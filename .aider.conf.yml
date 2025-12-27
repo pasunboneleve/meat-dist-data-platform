@@ -3,3 +3,4 @@ read:
   - infra/DEPLOYMENT.md
   - infra/INFRA.md
   - infra/*.tf
+  - .github/workflows/deploy.yml

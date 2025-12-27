@@ -1,0 +1,5 @@
+read:
+  - README.md
+  - infra/DEPLOYMENT.md
+  - infra/INFRA.md
+  - infra/*.tf

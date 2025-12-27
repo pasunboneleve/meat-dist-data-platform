@@ -1,5 +1,7 @@
 # Modern Open Lakehouse Portfolio Project on Google Cloud
 
+[![CI/CD Status](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/deploy.yml/badge.svg)](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/deploy.yml)
+
 **Goal**: Build a cost-effective (~$10–30/month), serverless-first Lakehouse ingesting crypto trade data from Coinbase, demonstrating modern data engineering practices (Iceberg, DataPlex, Data Vault 2.0 + Kimball, Terraform IaC, CI/CD).
 
 **Key Technologies**:

@@ -8,3 +8,4 @@ provider_id     = "github-provider"
 github_owner    = "your-github-username"
 github_repo     = "your-repo-name"
 github_token    = "ghp_your_github_personal_access_token"   # Create at: https://github.com/settings/tokens
+tf_state_bucket = "your-tf-state-bucket-name"

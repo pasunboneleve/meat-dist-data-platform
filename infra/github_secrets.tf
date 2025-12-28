@@ -31,3 +31,9 @@ resource "github_actions_secret" "gcp_service_account" {
   secret_name     = "GCP_SERVICE_ACCOUNT"
   plaintext_value = google_service_account.github_actions.email
 }
+
+resource "github_actions_secret" "tf_state_bucket" {
+  repository      = var.github_repo
+  secret_name     = "TF_STATE_BUCKET"
+  plaintext_value = var.tf_state_bucket
+}

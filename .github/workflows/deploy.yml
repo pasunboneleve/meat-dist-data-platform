@@ -1,4 +1,4 @@
-name: Deploy to Cloud Run
+name: Deploy Warehouse Infrastructure
 
 on:
   push:
@@ -7,11 +7,10 @@ on:
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_REGION: ${{ secrets.GCP_REGION }}
 
 jobs:
   deploy:
-    name: Build and Deploy
+    name: Deploy Warehouse
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
@@ -29,30 +28,21 @@ jobs:
         service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
         audience: 'sts.googleapis.com'
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
-
-    - name: Configure Docker for Artifact Registry
-      run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Build and push container image
-      uses: docker/build-push-action@v5
+    - name: Setup OpenTofu
+      uses: opentofu/setup-opentofu@v1
       with:
-        context: .
-        push: true
-        tags: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_REPO }}/${{ env.GCP_SERVICE_NAME }}:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        tofu_version: latest
 
-    - name: Deploy to Cloud Run
-      run: |-
-        gcloud run deploy "$GCP_SERVICE_NAME" \
-          --image "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_REPO }}/${{ env.GCP_SERVICE_NAME }}:${{ github.sha }}" \
-          --region "$GCP_REGION" \
-          --allow-unauthenticated \
-          --port 8080 \
-          --ingress all \
-          --project "$GCP_PROJECT_ID"
+    - name: Tofu Init
+      id: init
+      run: tofu init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="prefix=${GCP_PROJECT_ID}/warehouse"
+      working-directory: warehouse
+
+    - name: Tofu Plan
+      id: plan
+      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -out=tfplan
+      working-directory: warehouse
+
+    - name: Tofu Apply
+      run: tofu apply -auto-approve tfplan
+      working-directory: warehouse

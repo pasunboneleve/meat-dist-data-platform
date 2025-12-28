@@ -34,3 +34,8 @@ variable "github_token" {
   type        = string
   sensitive   = true
 }
+
+variable "tf_state_bucket" {
+  description = "GCS bucket for Terraform state"
+  type        = string
+}

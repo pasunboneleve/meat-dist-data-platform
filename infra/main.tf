@@ -1,23 +1,15 @@
 locals {
   # Roles the deploy SA needs at the project level
   sa_roles = [
-    "roles/run.admin",
-    "roles/iam.serviceAccountUser",
-    "roles/artifactregistry.writer",
+    "roles/editor",
     "roles/serviceusage.serviceUsageAdmin",
-    "roles/compute.loadBalancerAdmin",
   ]
 
   # Required APIs for the deployment pipeline
   required_apis = [
-    "run.googleapis.com",
-    "artifactregistry.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
-    "dns.googleapis.com",
     "cloudresourcemanager.googleapis.com",
-    "compute.googleapis.com",
-    "bigquery.googleapis.com",
   ]
 
   # Full resource names
@@ -43,7 +35,7 @@ resource "google_iam_workload_identity_pool" "github" {
   workload_identity_pool_id = var.pool_id
   display_name              = var.pool_id
 
-  depends_on = [google_project_service.apis, google_project_service.bigquery]
+  depends_on = [google_project_service.apis]
 }
 
 resource "google_iam_workload_identity_pool_provider" "github" {
@@ -79,35 +71,6 @@ resource "google_service_account" "github_actions" {
   depends_on = [google_project_service.apis]
 }
 
-# Ensure BigQuery API is enabled
-resource "google_project_service" "bigquery" {
-  project = var.project_id
-  service = "bigquery.googleapis.com"
-
-  disable_dependent_services = false
-  disable_on_destroy         = false
-}
-
-# Create administrative service account for organization-level tasks
-resource "google_service_account" "admin" {
-  project      = var.project_id
-  account_id   = "infrastructure-admin"
-  display_name = "Infrastructure Admin"
-  description  = "Service account for administrative and organization policy tasks"
-
-  depends_on = [google_project_service.apis]
-}
-
-# Create Artifact Registry repository
-resource "google_artifact_registry_repository" "images" {
-  project       = var.project_id
-  location      = var.region
-  repository_id = var.repository_id
-  description   = "container images"
-  format        = "DOCKER"
-
-  depends_on = [google_project_service.apis]
-}
 
 # Create the service account for GitHub Actions
 resource "google_service_account_iam_binding" "wif_impersonation" {
@@ -127,19 +90,3 @@ resource "google_project_iam_member" "sa_roles" {
 }
 
 
-# Allow owner to impersonate the admin service account
-resource "google_service_account_iam_binding" "admin_impersonation" {
-  service_account_id = google_service_account.admin.id
-  role               = "roles/iam.serviceAccountTokenCreator"
-  members = [
-    "user:${var.gcp_owner}"
-  ]
-}
-
-resource "google_service_account_iam_binding" "admin_user" {
-  service_account_id = google_service_account.admin.id
-  role               = "roles/iam.serviceAccountUser"
-  members = [
-    "user:${var.gcp_owner}"
-  ]
-}

@@ -10,6 +10,3 @@ output "impersonated_service_account" {
   value = google_service_account.github_actions.email
 }
 
-output "admin_service_account" {
-  value = google_service_account.admin.email
-}

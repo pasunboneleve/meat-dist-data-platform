@@ -1,11 +1,8 @@
 # Production Configuration Template
 # Copy this file to prod.tfvars and fill in your actual values
 
-gcp_owner       = "owner@boss.com"
-repository_id   = "your-repository-id"
 project_id      = "your-gcp-project-id"
 project_number  = "your-project-number"
-region          = "your-preferred-region"  # e.g., us-central1, europe-west1
 pool_id         = "github-pool"
 provider_id     = "github-provider"
 github_owner    = "your-github-username"

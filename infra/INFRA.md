@@ -4,7 +4,6 @@ This folder provisions:
 - Workload Identity Pool and Provider for GitHub OIDC
 - IAM binding to let your GitHub repo impersonate the deploy service account
 - Project roles for the deploy service account (Cloud Run, Artifact Registry, Cloud Build)
-- Datawarehouse resources (BigQuery dataset)
 
 ## Prereqs
 - gcloud (authenticated to the target project)

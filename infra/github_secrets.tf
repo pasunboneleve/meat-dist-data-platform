@@ -36,9 +36,3 @@ resource "github_actions_secret" "gcp_service_account" {
   secret_name     = "GCP_SERVICE_ACCOUNT"
   plaintext_value = google_service_account.github_actions.email
 }
-
-resource "github_actions_secret" "cloud_run_service_url" {
-  repository      = var.github_repo
-  secret_name     = "CLOUD_RUN_SERVICE_URL"
-  plaintext_value = var.cloud_run_url
-}

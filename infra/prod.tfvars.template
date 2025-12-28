@@ -10,5 +10,4 @@ pool_id         = "github-pool"
 provider_id     = "github-provider"
 github_owner    = "your-github-username"
 github_repo     = "your-repo-name"
-cloud_run_url   = "your-service-hash.your-region.run.app."  # Get from: gcloud run services list
 github_token    = "ghp_your_github_personal_access_token"   # Create at: https://github.com/settings/tokens

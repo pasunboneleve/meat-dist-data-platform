@@ -11,6 +11,7 @@ on:
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
   GCP_REGION: ${{ secrets.GCP_REGION }}
 
 jobs:
@@ -36,27 +37,40 @@ jobs:
     - name: Set up uv
       uses: astral-sh/setup-uv@v7
 
-    - name: Build and Package Ingestion Function
+    - name: Build and Deploy Ingestion Function to Artifact Registry
       working-directory: ingestion/synthetic-meat
       run: |
-        # Ensure the root dist directory exists for the final zip artifact.
-        mkdir -p ${{ github.workspace }}/dist
+        # 1. Build a wheel for the Python package.
+        uv build --wheel --out-dir dist
 
-        # 1. Build a source distribution (sdist). This command creates a standard
-        #    .tar.gz file in the local `dist/` directory, packaging up the source code
-        #    and respecting all settings in pyproject.toml.
-        uv build --sdist --out-dir dist
+        # 2. Authenticate to Artifact Registry and upload the wheel.
+        #    The `google-github-actions/auth` step configures gcloud credentials.
+        uv pip install twine
+        gcloud artifacts print-settings python --repo=python-packages --location=${GCP_REGION} >> ~/.pypirc
+        uv run twine upload --repository-url https://${GCP_REGION}-python.pkg.dev/${GCP_PROJECT_ID}/python-packages/ dist/*
 
-        # 2. Unpack the sdist so we can re-package it as a .zip for Cloud Functions.
-        cd dist
-        SDIST_TGZ=$(find . -name "*.tar.gz")
-        tar -xvf "$SDIST_TGZ"
-        SDIST_DIR=$(basename "$SDIST_TGZ" .tar.gz)
+        # 3. Create a minimal source package for the Cloud Function.
+        mkdir -p ${{ github.workspace }}/dist/bootstrap
 
-        # 3. Create the final zip archive. We `cd` into the unpacked directory so that
-        #    `pyproject.toml` is at the root of the zip file, which is what the
-        #    Cloud Functions build process expects for packaged applications.
-        cd "$SDIST_DIR"
+        # 3a. Generate a pinned requirements.txt from uv.lock for production dependencies.
+        uv venv ./.venv
+        uv pip install -e . --no-dev --python ./.venv/bin/python
+        uv pip freeze --python ./.venv/bin/python | grep -v '^-e ' > ${{ github.workspace }}/dist/bootstrap/requirements.txt
+        rm -rf ./.venv
+
+        # 3b. Add our own package to requirements.txt
+        VERSION=$(grep "^version =" pyproject.toml | awk -F '"' '{print $2}')
+        echo "synthetic-meat==$VERSION" >> ${{ github.workspace }}/dist/bootstrap/requirements.txt
+
+        # 3c. Create main.py
+        echo "from src.synthesise import generate_and_upload" > ${{ github.workspace }}/dist/bootstrap/main.py
+
+        # 3d. Add a pip.conf to tell Cloud Build where to find our private package.
+        echo "[global]" > ${{ github.workspace }}/dist/bootstrap/pip.conf
+        echo "extra-index-url = https://${GCP_REGION}-python.pkg.dev/${GCP_PROJECT_ID}/python-packages/simple/" >> ${{ github.workspace }}/dist/bootstrap/pip.conf
+
+        # 4. Zip the bootstrap files into the final deployment artifact.
+        cd ${{ github.workspace }}/dist/bootstrap
         zip -r ${{ github.workspace }}/dist/synthetic-meat-ingestor.zip .
 
     - name: Setup OpenTofu
@@ -71,7 +85,7 @@ jobs:
 
     - name: Tofu Plan
       id: plan
-      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -out=tfplan
+      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="project_number=${GCP_PROJECT_NUMBER}" -out=tfplan
       working-directory: warehouse
 
     - name: Tofu Apply

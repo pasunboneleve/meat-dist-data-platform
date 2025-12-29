@@ -7,3 +7,8 @@ variable "region" {
   description = "BigQuery dataset region"
   type        = string
 }
+
+variable "project_number" {
+  description = "GCP project number, used for service account identifiers"
+  type        = string
+}

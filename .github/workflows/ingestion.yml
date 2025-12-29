@@ -28,7 +28,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v1
+      uses: astral-sh/setup-uv@v7
 
     - name: Install dependencies
       working-directory: ./ingestion/synthetic-meat

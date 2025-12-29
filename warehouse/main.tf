@@ -4,6 +4,7 @@ locals {
     "cloudfunctions.googleapis.com",
     "cloudscheduler.googleapis.com",
     "cloudbuild.googleapis.com",
+    "artifactregistry.googleapis.com",
     "dataproc.googleapis.com",
     "bigquery.googleapis.com",
     "dataplex.googleapis.com",
@@ -51,6 +52,29 @@ resource "google_storage_bucket" "deps" {
 
   depends_on = [google_project_service.apis]
 }
+
+# --- Artifact Registry ---
+# Python package repository for custom code
+resource "google_artifact_registry_repository" "python_packages" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "python-packages"
+  description   = "Repository for Python wheels"
+  format        = "PYTHON"
+
+  depends_on = [google_project_service.apis]
+}
+
+# Grant the Cloud Build service account permission to read from the repository.
+# This allows Cloud Functions to install packages from here during deployment.
+resource "google_artifact_registry_repository_iam_member" "cloudbuild_artifact_registry_reader" {
+  project    = google_artifact_registry_repository.python_packages.project
+  location   = google_artifact_registry_repository.python_packages.location
+  repository = google_artifact_registry_repository.python_packages.name
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${var.project_number}@cloudbuild.gserviceaccount.com"
+}
+
 
 # --- Dataplex ---
 # Dataplex Lake for centralized management and governance

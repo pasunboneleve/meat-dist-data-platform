@@ -57,7 +57,7 @@ resource "google_service_account" "scheduler_sa" {
 resource "google_cloud_run_service_iam_member" "invoker" {
   project  = google_cloudfunctions2_function.ingestor.project
   location = google_cloudfunctions2_function.ingestor.location
-  name     = google_cloudfunctions2_function.ingestor.name
+  service  = google_cloudfunctions2_function.ingestor.name
   role     = "roles/run.invoker"
   member   = "serviceAccount:${google_service_account.scheduler_sa.email}"
 }

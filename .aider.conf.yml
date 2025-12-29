@@ -1,3 +1,7 @@
+model: gemini/gemini-2.5-pro
+editor-model: gemini/gemini-2.5-flash
+weak-model: gemini/gemini-flash-lite-latest
+
 read:
   - README.md
   - infra/DEPLOYMENT.md

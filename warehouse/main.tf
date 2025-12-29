@@ -107,7 +107,7 @@ resource "google_dataplex_asset" "bronze_asset" {
     enabled = true
   }
   resource_spec {
-    name = google_storage_bucket.bronze.id
+    name = "projects/${google_storage_bucket.bronze.project}/buckets/${google_storage_bucket.bronze.name}"
     type = "STORAGE_BUCKET"
   }
 }
@@ -124,7 +124,7 @@ resource "google_dataplex_asset" "silver_asset" {
     enabled = true
   }
   resource_spec {
-    name = google_storage_bucket.silver.id
+    name = "projects/${google_storage_bucket.silver.project}/buckets/${google_storage_bucket.silver.name}"
     type = "STORAGE_BUCKET"
   }
 }

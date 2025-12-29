@@ -3,6 +3,7 @@ locals {
   sa_roles = [
     "roles/editor",
     "roles/serviceusage.serviceUsageAdmin",
+    "roles/resourcemanager.projectIamAdmin", # Allows the SA to grant IAM roles
   ]
 
   # Required APIs for the deployment pipeline

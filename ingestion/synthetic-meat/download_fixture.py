@@ -1,9 +1,13 @@
+#!/bin/env python
+
 from pathlib import Path
+
 import requests
 
 FIXTURE_DIR = Path(__file__).parent / "tests" / "fixtures"
 FIXTURE_PATH = FIXTURE_DIR / "market_report.xlsx"
 MLA_API_URL = "https://www.mla.com.au/api/search/site-search"
+
 
 def main():
     """
@@ -56,6 +60,7 @@ def main():
 
     except requests.exceptions.RequestException as e:
         raise RuntimeError(f"An error occurred during the request: {e}") from e
+
 
 if __name__ == "__main__":
     main()

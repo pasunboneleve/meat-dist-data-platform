@@ -34,6 +34,34 @@ jobs:
         service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
         audience: 'sts.googleapis.com'
 
+    - name: Create dummy package for initial Tofu apply
+      run: |
+        # The Cloud Function resource requires a source zip file to exist for `tofu plan`.
+        # We create a placeholder file here that will be replaced after the real artifact is built.
+        mkdir -p ${{ github.workspace }}/dist/bootstrap
+        echo "def generate_and_upload(request): return ('dummy', 200)" > ${{ github.workspace }}/dist/bootstrap/main.py
+        cd ${{ github.workspace }}/dist/bootstrap
+        zip -r ${{ github.workspace }}/dist/synthetic-meat-ingestor.zip .
+
+    - name: Setup OpenTofu
+      uses: opentofu/setup-opentofu@v1
+      with:
+        tofu_version: latest
+
+    - name: Tofu Init
+      id: init
+      run: tofu init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="prefix=${GCP_PROJECT_ID}/warehouse"
+      working-directory: warehouse
+
+    - name: Tofu Plan (infra)
+      id: plan_infra
+      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="project_number=${GCP_PROJECT_NUMBER}" -out=tfplan
+      working-directory: warehouse
+
+    - name: Tofu Apply (infra)
+      run: tofu apply -auto-approve tfplan
+      working-directory: warehouse
+
     - name: Set up uv
       uses: astral-sh/setup-uv@v7
 
@@ -74,21 +102,11 @@ jobs:
         cd ${{ github.workspace }}/dist/bootstrap
         zip -r ${{ github.workspace }}/dist/synthetic-meat-ingestor.zip .
 
-    - name: Setup OpenTofu
-      uses: opentofu/setup-opentofu@v1
-      with:
-        tofu_version: latest
-
-    - name: Tofu Init
-      id: init
-      run: tofu init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="prefix=${GCP_PROJECT_ID}/warehouse"
-      working-directory: warehouse
-
-    - name: Tofu Plan
-      id: plan
+    - name: Tofu Plan (function update)
+      id: plan_update
       run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="project_number=${GCP_PROJECT_NUMBER}" -out=tfplan
       working-directory: warehouse
 
-    - name: Tofu Apply
+    - name: Tofu Apply (function update)
       run: tofu apply -auto-approve tfplan
       working-directory: warehouse

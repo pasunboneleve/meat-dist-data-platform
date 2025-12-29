@@ -1,6 +1,6 @@
 import polars as pl
 from unittest.mock import patch, Mock
-from src.synthetic_meat.main import (
+from synthetic_meat.main import (
     load_base_data,
     generate_synthetic_carcasses,
     generate_and_upload,
@@ -39,7 +39,7 @@ def test_generate_synthetic_carcasses(fixture_path):
     assert synthetic_df.select(pl.all().is_null().sum()).row(0) == tuple([0] * len(synthetic_df.columns))
 
 
-@patch("src.synthetic_meat.main.write_to_gcs")
+@patch("synthetic_meat.main.write_to_gcs")
 def test_generate_and_upload_success(mock_write_to_gcs, fixture_path):
     """Tests the main cloud function entry point on a successful run."""
     # Arrange
@@ -60,7 +60,7 @@ def test_generate_and_upload_success(mock_write_to_gcs, fixture_path):
     assert len(call_args[0]) == 1000
 
 
-@patch("src.synthetic_meat.main.load_base_data", side_effect=Exception("Test error"))
+@patch("synthetic_meat.main.load_base_data", side_effect=Exception("Test error"))
 def test_generate_and_upload_failure(mock_load_base_data):
     """Tests the main cloud function entry point on a failure when loading data."""
     # Arrange

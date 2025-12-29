@@ -20,3 +20,6 @@ dev = [
     "requests>=2.30.0",
     "uv>=0.1.0",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = "src"

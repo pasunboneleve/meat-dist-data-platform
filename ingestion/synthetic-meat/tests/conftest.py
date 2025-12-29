@@ -1,59 +1,50 @@
 from pathlib import Path
 import pytest
 import requests
+import json
+from datetime import datetime, timedelta
 
 MLA_API_URL = "https://api-mlastatistics.mla.com.au"
 
 
-def _download_fixture(path: Path):
+def _create_fixture(path: Path):
     """
-    Downloads the latest XLSX cattle market report from the MLA website's API
-    to serve as a test fixture.
+    Creates a test fixture by downloading cattle pricing data from the MLA Statistics API.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    payload = {
-        "request": {
-            "search": "",
-            "searchType": "site-search",
-            "categories": ["Market Reports"],
-            "tags": ["Cattle"],
-            "fileTypes": ["XLSX"],
-            "page": 1,
-            "pageSize": 1,
-            "sortBy": "date",
-            "sortOrder": "desc",
-        }
+    to_date = datetime.utcnow()
+    # Fetch data from the last 90 days for a decent sample size.
+    from_date = to_date - timedelta(days=90)
+
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = to_date.strftime("%Y-%m-%d")
+
+    # Fetch National Feeder Steer Indicator (3) from Dalby saleyard (DAL).
+    # This provides a consistent set of real-world price and volume data.
+    endpoint = "/report/6"
+    params = {
+        "indicatorID": 3,
+        "saleyardID": "DAL",
+        "fromDate": from_date_str,
+        "toDate": to_date_str,
     }
 
-    headers = {
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "Referer": "https://www.mla.com.au/",
-    }
-
-    print(f"\nRequesting data from {MLA_API_URL}...")
+    print(f"\nRequesting data from {MLA_API_URL}{endpoint} with params: {params}")
     try:
-        response = requests.post(MLA_API_URL, json=payload, headers=headers)
+        response = requests.get(f"{MLA_API_URL}{endpoint}", params=params)
         response.raise_for_status()
 
         data = response.json()
-        results = data.get("data", {}).get("results", [])
+        results = data.get("data", [])
+
         if not results:
-            raise RuntimeError("No market reports found in the API response.")
+            raise RuntimeError("No data found in API response for the given parameters.")
 
-        download_url = results[0].get("fileUrl")
-        if not download_url:
-            raise RuntimeError("Could not find a download URL in the first report.")
+        with open(path, "w") as f:
+            json.dump(results, f, indent=2)
 
-        print(f"Downloading fixture from: {download_url}")
-        file_response = requests.get(download_url)
-        file_response.raise_for_status()
-
-        with open(path, "wb") as f:
-            f.write(file_response.content)
-
-        print(f"Successfully downloaded fixture to {path}")
+        print(f"Successfully created fixture with {len(results)} records at {path}")
 
     except requests.exceptions.RequestException as e:
         raise RuntimeError(f"An error occurred during the request: {e}") from e
@@ -63,17 +54,17 @@ def _download_fixture(path: Path):
 def fixture_path() -> Path:
     """
     Returns the path to the test fixture file.
-    Downloads the file if it's missing.
+    Creates the fixture by querying the API if it's missing.
     """
-    path = Path(__file__).parent / "fixtures" / "market_report.xlsx"
+    path = Path(__file__).parent / "fixtures" / "market_data.json"
     if not path.exists():
-        print(f"Fixture file not found at {path}. Downloading...")
+        print(f"Fixture file not found at {path}. Creating from API...")
         try:
-            _download_fixture(path)
+            _create_fixture(path)
         except Exception as e:
-            pytest.fail(f"Failed to download fixture: {e}")
+            pytest.fail(f"Failed to create fixture: {e}")
 
     if not path.exists():
-        pytest.fail(f"Fixture file still not found at {path} after attempting download.")
+        pytest.fail(f"Fixture file still not found at {path} after attempting to create it.")
 
     return path

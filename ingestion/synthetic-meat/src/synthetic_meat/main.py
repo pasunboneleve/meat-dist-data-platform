@@ -13,25 +13,29 @@ import functions_framework
 BUCKET_NAME = os.environ.get("BRONZE_BUCKET")
 # For local testing, we can use the downloaded fixture. In a real deployment,
 # this base data might come from a GCS location or be packaged with the function.
-FIXTURE_PATH = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "market_report.xlsx"
+FIXTURE_PATH = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "market_data.json"
 
 # --- Helper Functions ---
 
 def load_base_data(file_path: Path) -> pl.DataFrame:
-    """Loads and preprocesses the base market data from an Excel file."""
+    """Loads and preprocesses the base market data from a JSON fixture file."""
     if not file_path.exists():
         print(f"Warning: Fixture file not found at {file_path}. Returning empty DataFrame.")
         return pl.DataFrame()
 
     try:
-        # The actual data in the report may start several rows down.
-        # This approach is brittle and depends on the specific report format.
-        df = pl.read_excel(file_path, read_options={"skip_rows": 2})
-        df = df.rename({df.columns[0]: "category", df.columns[1]: "indicator"})
-        df = df.filter(pl.col("category").is_not_null())
+        df = pl.read_json(file_path)
+        # The `generate_synthetic_carcasses` function expects a 'category' column
+        # to derive animal classes from. We'll use 'indicator_desc'.
+        if "indicator_desc" in df.columns:
+            df = df.rename({"indicator_desc": "category"})
+        else:
+            print("Warning: 'indicator_desc' not found in fixture. Using fallback categories.")
+            return pl.DataFrame()
+
         return df
     except Exception as e:
-        print(f"Error reading or processing Excel file: {e}")
+        print(f"Error reading or processing JSON file: {e}")
         return pl.DataFrame()
 
 def generate_synthetic_carcasses(base_df: pl.DataFrame, num_records: int = 1000) -> pl.DataFrame:

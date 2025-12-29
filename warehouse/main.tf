@@ -1,3 +1,4 @@
+# Trigger CI/CD to apply infra changes.
 locals {
   # APIs needed for the data warehouse infrastructure
   required_apis = [

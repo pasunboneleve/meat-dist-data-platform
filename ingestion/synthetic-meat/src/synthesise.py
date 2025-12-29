@@ -1,20 +1,21 @@
 import os
-import uuid
 import random
-from datetime import datetime, timedelta, date
+import uuid
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import functions_framework
 import polars as pl
 import requests
 from faker import Faker
 from google.cloud import storage
-import functions_framework
 
 # --- Configuration ---
 BUCKET_NAME = os.environ.get("BRONZE_BUCKET")
 MLA_API_URL = "https://api-mlastatistics.mla.com.au"
 
 # --- Helper Functions ---
+
 
 def fetch_base_data() -> pl.DataFrame:
     """
@@ -59,7 +60,9 @@ def fetch_base_data() -> pl.DataFrame:
 def load_base_data(file_path: Path) -> pl.DataFrame:
     """Loads and preprocesses the base market data from a JSON fixture file."""
     if not file_path.exists():
-        print(f"Warning: Fixture file not found at {file_path}. Returning empty DataFrame.")
+        print(
+            f"Warning: Fixture file not found at {file_path}. Returning empty DataFrame."
+        )
         return pl.DataFrame()
 
     try:
@@ -69,20 +72,25 @@ def load_base_data(file_path: Path) -> pl.DataFrame:
         if "indicator_desc" in df.columns:
             df = df.rename({"indicator_desc": "category"})
         else:
-            print("Warning: 'indicator_desc' not found in fixture. Using fallback categories.")
+            print(
+                "Warning: 'indicator_desc' not found in fixture. Using fallback categories."
+            )
             return pl.DataFrame()
 
         # The API provides 'calendar_date', but we use 'report_date' internally.
         if "calendar_date" in df.columns:
             df = df.rename({"calendar_date": "report_date"})
         else:
-            print("Warning: 'calendar_date' not found in fixture. Cannot determine report dates.")
+            print(
+                "Warning: 'calendar_date' not found in fixture. Cannot determine report dates."
+            )
             return pl.DataFrame()
 
         return df
     except Exception as e:
         print(f"Error reading or processing JSON file: {e}")
         return pl.DataFrame()
+
 
 def generate_synthetic_carcasses(
     base_df: pl.DataFrame, target_date: date
@@ -107,9 +115,7 @@ def generate_synthetic_carcasses(
 
         if not stat_for_date.is_empty():
             head_count = stat_for_date.get_column("head_count").item()
-            num_records = (
-                int(head_count) if head_count and int(head_count) > 0 else 0
-            )
+            num_records = int(head_count) if head_count and int(head_count) > 0 else 0
 
             price_value = stat_for_date.get_column("indicator_value").item()
             if price_value:
@@ -154,6 +160,7 @@ def generate_synthetic_carcasses(
         (pl.col("hscw_kg") * pl.col("price_aud_per_kg")).alias("total_price_aud")
     )
     return synthetic_df
+
 
 def write_to_gcs(df: pl.DataFrame, bucket_name: str, plant_id: str, target_date: date):
     """Writes a Polars DataFrame to GCS as a partitioned Parquet file."""

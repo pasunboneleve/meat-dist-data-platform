@@ -1,11 +1,9 @@
-import polars as pl
-from unittest.mock import patch, Mock
 from datetime import date
-from main import (
-    load_base_data,
-    generate_synthetic_carcasses,
-    generate_and_upload,
-)
+from unittest.mock import Mock, patch
+
+import polars as pl
+from src.synthesise import (generate_and_upload, generate_synthetic_carcasses,
+                            load_base_data)
 
 
 def test_load_base_data(fixture_path):
@@ -14,6 +12,7 @@ def test_load_base_data(fixture_path):
     assert isinstance(df, pl.DataFrame)
     assert not df.is_empty()
     assert "category" in df.columns
+
 
 def test_generate_synthetic_carcasses(fixture_path):
     """Tests the synthetic data generation logic using the latest date in the fixture."""
@@ -55,7 +54,9 @@ def test_generate_synthetic_carcasses(fixture_path):
         )
 
         # Check that slaughter dates match the target date
-        slaughter_dates = synthetic_df["slaughter_date"].str.to_datetime().dt.date().unique()
+        slaughter_dates = (
+            synthetic_df["slaughter_date"].str.to_datetime().dt.date().unique()
+        )
         assert len(slaughter_dates) == 1
         assert slaughter_dates[0] == target_date
 
@@ -86,8 +87,8 @@ def test_generated_data_matches_stats(fixture_path):
         assert abs(actual_avg_price - expected_avg_price) / expected_avg_price < 0.15
 
 
-@patch("main.fetch_base_data")
-@patch("main.write_to_gcs")
+@patch("src.synthesise.fetch_base_data")
+@patch("src.synthesise.write_to_gcs")
 def test_generate_and_upload_with_target_date(
     mock_write_to_gcs, mock_fetch_base_data, fixture_path
 ):
@@ -121,7 +122,7 @@ def test_generate_and_upload_with_target_date(
     assert call_date == date.fromisoformat(target_date_str)
 
 
-@patch("main.fetch_base_data", side_effect=Exception("Test error"))
+@patch("src.synthesise.fetch_base_data", side_effect=Exception("Test error"))
 def test_generate_and_upload_failure(mock_fetch_base_data):
     """Tests the main cloud function entry point on a failure when loading data."""
     # Arrange

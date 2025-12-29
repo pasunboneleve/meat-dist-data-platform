@@ -18,7 +18,7 @@ resource "google_cloudfunctions2_function" "ingestor" {
 
   build_config {
     runtime     = "python311"
-    entry_point = "generate_and_upload"
+    entry_point = "synthetic-meat" # Corresponds to the script in pyproject.toml
     source {
       storage_source {
         bucket = google_storage_bucket_object.synthetic_meat_source.bucket
@@ -35,8 +35,7 @@ resource "google_cloudfunctions2_function" "ingestor" {
     service_account_email          = google_service_account.cloud_function_sa.email
     all_traffic_on_latest_revision = true
     environment_variables = {
-      BRONZE_BUCKET   = google_storage_bucket.bronze.name
-      FUNCTION_SOURCE = "src/synthesise.py"
+      BRONZE_BUCKET = google_storage_bucket.bronze.name
     }
   }
 

@@ -1,7 +1,7 @@
 import polars as pl
 from unittest.mock import patch, Mock
 from datetime import date
-from synthetic_meat.main import (
+from synthetic_meat.core import (
     load_base_data,
     generate_synthetic_carcasses,
     generate_and_upload,
@@ -86,8 +86,8 @@ def test_generated_data_matches_stats(fixture_path):
         assert abs(actual_avg_price - expected_avg_price) / expected_avg_price < 0.15
 
 
-@patch("synthetic_meat.main.fetch_base_data")
-@patch("synthetic_meat.main.write_to_gcs")
+@patch("synthetic_meat.core.fetch_base_data")
+@patch("synthetic_meat.core.write_to_gcs")
 def test_generate_and_upload_with_target_date(
     mock_write_to_gcs, mock_fetch_base_data, fixture_path
 ):
@@ -121,7 +121,7 @@ def test_generate_and_upload_with_target_date(
     assert call_date == date.fromisoformat(target_date_str)
 
 
-@patch("synthetic_meat.main.fetch_base_data", side_effect=Exception("Test error"))
+@patch("synthetic_meat.core.fetch_base_data", side_effect=Exception("Test error"))
 def test_generate_and_upload_failure(mock_fetch_base_data):
     """Tests the main cloud function entry point on a failure when loading data."""
     # Arrange

@@ -74,8 +74,8 @@ resource "google_dataplex_zone" "raw_zone" {
   discovery_spec {
     enabled = true
   }
-  resource_location_spec {
-    type = "SINGLE_REGION"
+  resource_spec {
+    location_type = "SINGLE_REGION"
   }
 }
 
@@ -90,8 +90,8 @@ resource "google_dataplex_zone" "curated_zone" {
   discovery_spec {
     enabled = true
   }
-  resource_location_spec {
-    type = "SINGLE_REGION"
+  resource_spec {
+    location_type = "SINGLE_REGION"
   }
 }
 

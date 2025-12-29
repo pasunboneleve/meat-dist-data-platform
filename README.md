@@ -2,10 +2,10 @@
 
 [![CI/CD Status](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/deploy.yml/badge.svg)](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/deploy.yml)
 
-**Goal**: Build a cost-effective (~$10–30/month), serverless-first Lakehouse ingesting crypto trade data from Coinbase, demonstrating modern data engineering practices (Iceberg, DataPlex, Data Vault 2.0 + Kimball, Terraform IaC, CI/CD).
+**Goal**: Build a cost-effective (~$10–30/month), serverless-first Lakehouse for a meat distribution platform, demonstrating modern data engineering practices (Iceberg, DataPlex, Data Vault 2.0 + Kimball, Terraform IaC, CI/CD).
 
 **Key Technologies**:
-- **Data Source**: Coinbase Advanced Trade REST API (polling for recent trades – no API key needed).
+- **Data Source**: A synthetic data generator that simulates a stream of meat processing data.
 - **Ingestion**: Cloud Functions (Python) triggered by Cloud Scheduler (every 1–5 minutes).
 - **Bronze Layer**: Raw JSON/Parquet files in GCS.
 - **Silver Layer**: Data Vault 2.0 modeled Iceberg tables in GCS.
@@ -62,10 +62,10 @@ Deploy in this order:
   - `${project_id}-silver`
   - `${project_id}-deps` (for Spark jars/temp)
 - DataPlex Lake with zones:
-  - Lake: `crypto-lake`
+  - Lake: `meat-market-lake`
   - Zones: `raw` (bronze), `curated` (silver)
   - Assets linking buckets to zones
-- BigQuery dataset: `gold_crypto`
+- BigQuery dataset: `gold_meat_market`
 - Service accounts & IAM:
   - One for Cloud Functions (Storage writer, DataPlex)
   - One for Dataproc (BigQuery, Storage, DataPlex roles)
@@ -75,16 +75,23 @@ Use community modules where possible (e.g., GoogleCloudPlatform/cloud-foundation
 
 Validate locally: `tofu init → fmt → validate → plan → apply`.
 
-## Phase 3: Ingestion – Coinbase Polling to Bronze
+## Phase 3: Data Generation & Ingestion to Bronze
 
-- Endpoint: `GET https://api.coinbase.com/api/v3/brokerage/products/{product_id}/ticker` or `/trades` (paginated).
-- Focus on 1–3 pairs initially (e.g., BTC-USD, ETH-USD).
-- Cloud Function (2nd gen, Python 3.11+):
-  - Track last ingested timestamp (store in GCS file or Firestore lite).
-  - Fetch new trades, convert to Parquet (pandas + pyarrow).
-  - Write partitioned: `gs://bronze/trades/product=BTC-USD/year=2025/month=12/day=27/trades.parquet`
-- Trigger: Cloud Scheduler cron job (e.g., `*/5 * * * *` for every 5 min) → HTTP trigger on Function.
-- DataPlex auto-discovers new files → BigLake external tables appear.
+- **Data Source**: A synthetic data generator script (Python) that simulates a stream of meat processing data.
+- **Methodology**:
+  - Use aggregated public data (e.g., from [MLA](https://www.mla.com.au/prices-markets/)) as a baseline for realistic distributions of weights (e.g., 250-400kg HSCW), grades, and prices.
+  - Use a library like `polars` to generate thousands of "fake" individual animal/carcass records.
+  - Sample attributes like weight from normal distributions based on grade and animal class.
+  - Assign pseudo-random identifiers (e.g., RFID-style tags) for traceability.
+  - Calculate prices based on grid formulas, applying premiums/discounts for factors like marbling, fat depth, and yield.
+  - Include additional fields for rich analytics, such as slaughter date, processing plant ID, breed, and quality scores.
+- **Cloud Function (2nd gen, Python 3.11+)**:
+  - The function will host the data generation logic.
+  - It will generate a new batch of data upon each invocation.
+  - Convert the generated data to Parquet format.
+  - Write partitioned data to the bronze GCS bucket, e.g., `gs://bronze/carcasses/plant_id=P01/year=2025/month=12/day=27/batch_12345.parquet`
+- **Trigger**: Cloud Scheduler cron job (e.g., `*/5 * * * *` for every 5 min) makes an HTTP request to the Cloud Function to generate a new micro-batch of data.
+- **Discovery**: DataPlex automatically discovers the new Parquet files as they land, making them available for querying via BigLake.
 
 ## Phase 4: Transformations
 
@@ -95,10 +102,10 @@ Use Dataproc Serverless PySpark batch:
 - Catalog: BigLakeCatalog (integrated with DataPlex).
 - Read bronze Parquet.
 - Build DV2 entities:
-  - Hub_Trade (business key: trade_id)
-  - Hub_Product (product_id)
-  - Sat_Trade_Details
-  - Link_Trade_Product (if needed)
+  - Hub_Carcass (business key: carcass_id/rfid_tag)
+  - Hub_Processor (business key: plant_id)
+  - Sat_Carcass_Details (quality scores, weights, grades)
+  - Link_Carcass_Processing (linking carcasses to processing events)
 - Write as Iceberg tables in silver bucket, partitioned appropriately.
 - Trigger initially manual (`gcloud dataproc batches submit`), later via Scheduler or Pub/Sub on new bronze files.
 
@@ -112,11 +119,11 @@ Use Dataproc Serverless PySpark batch:
 
 ## Phase 5: BI Layer
 
-- Connect Looker Studio to BigQuery `gold_crypto` dataset.
+- Connect Looker Studio to BigQuery `gold_meat_market` dataset.
 - Build dashboards:
-  - Trade volume over time
-  - Price movements
-  - Top products by volume
+  - Carcass weight distribution by grade
+  - Average price per kg over time
+  - Yield analysis by processing plant
 - Make dashboards public (share link) for portfolio demo.
 
 ## Phase 6: CI/CD and Testing
@@ -124,7 +131,7 @@ Use Dataproc Serverless PySpark batch:
 **GitHub Actions Workflow** (on push/PR and merge):
 
 1. OpenTofu fmt/validate/plan
-2. Unit tests (pytest) for function logic (mock Coinbase responses)
+2. Unit tests (pytest) for the data generator and transformation logic.
 3. Integration tests (optional separate test project):
    - Deploy infra
    - Trigger ingestion

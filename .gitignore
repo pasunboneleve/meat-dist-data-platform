@@ -33,3 +33,6 @@ infra/*.auto.tfvars
 
 # Logs
 *.log
+
+# Build artifacts
+/dist/

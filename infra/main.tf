@@ -7,7 +7,7 @@ locals {
     "roles/artifactregistry.writer",       # To upload packages to Artifact Registry
     "roles/artifactregistry.admin",        # To set IAM policies on repositories
     "roles/run.admin",                     # To set IAM policies on Cloud Run services
-    "roles/appengine.admin",               # To create the App Engine application
+    "roles/appengine.appAdmin",            # To create the App Engine application
   ]
 
   # Required APIs for the deployment pipeline

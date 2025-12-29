@@ -13,7 +13,7 @@ import functions_framework
 BUCKET_NAME = os.environ.get("BRONZE_BUCKET")
 # For local testing, we can use the downloaded fixture. In a real deployment,
 # this base data might come from a GCS location or be packaged with the function.
-FIXTURE_PATH = Path(__file__).parent.parent.parent.parent / "tests" / "fixtures" / "market_report.xlsx"
+FIXTURE_PATH = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "market_report.xlsx"
 
 # --- Helper Functions ---
 

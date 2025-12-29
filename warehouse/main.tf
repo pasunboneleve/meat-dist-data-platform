@@ -54,11 +54,11 @@ resource "google_storage_bucket" "deps" {
 
 # --- Dataplex ---
 # Dataplex Lake for centralized management and governance
-resource "google_dataplex_lake" "crypto_lake" {
+resource "google_dataplex_lake" "meat_market_lake" {
   project      = var.project_id
-  name         = "crypto-lake"
+  name         = "meat-market-lake"
   location     = var.region
-  display_name = "Crypto Data Lake"
+  display_name = "Meat Market Data Lake"
 
   depends_on = [google_project_service.apis]
 }
@@ -66,7 +66,7 @@ resource "google_dataplex_lake" "crypto_lake" {
 # Raw zone for bronze data
 resource "google_dataplex_zone" "raw_zone" {
   project                = var.project_id
-  lake                   = google_dataplex_lake.crypto_lake.name
+  lake                   = google_dataplex_lake.meat_market_lake.name
   location               = var.region
   name                   = "raw"
   display_name           = "Raw Zone (Bronze)"
@@ -82,7 +82,7 @@ resource "google_dataplex_zone" "raw_zone" {
 # Curated zone for silver data
 resource "google_dataplex_zone" "curated_zone" {
   project                = var.project_id
-  lake                   = google_dataplex_lake.crypto_lake.name
+  lake                   = google_dataplex_lake.meat_market_lake.name
   location               = var.region
   name                   = "curated"
   display_name           = "Curated Zone (Silver)"
@@ -98,7 +98,7 @@ resource "google_dataplex_zone" "curated_zone" {
 # Link bronze bucket to the raw zone
 resource "google_dataplex_asset" "bronze_asset" {
   project          = var.project_id
-  lake             = google_dataplex_lake.crypto_lake.name
+  lake             = google_dataplex_lake.meat_market_lake.name
   location         = var.region
   dataplex_zone    = google_dataplex_zone.raw_zone.name
   name             = "bronze-storage"
@@ -115,7 +115,7 @@ resource "google_dataplex_asset" "bronze_asset" {
 # Link silver bucket to the curated zone
 resource "google_dataplex_asset" "silver_asset" {
   project          = var.project_id
-  lake             = google_dataplex_lake.crypto_lake.name
+  lake             = google_dataplex_lake.meat_market_lake.name
   location         = var.region
   dataplex_zone    = google_dataplex_zone.curated_zone.name
   name             = "silver-storage"
@@ -131,9 +131,9 @@ resource "google_dataplex_asset" "silver_asset" {
 
 # --- BigQuery ---
 # Gold dataset for Kimball models and BI
-resource "google_bigquery_dataset" "gold_crypto" {
+resource "google_bigquery_dataset" "gold_meat_market" {
   project    = var.project_id
-  dataset_id = "gold_crypto"
+  dataset_id = "gold_meat_market"
   location   = var.region
 
   depends_on = [google_project_service.apis]
@@ -145,7 +145,7 @@ resource "google_service_account" "cloud_function_sa" {
   project      = var.project_id
   account_id   = "ingestion-cloud-function"
   display_name = "Ingestion Cloud Function SA"
-  description  = "Service account for the Coinbase ingestion Cloud Function"
+  description  = "Service account for the ingestion Cloud Function"
 
   depends_on = [google_project_service.apis]
 }

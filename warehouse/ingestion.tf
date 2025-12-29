@@ -53,13 +53,13 @@ resource "google_service_account" "scheduler_sa" {
   description  = "Service account for Cloud Scheduler to invoke Cloud Functions"
 }
 
-# 4. Grant the scheduler's service account the 'Cloud Run Invoker' role.
-resource "google_cloudfunctions2_function_iam_member" "invoker" {
-  project        = google_cloudfunctions2_function.ingestor.project
-  location       = google_cloudfunctions2_function.ingestor.location
-  cloud_function = google_cloudfunctions2_function.ingestor.name
-  role           = "roles/run.invoker"
-  member         = "serviceAccount:${google_service_account.scheduler_sa.email}"
+# 4. Grant the scheduler's service account the 'Cloud Run Invoker' role on the underlying service.
+resource "google_cloud_run_service_iam_member" "invoker" {
+  project  = google_cloudfunctions2_function.ingestor.project
+  location = google_cloudfunctions2_function.ingestor.location
+  name     = google_cloudfunctions2_function.ingestor.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.scheduler_sa.email}"
 }
 
 # 5. Create the Cloud Scheduler job to trigger the function daily.
@@ -87,6 +87,6 @@ resource "google_cloud_scheduler_job" "ingestor_trigger" {
   }
 
   depends_on = [
-    google_cloudfunctions2_function_iam_member.invoker,
+    google_cloud_run_service_iam_member.invoker,
   ]
 }

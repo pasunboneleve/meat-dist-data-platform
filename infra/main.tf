@@ -5,6 +5,7 @@ locals {
     "roles/serviceusage.serviceUsageAdmin",
     "roles/resourcemanager.projectIamAdmin", # Allows the SA to grant IAM roles
     "roles/artifactregistry.writer",       # To upload packages to Artifact Registry
+    "roles/artifactregistry.admin",        # To set IAM policies on repositories
   ]
 
   # Required APIs for the deployment pipeline

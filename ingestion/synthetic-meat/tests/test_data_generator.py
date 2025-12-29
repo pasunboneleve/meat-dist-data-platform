@@ -55,7 +55,7 @@ def test_generate_synthetic_carcasses(fixture_path):
         )
 
         # Check that slaughter dates match the target date
-        slaughter_dates = synthetic_df["slaughter_date"].str.to_date().unique()
+        slaughter_dates = synthetic_df["slaughter_date"].str.to_datetime().dt.date().unique()
         assert len(slaughter_dates) == 1
         assert slaughter_dates[0] == target_date
 

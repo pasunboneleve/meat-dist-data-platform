@@ -121,6 +121,8 @@ def test_generate_and_upload_failure(mock_load_base_data):
     """Tests the main cloud function entry point on a failure when loading data."""
     # Arrange
     mock_request = Mock()
+    mock_request.args = {}  # To avoid TypeError on 'in' operator
+    mock_request.is_json = False
 
     # Act
     response, status_code = generate_and_upload(mock_request)

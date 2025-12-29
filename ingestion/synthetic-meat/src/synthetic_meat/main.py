@@ -33,6 +33,13 @@ def load_base_data(file_path: Path) -> pl.DataFrame:
             print("Warning: 'indicator_desc' not found in fixture. Using fallback categories.")
             return pl.DataFrame()
 
+        # The API provides 'calendar_date', but we use 'report_date' internally.
+        if "calendar_date" in df.columns:
+            df = df.rename({"calendar_date": "report_date"})
+        else:
+            print("Warning: 'calendar_date' not found in fixture. Cannot determine report dates.")
+            return pl.DataFrame()
+
         return df
     except Exception as e:
         print(f"Error reading or processing JSON file: {e}")

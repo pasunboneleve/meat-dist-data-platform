@@ -34,13 +34,12 @@ jobs:
         audience: 'sts.googleapis.com'
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v1
+      uses: astral-sh/setup-uv@v7
 
     - name: Build Function Package
+      working-directory: ingestion/synthetic-meat
       run: |
-        mkdir -p ingestion/synthetic-meat/dist
-        cp ingestion/synthetic-meat/main.py ingestion/synthetic-meat/dist/
-        uv pip install -r ingestion/synthetic-meat/requirements.txt --target ingestion/synthetic-meat/dist
+        uv build
 
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@v1

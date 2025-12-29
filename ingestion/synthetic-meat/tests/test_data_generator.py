@@ -70,9 +70,9 @@ def test_generated_data_matches_stats(fixture_path):
     # Pick a date from the fixture to test against
     target_stat = base_df.row(len(base_df) // 2, named=True)
     target_date = date.fromisoformat(target_stat["report_date"].split("T")[0])
-    expected_records = int(target_stat["head"])
+    expected_records = int(target_stat["head_count"])
     # price is in cents/kg in fixture, we generate aud/kg
-    expected_avg_price = float(target_stat["value"]) / 100.0
+    expected_avg_price = float(target_stat["indicator_value"]) / 100.0
 
     synthetic_df = generate_synthetic_carcasses(base_df, target_date=target_date)
 
@@ -94,7 +94,7 @@ def test_generate_and_upload_with_target_date(mock_write_to_gcs, fixture_path):
     # Pick a date from the middle of the fixture data for a reliable test
     target_stat = base_df.row(len(base_df) // 2, named=True)
     target_date_str = target_stat["report_date"].split("T")[0]
-    expected_records = int(target_stat["head"])
+    expected_records = int(target_stat["head_count"])
 
     mock_request = Mock()
     mock_request.args = {"target_date": target_date_str}

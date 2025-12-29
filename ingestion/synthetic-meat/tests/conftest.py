@@ -48,6 +48,8 @@ def _create_fixture(path: Path):
         print(f"Successfully created fixture with {len(results)} records at {path}")
 
     except requests.exceptions.RequestException as e:
+        if isinstance(e, requests.exceptions.HTTPError):
+            print(f"\nAPI Error Response: {e.response.text}")
         raise RuntimeError(f"An error occurred during the request: {e}") from e
 
 

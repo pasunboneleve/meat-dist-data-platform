@@ -18,7 +18,9 @@ resource "google_cloudfunctions2_function" "ingestor" {
 
   build_config {
     runtime     = "python311"
-    entry_point = "synthetic-meat" # Corresponds to the script in pyproject.toml
+    # This entry point must match the script name defined in `[project.scripts]`
+    # in the `ingestion/synthetic-meat/pyproject.toml` file.
+    entry_point = "synthetic-meat"
     source {
       storage_source {
         bucket = google_storage_bucket_object.synthetic_meat_source.bucket

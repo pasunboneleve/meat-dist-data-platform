@@ -75,6 +75,19 @@ Use community modules where possible (e.g., GoogleCloudPlatform/cloud-foundation
 
 Validate locally: `tofu init → fmt → validate → plan → apply`.
 
+## Deployment Process
+
+This repository uses a two-part deployment strategy:
+
+1.  **Core Infrastructure (`infra/`)**: This configuration sets up the foundational components for CI/CD, including the Workload Identity Federation, the deployment service account, and its project-level IAM permissions. Because it grants powerful permissions, **it is designed to be applied manually from a local machine** after careful review. Any changes to IAM roles in `infra/main.tf` must be applied locally before they will take effect in the CI/CD pipeline.
+
+    ```bash
+    # From your local machine, inside the infra/ directory
+    tofu apply -var-file="prod.tfvars"
+    ```
+
+2.  **Warehouse Infrastructure (`warehouse/`)**: This configuration defines the application-specific infrastructure, such as GCS buckets, Cloud Functions, and Dataplex assets. It is deployed automatically by the GitHub Actions workflow (`.github/workflows/deploy.yml`) whenever changes are pushed to the `warehouse/` or `ingestion/` directories.
+
 ## Phase 3: Data Generation & Ingestion to Bronze
 
 - **Data Source**: A synthetic data generator script (Python) that simulates a stream of meat processing data.

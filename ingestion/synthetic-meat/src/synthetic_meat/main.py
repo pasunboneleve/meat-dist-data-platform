@@ -5,17 +5,56 @@ from datetime import datetime, timedelta, date
 from pathlib import Path
 
 import polars as pl
+import requests
 from faker import Faker
 from google.cloud import storage
 import functions_framework
 
 # --- Configuration ---
 BUCKET_NAME = os.environ.get("BRONZE_BUCKET")
-# For local testing, we can use the downloaded fixture. In a real deployment,
-# this base data might come from a GCS location or be packaged with the function.
-FIXTURE_PATH = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "market_data.json"
+MLA_API_URL = "https://api-mlastatistics.mla.com.au"
 
 # --- Helper Functions ---
+
+def fetch_base_data() -> pl.DataFrame:
+    """
+    Fetches cattle pricing data from the MLA Statistics API for the last 90 days.
+    """
+    to_date = datetime.utcnow() - timedelta(days=1)
+    from_date = to_date - timedelta(days=90)
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = to_date.strftime("%Y-%m-%d")
+
+    endpoint = "/report/6"
+    params = {
+        "indicatorID": 3,
+        "saleyardID": "DAL",
+        "fromDate": from_date_str,
+        "toDate": to_date_str,
+    }
+
+    print(f"Requesting data from {MLA_API_URL}{endpoint} with params: {params}")
+    try:
+        response = requests.get(f"{MLA_API_URL}{endpoint}", params=params)
+        response.raise_for_status()
+
+        data = response.json().get("data", [])
+        if not data:
+            print("Warning: No data found in API response. Using fallback values.")
+            return pl.DataFrame()
+
+        df = pl.DataFrame(data)
+        # Preprocessing from the original load_base_data function
+        if "indicator_desc" in df.columns:
+            df = df.rename({"indicator_desc": "category"})
+        if "calendar_date" in df.columns:
+            df = df.rename({"calendar_date": "report_date"})
+        return df
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching base data from API: {e}. Using fallback values.")
+        return pl.DataFrame()
+
 
 def load_base_data(file_path: Path) -> pl.DataFrame:
     """Loads and preprocesses the base market data from a JSON fixture file."""
@@ -164,12 +203,11 @@ def generate_and_upload(request):
         else:
             target_date = datetime.utcnow().date() - timedelta(days=1)
 
-        # TODO: Replace fixture loading with a robust data fetching mechanism
-        # directly from the MLA website for production use.
-        base_data = load_base_data(FIXTURE_PATH)
+        # Fetch live data from the MLA API.
+        base_data = fetch_base_data()
         if base_data.is_empty():
             print(
-                "Warning: Base data is empty or could not be loaded. "
+                "Warning: Base data is empty or could not be fetched. "
                 "Using fallback values."
             )
 

@@ -11,13 +11,13 @@ dependencies = [
     "google-cloud-storage>=2.0.0",
     "openpyxl>=3.1.0", # For reading xlsx with polars
     "functions-framework>=3.0.0",
-    "fastparquet>=2024.2.0"
+    "fastparquet>=2024.2.0",
+    "requests>=2.30.0"
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
-    "requests>=2.30.0",
 ]
 
 [tool.pytest.ini_options]

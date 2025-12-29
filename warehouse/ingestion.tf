@@ -13,7 +13,8 @@ data "archive_file" "synthetic_meat_source" {
     "tests",
     ".gitignore",
     "__pycache__",
-    ".pytest_cache"
+    ".pytest_cache",
+    "uv.lock"
   ]
 }
 

@@ -13,7 +13,8 @@ def _create_fixture(path: Path):
     """
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    to_date = datetime.utcnow()
+    # API might not have data for "today", so we'll fetch up to yesterday.
+    to_date = datetime.utcnow() - timedelta(days=1)
     # Fetch data from the last 90 days for a decent sample size.
     from_date = to_date - timedelta(days=90)
 

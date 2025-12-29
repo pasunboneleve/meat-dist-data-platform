@@ -18,9 +18,8 @@ resource "google_cloudfunctions2_function" "ingestor" {
 
   build_config {
     runtime     = "python311"
-    # This entry point must match the script name defined in `[project.scripts]`
-    # in the `ingestion/synthetic-meat/pyproject.toml` file.
-    entry_point = "synthetic-meat"
+    # The `entry_point` must be the name of the Python function to execute.
+    entry_point = "generate_and_upload"
     source {
       storage_source {
         bucket = google_storage_bucket_object.synthetic_meat_source.bucket
@@ -37,7 +36,10 @@ resource "google_cloudfunctions2_function" "ingestor" {
     service_account_email          = google_service_account.cloud_function_sa.email
     all_traffic_on_latest_revision = true
     environment_variables = {
-      BRONZE_BUCKET = google_storage_bucket.bronze.name
+      BRONZE_BUCKET   = google_storage_bucket.bronze.name
+      # The `FUNCTION_SOURCE` variable tells the Functions Framework which file
+      # contains the entry point function, which is necessary for a `src` layout.
+      FUNCTION_SOURCE = "src/synthesise.py"
     }
   }
 

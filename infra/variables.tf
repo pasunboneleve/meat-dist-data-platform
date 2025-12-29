@@ -9,6 +9,11 @@ variable "project_number" {
   type        = string
 }
 
+variable "region" {
+  description = "Default region for GCP resources"
+  type        = string
+}
+
 variable "pool_id" {
   description = "Workload Identity Pool ID (e.g., github-pool)"
   type        = string

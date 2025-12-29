@@ -3,8 +3,7 @@ variable "project_id" {
   type        = string
 }
 
-variable "location" {
-  description = "BigQuery dataset location"
+variable "region" {
+  description = "BigQuery dataset region"
   type        = string
-  default     = "US"
 }

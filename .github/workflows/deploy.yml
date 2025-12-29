@@ -7,6 +7,7 @@ on:
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ secrets.GCP_REGION }}
 
 jobs:
   deploy:
@@ -40,7 +41,7 @@ jobs:
 
     - name: Tofu Plan
       id: plan
-      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -out=tfplan
+      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -out=tfplan
       working-directory: warehouse
 
     - name: Tofu Apply

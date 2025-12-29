@@ -3,6 +3,7 @@
 
 project_id      = "your-gcp-project-id"
 project_number  = "your-project-number"
+region          = "your-preferred-region"  # e.g., us-central1
 pool_id         = "github-pool"
 provider_id     = "github-provider"
 github_owner    = "your-github-username"

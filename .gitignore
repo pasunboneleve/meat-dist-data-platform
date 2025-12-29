@@ -36,3 +36,4 @@ infra/*.auto.tfvars
 
 # Build artifacts
 /dist/
+ingestion/synthetic-meat/dist/

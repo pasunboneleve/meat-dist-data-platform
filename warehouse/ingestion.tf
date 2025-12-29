@@ -5,16 +5,13 @@ locals {
 # 1. Archive the Cloud Function source code from the 'ingestion' directory.
 data "archive_file" "synthetic_meat_source" {
   type        = "zip"
-  source_dir  = "${path.module}/../ingestion/synthetic-meat"
+  source_dir  = "${path.module}/../ingestion/synthetic-meat/dist"
   output_path = "${path.module}/../dist/${local.function_name}.zip"
 
-  # Exclude files not needed for the function runtime
+  # Exclude files that might be generated during local testing
   excludes = [
-    "tests",
-    ".gitignore",
     "__pycache__",
-    ".pytest_cache",
-    "uv.lock"
+    ".pytest_cache"
   ]
 }
 

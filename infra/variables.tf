@@ -14,6 +14,11 @@ variable "region" {
   type        = string
 }
 
+variable "app_engine_region" {
+  description = "Region for App Engine and Cloud Scheduler (must support App Engine)"
+  type        = string
+}
+
 variable "pool_id" {
   description = "Workload Identity Pool ID (e.g., github-pool)"
   type        = string

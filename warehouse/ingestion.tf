@@ -66,7 +66,7 @@ resource "google_cloud_run_service_iam_member" "invoker" {
 resource "google_cloud_scheduler_job" "ingestor_trigger" {
   project     = var.project_id
   name        = "${local.function_name}-trigger"
-  region      = var.region
+  region      = var.app_engine_region
   description = "Triggers the synthetic meat data generation function daily."
   schedule    = "0 5 * * *" # Daily at 5 AM UTC
   time_zone   = "Etc/UTC"

@@ -28,7 +28,7 @@ resource "google_project_service" "apis" {
 # This ensures it's created in the correct region before any scheduler jobs.
 resource "google_app_engine_application" "app" {
   project     = var.project_id
-  location_id = var.region
+  location_id = var.app_engine_region
 
   depends_on = [google_project_service.apis]
 }

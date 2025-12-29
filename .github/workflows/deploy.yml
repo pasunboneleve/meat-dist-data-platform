@@ -13,6 +13,7 @@ env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
   GCP_REGION: ${{ secrets.GCP_REGION }}
+  GCP_APP_ENGINE_REGION: ${{ secrets.GCP_APP_ENGINE_REGION }}
 
 jobs:
   deploy:
@@ -55,7 +56,7 @@ jobs:
 
     - name: Tofu Plan (infra)
       id: plan_infra
-      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="project_number=${GCP_PROJECT_NUMBER}" -out=tfplan
+      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="project_number=${GCP_PROJECT_NUMBER}" -var="app_engine_region=${GCP_APP_ENGINE_REGION}" -out=tfplan
       working-directory: warehouse
 
     - name: Tofu Apply (infra)
@@ -104,7 +105,7 @@ jobs:
 
     - name: Tofu Plan (function update)
       id: plan_update
-      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="project_number=${GCP_PROJECT_NUMBER}" -out=tfplan
+      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="project_number=${GCP_PROJECT_NUMBER}" -var="app_engine_region=${GCP_APP_ENGINE_REGION}" -out=tfplan
       working-directory: warehouse
 
     - name: Tofu Apply (function update)

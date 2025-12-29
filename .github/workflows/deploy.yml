@@ -36,10 +36,19 @@ jobs:
     - name: Set up uv
       uses: astral-sh/setup-uv@v7
 
-    - name: Build Function Package
-      working-directory: ingestion/synthetic-meat
+    - name: Build and Package Ingestion Function
       run: |
-        uv build
+        # Create a source distribution (sdist) which respects pyproject.toml definitions.
+        cd ${{ github.workspace }}/ingestion/synthetic-meat
+        uv build --sdist --out-dir dist
+
+        # Cloud Functions requires a zip file, so we convert the .tar.gz sdist to .zip
+        cd dist
+        SDIST_TGZ=$(find . -name "*.tar.gz")
+        tar -xvf "$SDIST_TGZ"
+        SDIST_DIR=$(basename "$SDIST_TGZ" .tar.gz)
+        cd "$SDIST_DIR"
+        zip -r ${{ github.workspace }}/dist/synthetic-meat-ingestor.zip .
 
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@v1

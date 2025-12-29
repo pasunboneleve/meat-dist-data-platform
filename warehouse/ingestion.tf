@@ -2,28 +2,15 @@ locals {
   function_name = "synthetic-meat-ingestor"
 }
 
-# 1. Archive the Cloud Function source code from the 'ingestion' directory.
-data "archive_file" "synthetic_meat_source" {
-  type        = "zip"
-  source_dir  = "${path.module}/../ingestion/synthetic-meat/dist"
-  output_path = "${path.module}/../dist/${local.function_name}.zip"
-
-  # Exclude files that might be generated during local testing
-  excludes = [
-    "__pycache__",
-    ".pytest_cache"
-  ]
-}
-
-# 2. Upload the zipped source code to the 'deps' GCS bucket.
+# 1. Upload the zipped source code (created by CI) to the 'deps' GCS bucket.
 #    A new object is created each time the source code MD5 hash changes.
 resource "google_storage_bucket_object" "synthetic_meat_source" {
-  name   = "source/${local.function_name}-${data.archive_file.synthetic_meat_source.output_md5}.zip"
+  name   = "source/${local.function_name}-${filemd5("${path.module}/../dist/${local.function_name}.zip")}.zip"
   bucket = google_storage_bucket.deps.name
-  source = data.archive_file.synthetic_meat_source.output_path
+  source = "${path.module}/../dist/${local.function_name}.zip"
 }
 
-# 3. Define the Cloud Function (2nd Gen).
+# 2. Define the Cloud Function (2nd Gen).
 resource "google_cloudfunctions2_function" "ingestor" {
   project  = var.project_id
   name     = local.function_name
@@ -57,7 +44,7 @@ resource "google_cloudfunctions2_function" "ingestor" {
   ]
 }
 
-# 4. Create a dedicated service account for the Cloud Scheduler job.
+# 3. Create a dedicated service account for the Cloud Scheduler job.
 resource "google_service_account" "scheduler_sa" {
   project      = var.project_id
   account_id   = "scheduler-cf-invoker"
@@ -65,7 +52,7 @@ resource "google_service_account" "scheduler_sa" {
   description  = "Service account for Cloud Scheduler to invoke Cloud Functions"
 }
 
-# 5. Grant the scheduler's service account the 'Cloud Run Invoker' role.
+# 4. Grant the scheduler's service account the 'Cloud Run Invoker' role.
 resource "google_cloudfunctions2_function_iam_member" "invoker" {
   project        = google_cloudfunctions2_function.ingestor.project
   location       = google_cloudfunctions2_function.ingestor.location
@@ -74,7 +61,7 @@ resource "google_cloudfunctions2_function_iam_member" "invoker" {
   member         = "serviceAccount:${google_service_account.scheduler_sa.email}"
 }
 
-# 6. Create the Cloud Scheduler job to trigger the function daily.
+# 5. Create the Cloud Scheduler job to trigger the function daily.
 resource "google_cloud_scheduler_job" "ingestor_trigger" {
   project     = var.project_id
   name        = "${local.function_name}-trigger"

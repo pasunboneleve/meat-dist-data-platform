@@ -3,7 +3,7 @@ import requests
 
 FIXTURE_DIR = Path(__file__).parent / "tests" / "fixtures"
 FIXTURE_PATH = FIXTURE_DIR / "market_report.xlsx"
-MLA_API_URL = "https://www.mla.com.au/api/login/search/site-search"
+MLA_API_URL = "https://www.mla.com.au/api/search/site-search"
 
 def main():
     """

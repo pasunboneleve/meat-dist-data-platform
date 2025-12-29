@@ -1,10 +1,16 @@
-name: Run Python Tests
+name: Ingestion Tests
 
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'ingestion/**'
+      - '.github/workflows/ingestion.yml'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'ingestion/**'
+      - '.github/workflows/ingestion.yml'
 
 jobs:
   test:

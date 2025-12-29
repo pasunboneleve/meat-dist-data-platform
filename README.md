@@ -1,6 +1,6 @@
 # Modern Open Lakehouse Portfolio Project on Google Cloud
 
-[![CI/CD Status](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/deploy.yml/badge.svg)](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/deploy.yml) [![Run Python Tests](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/run-tests.yml/badge.svg)](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/run-tests.yml)
+[![CI/CD Status](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/deploy.yml/badge.svg)](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/deploy.yml) [![Ingestion Tests](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/ingestion.yml/badge.svg)](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/ingestion.yml)
 
 **Goal**: Build a cost-effective (~$10–30/month), serverless-first Lakehouse for a meat distribution platform, demonstrating modern data engineering practices (Iceberg, DataPlex, Data Vault 2.0 + Kimball, Terraform IaC, CI/CD).
 

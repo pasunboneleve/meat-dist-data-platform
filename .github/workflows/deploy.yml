@@ -6,7 +6,8 @@ on:
       - main
     paths:
       - 'warehouse/**'
-      - '.github/workflows/**'
+      - 'ingestion/synthetic-meat/**'
+      - '.github/workflows/deploy.yml'
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}

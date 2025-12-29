@@ -8,7 +8,8 @@ locals {
     "dataproc.googleapis.com",
     "bigquery.googleapis.com",
     "dataplex.googleapis.com",
-    "storage.googleapis.com"
+    "storage.googleapis.com",
+    "appengine.googleapis.com"
   ]
 }
 
@@ -20,6 +21,16 @@ resource "google_project_service" "apis" {
 
   disable_dependent_services = false
   disable_on_destroy         = false
+}
+
+# --- App Engine ---
+# An App Engine application is required for Cloud Scheduler to work.
+# This ensures it's created in the correct region before any scheduler jobs.
+resource "google_app_engine_application" "app" {
+  project     = var.project_id
+  location_id = var.region
+
+  depends_on = [google_project_service.apis]
 }
 
 # --- GCS Buckets ---

@@ -88,5 +88,6 @@ resource "google_cloud_scheduler_job" "ingestor_trigger" {
 
   depends_on = [
     google_cloud_run_service_iam_member.invoker,
+    google_app_engine_application.app,
   ]
 }

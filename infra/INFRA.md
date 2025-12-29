@@ -1,9 +1,15 @@
 # Infrastructure (OpenTofu/Terraform)
 
+This folder provisions the infrastructure for deploying **GitHub
+Actions**. You don't need to change anything in this directory apart
+from providing configurations for its `tfvars` files and running
+`tofu apply` once at when initialising the project. After that, when
+you add changes to `warehouse`, the changes will be applied by
+**GitHub Actions** automagically.
+
 This folder provisions:
 - Workload Identity Pool and Provider for GitHub OIDC
 - IAM binding to let your GitHub repo impersonate the deploy service account
-- Project roles for the deploy service account (Cloud Run, Artifact Registry, Cloud Build)
 
 ## Prereqs
 - gcloud (authenticated to the target project)

@@ -44,19 +44,20 @@ jobs:
         uv build --wheel --out-dir dist
 
         # 2. Authenticate to Artifact Registry and upload the wheel.
-        #    The `google-github-actions/auth` step configures gcloud credentials.
-        uv pip install twine
+        #    We use `uv tool install` to manage CLI tools in an isolated environment.
+        uv tool install twine
         gcloud artifacts print-settings python --repo=python-packages --location=${GCP_REGION} >> ~/.pypirc
-        uv run twine upload --repository-url https://${GCP_REGION}-python.pkg.dev/${GCP_PROJECT_ID}/python-packages/ dist/*
+        uv tool run twine upload --repository-url https://${GCP_REGION}-python.pkg.dev/${GCP_PROJECT_ID}/python-packages/ dist/*
 
         # 3. Create a minimal source package for the Cloud Function.
         mkdir -p ${{ github.workspace }}/dist/bootstrap
 
         # 3a. Generate a pinned requirements.txt from uv.lock for production dependencies.
-        uv venv ./.venv
-        uv pip install -e . --no-dev --python ./.venv/bin/python
-        uv pip freeze --python ./.venv/bin/python | grep -v '^-e ' > ${{ github.workspace }}/dist/bootstrap/requirements.txt
-        rm -rf ./.venv
+        #    A temporary, clean venv is created to ensure only production dependencies are included.
+        uv venv ./.prod-venv
+        uv pip install -e . --no-dev --python ./.prod-venv/bin/python
+        uv pip freeze --python ./.prod-venv/bin/python | grep -v '^-e ' > ${{ github.workspace }}/dist/bootstrap/requirements.txt
+        rm -rf ./.prod-venv
 
         # 3b. Add our own package to requirements.txt
         VERSION=$(grep "^version =" pyproject.toml | awk -F '"' '{print $2}')

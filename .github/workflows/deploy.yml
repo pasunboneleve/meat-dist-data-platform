@@ -37,19 +37,25 @@ jobs:
       uses: astral-sh/setup-uv@v7
 
     - name: Build and Package Ingestion Function
+      working-directory: ingestion/synthetic-meat
       run: |
         # Ensure the root dist directory exists for the final zip artifact.
         mkdir -p ${{ github.workspace }}/dist
 
-        # Create a source distribution (sdist) which respects pyproject.toml definitions.
-        cd ${{ github.workspace }}/ingestion/synthetic-meat
+        # 1. Build a source distribution (sdist). This command creates a standard
+        #    .tar.gz file in the local `dist/` directory, packaging up the source code
+        #    and respecting all settings in pyproject.toml.
         uv build --sdist --out-dir dist
 
-        # Cloud Functions requires a zip file, so we convert the .tar.gz sdist to .zip
+        # 2. Unpack the sdist so we can re-package it as a .zip for Cloud Functions.
         cd dist
         SDIST_TGZ=$(find . -name "*.tar.gz")
         tar -xvf "$SDIST_TGZ"
         SDIST_DIR=$(basename "$SDIST_TGZ" .tar.gz)
+
+        # 3. Create the final zip archive. We `cd` into the unpacked directory so that
+        #    `pyproject.toml` is at the root of the zip file, which is what the
+        #    Cloud Functions build process expects for packaged applications.
         cd "$SDIST_DIR"
         zip -r ${{ github.workspace }}/dist/synthetic-meat-ingestor.zip .
 

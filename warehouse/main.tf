@@ -6,8 +6,7 @@ locals {
     "bigquery.googleapis.com",
     "dataplex.googleapis.com",
     "storage.googleapis.com",
-    "run.googleapis.com",
-    "artifactregistry.googleapis.com"
+    "run.googleapis.com"
   ]
 }
 
@@ -53,18 +52,6 @@ resource "google_storage_bucket" "deps" {
   depends_on = [google_project_service.apis]
 }
 
-
-# --- Artifact Registry ---
-# Docker repository for ingestion service images
-resource "google_artifact_registry_repository" "images" {
-  project       = var.project_id
-  location      = var.region
-  repository_id = "meat-data-images"
-  format        = "DOCKER"
-  description   = "Docker repository for meat data platform images"
-
-  depends_on = [google_project_service.apis]
-}
 
 
 # --- Dataplex ---

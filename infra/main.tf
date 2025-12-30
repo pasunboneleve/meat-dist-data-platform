@@ -38,6 +38,17 @@ resource "google_project_service" "apis" {
   disable_on_destroy         = false
 }
 
+# Docker repository for ingestion service images
+resource "google_artifact_registry_repository" "images" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "meat-data-images"
+  format        = "DOCKER"
+  description   = "Docker repository for meat data platform images"
+
+  depends_on = [google_project_service.apis]
+}
+
 resource "google_iam_workload_identity_pool" "github" {
   project                   = var.project_id
   workload_identity_pool_id = var.pool_id

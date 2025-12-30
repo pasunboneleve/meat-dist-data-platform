@@ -22,5 +22,4 @@ resource "google_cloud_run_v2_service" "ingestor" {
     }
   }
 
-  depends_on = [google_artifact_registry_repository.images]
 }

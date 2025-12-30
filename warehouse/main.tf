@@ -68,17 +68,27 @@ resource "google_bigquery_connection" "biglake" {
   depends_on = [google_project_service.apis]
 }
 
+# Wait 30s for the BigLake connection's service account to be created and propagate.
+resource "time_sleep" "wait_for_biglake_sa" {
+  create_duration = "30s"
+  depends_on      = [google_bigquery_connection.biglake]
+}
+
 # Grant the BigLake connection's service account access to the GCS buckets.
 resource "google_storage_bucket_iam_member" "biglake_sa_bronze_reader" {
   bucket = google_storage_bucket.bronze.name
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${google_bigquery_connection.biglake.cloud_resource[0].service_account_id}"
+
+  depends_on = [time_sleep.wait_for_biglake_sa]
 }
 
 resource "google_storage_bucket_iam_member" "biglake_sa_silver_reader" {
   bucket = google_storage_bucket.silver.name
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${google_bigquery_connection.biglake.cloud_resource[0].service_account_id}"
+
+  depends_on = [time_sleep.wait_for_biglake_sa]
 }
 
 

@@ -35,9 +35,9 @@ jobs:
         service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
         audience: 'sts.googleapis.com'
 
-    - name: Wait for IAM propagation
-      run: sleep 30s
-      shell: bash
+    # - name: Wait for IAM propagation
+    #   run: sleep 30s
+    #   shell: bash
 
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@v1
@@ -47,10 +47,6 @@ jobs:
     - name: Tofu Init
       id: init
       run: |
-        # The -upgrade flag should handle this, but as a fallback, we remove the
-        # lock file to ensure that a provider version compatible with the remote
-        # state is selected, resolving any potential lock file inconsistencies.
-        rm -f .terraform.lock.hcl
         tofu init -upgrade -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="prefix=${GCP_PROJECT_ID}/warehouse"
       working-directory: warehouse
 

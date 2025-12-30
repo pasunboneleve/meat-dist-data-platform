@@ -5,7 +5,9 @@ locals {
     "dataproc.googleapis.com",
     "bigquery.googleapis.com",
     "dataplex.googleapis.com",
-    "storage.googleapis.com"
+    "storage.googleapis.com",
+    "run.googleapis.com",
+    "artifactregistry.googleapis.com"
   ]
 }
 
@@ -47,6 +49,19 @@ resource "google_storage_bucket" "deps" {
   name          = "${var.project_id}-deps"
   location      = var.region
   force_destroy = true
+
+  depends_on = [google_project_service.apis]
+}
+
+
+# --- Artifact Registry ---
+# Docker repository for ingestion service images
+resource "google_artifact_registry_repository" "images" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "meat-data-images"
+  format        = "DOCKER"
+  description   = "Docker repository for meat data platform images"
 
   depends_on = [google_project_service.apis]
 }
@@ -172,4 +187,11 @@ resource "google_project_iam_member" "dataproc_sa_roles" {
   project = var.project_id
   role    = each.value
   member  = "serviceAccount:${google_service_account.dataproc_sa.email}"
+}
+
+# Grant Ingestion SA permission to write to the bronze bucket
+resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_writer" {
+  bucket = google_storage_bucket.bronze.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.ingestion_sa.email}"
 }

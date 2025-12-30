@@ -1,9 +1,14 @@
 locals {
   # Roles the deploy SA needs at the project level
   sa_roles = [
-    "roles/editor",
+    "roles/storage.admin",
     "roles/serviceusage.serviceUsageAdmin",
     "roles/resourcemanager.projectIamAdmin", # Allows the SA to grant IAM roles
+    "roles/iam.serviceAccountAdmin",
+    "roles/run.admin",
+    "roles/dataplex.admin",
+    "roles/bigquery.admin",
+    "roles/artifactregistry.admin",
   ]
 
   # Required APIs for the deployment pipeline
@@ -11,6 +16,8 @@ locals {
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "run.googleapis.com",
   ]
 
   # Full resource names

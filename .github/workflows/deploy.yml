@@ -7,10 +7,13 @@ on:
     paths:
       - 'warehouse/**'
       - '.github/workflows/deploy.yml'
+      - 'ingestion/synthetic-meat/**'
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: ${{ secrets.GCP_REGION }}
+  GAR_REPOSITORY: 'meat-data-images'
+  IMAGE_NAME: 'synthetic-meat'
 
 jobs:
   deploy:
@@ -32,6 +35,16 @@ jobs:
         service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
         audience: 'sts.googleapis.com'
 
+    - name: Configure Docker
+      run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+    - name: Build and Push Docker Image
+      id: build-image
+      run: |
+        IMAGE_URI="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        docker build -t $IMAGE_URI ./ingestion/synthetic-meat
+        docker push $IMAGE_URI
+        echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
 
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@v1
@@ -46,7 +59,7 @@ jobs:
 
     - name: Tofu Plan
       id: plan
-      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -out=tfplan
+      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="image_uri=${{ steps.build-image.outputs.image_uri }}" -out=tfplan
       working-directory: warehouse
 
     - name: Tofu Apply

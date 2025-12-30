@@ -7,7 +7,8 @@ locals {
     "dataplex.googleapis.com",
     "storage.googleapis.com",
     "run.googleapis.com",
-    "cloudscheduler.googleapis.com"
+    "cloudscheduler.googleapis.com",
+    "bigqueryconnection.googleapis.com"
   ]
 }
 
@@ -53,6 +54,32 @@ resource "google_storage_bucket" "deps" {
   depends_on = [google_project_service.apis]
 }
 
+
+# --- BigLake Connection ---
+# BigLake connection for querying GCS data from BigQuery
+resource "google_bigquery_connection" "biglake" {
+  project       = var.project_id
+  connection_id = "biglake-connection"
+  location      = var.region
+  friendly_name = "BigLake GCS Connection"
+  description   = "Connection for BigQuery to read GCS data via BigLake"
+  cloud_resource {} # This empty block specifies it's for GCS
+
+  depends_on = [google_project_service.apis]
+}
+
+# Grant the BigLake connection's service account access to the GCS buckets.
+resource "google_storage_bucket_iam_member" "biglake_sa_bronze_reader" {
+  bucket = google_storage_bucket.bronze.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_bigquery_connection.biglake.cloud_resource[0].service_account_id}"
+}
+
+resource "google_storage_bucket_iam_member" "biglake_sa_silver_reader" {
+  bucket = google_storage_bucket.silver.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_bigquery_connection.biglake.cloud_resource[0].service_account_id}"
+}
 
 
 # --- Dataplex ---

@@ -9,7 +9,7 @@ resource "google_cloud_run_v2_service" "ingestor" {
   location = var.region
 
   template {
-    service_account = google_service_account.cloud_function_sa.email
+    service_account = google_service_account.ingestion_sa.email
     containers {
       image = var.image_uri
       ports {

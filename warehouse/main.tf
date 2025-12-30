@@ -186,25 +186,25 @@ resource "google_bigquery_dataset" "gold_meat_market" {
 }
 
 # --- IAM / Service Accounts ---
-# Service account for Cloud Functions
-resource "google_service_account" "cloud_function_sa" {
+# Service account for the ingestion service
+resource "google_service_account" "ingestion_sa" {
   project      = var.project_id
-  account_id   = "ingestion-cloud-function"
-  display_name = "Ingestion Cloud Function SA"
-  description  = "Service account for the ingestion Cloud Function"
+  account_id   = "ingestion-service"
+  display_name = "Ingestion Service SA"
+  description  = "Service account for the ingestion service"
 
   depends_on = [google_project_service.apis]
 }
 
-# Grant Cloud Function SA permissions
-resource "google_project_iam_member" "cloud_function_sa_roles" {
+# Grant Ingestion SA permissions
+resource "google_project_iam_member" "ingestion_sa_roles" {
   for_each = toset([
     "roles/storage.objectAdmin", # To write to GCS bronze bucket
     "roles/dataplex.dataWriter"  # To interact with Dataplex
   ])
   project = var.project_id
   role    = each.value
-  member  = "serviceAccount:${google_service_account.cloud_function_sa.email}"
+  member  = "serviceAccount:${google_service_account.ingestion_sa.email}"
 }
 
 # Service account for Dataproc Serverless jobs

@@ -25,11 +25,6 @@ repo-root/
 │   ├── variables.tf
 │   ├── outputs.tf
 │   └── modules/
-├── functions/              # Cloud Functions code
-│   └── ingestion/
-│       ├── main.py
-│       ├── requirements.txt
-│       └── test_ingestion.py
 ├── spark_jobs/             # Dataproc Serverless scripts
 │   ├── bronze_to_silver_dv.py
 │   └── silver_to_gold_kimball.py
@@ -43,7 +38,6 @@ repo-root/
 
 1. Create a new GCP project, enable billing.
 2. Enable required APIs:
-   - Cloud Functions API
    - Cloud Scheduler API
    - Cloud Build API
    - Dataproc API
@@ -67,7 +61,7 @@ Deploy in this order:
   - Assets linking buckets to zones
 - BigQuery dataset: `gold_meat_market`
 - Service accounts & IAM:
-  - One for Cloud Functions (Storage writer, DataPlex)
+  - One for the ingestion service (Storage writer, DataPlex)
   - One for Dataproc (BigQuery, Storage, DataPlex roles)
 - BigLake connection (if needed for Iceberg catalog)
 
@@ -86,7 +80,7 @@ This repository uses a two-part deployment strategy:
     tofu apply -var-file="prod.tfvars"
     ```
 
-2.  **Warehouse Infrastructure (`warehouse/`)**: This configuration defines the application-specific infrastructure, such as GCS buckets, Cloud Functions, and Dataplex assets. It is deployed automatically by the GitHub Actions workflow (`.github/workflows/deploy.yml`) whenever changes are pushed to the `warehouse/` or `ingestion/` directories.
+2.  **Warehouse Infrastructure (`warehouse/`)**: This configuration defines the application-specific infrastructure, such as GCS buckets, Cloud Run services, and Dataplex assets. It is deployed automatically by the GitHub Actions workflow (`.github/workflows/deploy.yml`) whenever changes are pushed to the `warehouse/` or `ingestion/` directories.
 
 ## Phase 3: Data Generation & Ingestion to Bronze
 

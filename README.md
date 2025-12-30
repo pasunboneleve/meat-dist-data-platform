@@ -6,7 +6,7 @@
 
 **Key Technologies**:
 - **Data Source**: A synthetic data generator that simulates a stream of meat processing data.
-- **Ingestion**: Synthetic data generator (Python container).
+- **Ingestion**: Cloud Run service (Python container) triggered by Cloud Scheduler.
 - **Bronze Layer**: Raw JSON/Parquet files in GCS.
 - **Silver Layer**: Data Vault 2.0 modeled Iceberg tables in GCS.
 - **Gold Layer**: Kimball star schema views or materialized tables queried via BigQuery (over Iceberg/BigLake).
@@ -16,21 +16,25 @@
 - **IaC**: OpenTofu for everything, configured using HCL.
 - **CI/CD & Testing**: GitHub Actions (lint, plan, tests, apply on merge).
 
-## Project Structure (Suggested Git Repo Layout)
+## Project Structure
 
 ```
 repo-root/
-├── infra/                  # Terraform modules and configs
+├── .github/workflows/        # GitHub Actions CI/CD pipelines
+│   ├── deploy.yml
+│   └── ingestion.yml
+├── infra/                    # Core infrastructure (WIF, deploy SA, permissions)
 │   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   └── modules/
-├── spark_jobs/             # Dataproc Serverless scripts
-│   ├── bronze_to_silver_dv.py
-│   └── silver_to_gold_kimball.py
-├── tests/                  # Integration/unit tests
-├── .github/workflows/
-│   └── ci-cd.yml           # GitHub Actions pipeline
+│   └── ...
+├── ingestion/
+│   └── synthetic-meat/       # Source for the Cloud Run ingestion service
+│       ├── src/
+│       ├── tests/
+│       ├── Dockerfile
+│       └── pyproject.toml
+├── warehouse/                # Data platform infrastructure (GCS, Dataplex, etc.)
+│   ├── main.tf
+│   └── ...
 └── README.md
 ```
 
@@ -91,11 +95,11 @@ This repository uses a two-part deployment strategy:
   - Assign pseudo-random identifiers (e.g., RFID-style tags) for traceability.
   - Calculate prices based on grid formulas, applying premiums/discounts for factors like marbling, fat depth, and yield.
   - Include additional fields for rich analytics, such as slaughter date, processing plant ID, breed, and quality scores.
-- **Container**: The data generation logic is packaged as a Docker container, which can be run to produce synthetic data.
-- **Execution**: The container can be run locally or on a schedule to generate data.
-  - It will generate a new batch of data upon each invocation.
-  - Convert the generated data to Parquet format.
-  - Write partitioned data to the bronze GCS bucket, e.g., `gs://bronze/carcasses/plant_id=P01/year=2025/month=12/day=27/batch_12345.parquet`
+- **Container**: The data generation logic is packaged as a Docker container and deployed as a serverless Cloud Run service.
+- **Execution**: A Cloud Scheduler job triggers the Cloud Run service via an HTTP request on a daily schedule.
+  - The service generates a new batch of data upon each invocation.
+  - It converts the generated data to Parquet format.
+  - It writes the partitioned data to the bronze GCS bucket, e.g., `gs://bronze/carcasses/plant_id=P01/year=2025/month=12/day=27/batch_12345.parquet`
 - **Discovery**: DataPlex automatically discovers the new Parquet files as they land, making them available for querying via BigLake.
 
 ## Phase 4: Transformations

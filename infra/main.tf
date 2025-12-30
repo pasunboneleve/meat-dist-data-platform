@@ -4,10 +4,6 @@ locals {
     "roles/editor",
     "roles/serviceusage.serviceUsageAdmin",
     "roles/resourcemanager.projectIamAdmin", # Allows the SA to grant IAM roles
-    "roles/artifactregistry.writer",       # To upload packages to Artifact Registry
-    "roles/artifactregistry.admin",        # To set IAM policies on repositories
-    "roles/run.admin",                     # To set IAM policies on Cloud Run services
-    "roles/appengine.appAdmin",            # To create the App Engine application
   ]
 
   # Required APIs for the deployment pipeline
@@ -15,7 +11,6 @@ locals {
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "cloudresourcemanager.googleapis.com",
-    "appengine.googleapis.com", # Needed to grant App Engine roles
   ]
 
   # Full resource names

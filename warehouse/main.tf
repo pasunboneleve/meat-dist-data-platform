@@ -2,16 +2,10 @@
 locals {
   # APIs needed for the data warehouse infrastructure
   required_apis = [
-    "cloudrun.googleapis.com",
-    "cloudscheduler.googleapis.com",
-    "cloudbuild.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "run.googleapis.com",
     "dataproc.googleapis.com",
     "bigquery.googleapis.com",
     "dataplex.googleapis.com",
-    "storage.googleapis.com",
-    "appengine.googleapis.com"
+    "storage.googleapis.com"
   ]
 }
 
@@ -25,25 +19,6 @@ resource "google_project_service" "apis" {
   disable_on_destroy         = false
 }
 
-# --- App Engine ---
-# An App Engine application is required for Cloud Scheduler to work.
-# This ensures it's created in the correct region before any scheduler jobs.
-resource "google_app_engine_application" "app" {
-  project     = var.project_id
-  location_id = var.app_engine_region
-
-  depends_on = [google_project_service.apis]
-}
-
-# --- Service Identities ---
-# Get the service agent identity for Cloud Run. This data source waits until the
-# agent has been created, which happens when the run.googleapis.com API is enabled.
-resource "google_project_service_identity" "run_agent" {
-  provider = google-beta
-  project  = var.project_id  # Or data.google_project.your_project.project_id
-  service  = "cloudrun.googleapis.com"
-  depends_on = [google_project_service.apis["run.googleapis.com"]]
-}
 
 # --- GCS Buckets ---
 # Bronze bucket for raw data ingestion
@@ -76,27 +51,6 @@ resource "google_storage_bucket" "deps" {
   depends_on = [google_project_service.apis]
 }
 
-# --- Artifact Registry ---
-# Docker image repository for custom code
-resource "google_artifact_registry_repository" "docker_images" {
-  project       = var.project_id
-  location      = var.region
-  repository_id = "docker-images"
-  description   = "Repository for Cloud Run container images"
-  format        = "DOCKER"
-
-  depends_on = [google_project_service.apis]
-}
-
-# Grant the Cloud Run Service Agent permission to pull images from the repository.
-resource "google_artifact_registry_repository_iam_member" "run_agent_artifact_registry_reader" {
-  project    = google_artifact_registry_repository.docker_images.project
-  location   = google_artifact_registry_repository.docker_images.location
-  repository = google_artifact_registry_repository.docker_images.name
-  role       = "roles/artifactregistry.reader"
-  # The service agent identity is retrieved from the `google_project_service_identity` data source.
-  member     = "serviceAccount:${google_project_service_identity.run_agent.email}"
-}
 
 # --- Dataplex ---
 # Dataplex Lake for centralized management and governance
@@ -186,26 +140,6 @@ resource "google_bigquery_dataset" "gold_meat_market" {
 }
 
 # --- IAM / Service Accounts ---
-# Service account for the ingestion service
-resource "google_service_account" "ingestion_sa" {
-  project      = var.project_id
-  account_id   = "ingestion-service"
-  display_name = "Ingestion Service SA"
-  description  = "Service account for the ingestion service"
-
-  depends_on = [google_project_service.apis]
-}
-
-# Grant Ingestion SA permissions
-resource "google_project_iam_member" "ingestion_sa_roles" {
-  for_each = toset([
-    "roles/storage.objectAdmin", # To write to GCS bronze bucket
-    "roles/dataplex.dataWriter"  # To interact with Dataplex
-  ])
-  project = var.project_id
-  role    = each.value
-  member  = "serviceAccount:${google_service_account.ingestion_sa.email}"
-}
 
 # Service account for Dataproc Serverless jobs
 resource "google_service_account" "dataproc_sa" {

@@ -6,7 +6,7 @@
 
 **Key Technologies**:
 - **Data Source**: A synthetic data generator that simulates a stream of meat processing data.
-- **Ingestion**: Cloud Run (Python container) triggered by Cloud Scheduler.
+- **Ingestion**: Synthetic data generator (Python container).
 - **Bronze Layer**: Raw JSON/Parquet files in GCS.
 - **Silver Layer**: Data Vault 2.0 modeled Iceberg tables in GCS.
 - **Gold Layer**: Kimball star schema views or materialized tables queried via BigQuery (over Iceberg/BigLake).
@@ -61,7 +61,6 @@ Deploy in this order:
   - Assets linking buckets to zones
 - BigQuery dataset: `gold_meat_market`
 - Service accounts & IAM:
-  - One for the ingestion service (Storage writer, DataPlex)
   - One for Dataproc (BigQuery, Storage, DataPlex roles)
 - BigLake connection (if needed for Iceberg catalog)
 
@@ -80,7 +79,7 @@ This repository uses a two-part deployment strategy:
     tofu apply -var-file="prod.tfvars"
     ```
 
-2.  **Warehouse Infrastructure (`warehouse/`)**: This configuration defines the application-specific infrastructure, such as GCS buckets, Cloud Run services, and Dataplex assets. It is deployed automatically by the GitHub Actions workflow (`.github/workflows/deploy.yml`) whenever changes are pushed to the `warehouse/` or `ingestion/` directories.
+2.  **Warehouse Infrastructure (`warehouse/`)**: This configuration defines the application-specific infrastructure, such as GCS buckets, and Dataplex assets. It is deployed automatically by the GitHub Actions workflow (`.github/workflows/deploy.yml`) whenever changes are pushed to the `warehouse/` directory.
 
 ## Phase 3: Data Generation & Ingestion to Bronze
 
@@ -92,12 +91,11 @@ This repository uses a two-part deployment strategy:
   - Assign pseudo-random identifiers (e.g., RFID-style tags) for traceability.
   - Calculate prices based on grid formulas, applying premiums/discounts for factors like marbling, fat depth, and yield.
   - Include additional fields for rich analytics, such as slaughter date, processing plant ID, breed, and quality scores.
-- **Cloud Run (Python 3.11+ container)**:
-  - The service hosts the data generation logic, packaged as a Docker container.
+- **Container**: The data generation logic is packaged as a Docker container, which can be run to produce synthetic data.
+- **Execution**: The container can be run locally or on a schedule to generate data.
   - It will generate a new batch of data upon each invocation.
   - Convert the generated data to Parquet format.
   - Write partitioned data to the bronze GCS bucket, e.g., `gs://bronze/carcasses/plant_id=P01/year=2025/month=12/day=27/batch_12345.parquet`
-- **Trigger**: Cloud Scheduler cron job (e.g., `*/5 * * * *` for every 5 min) makes an authenticated HTTP request to the Cloud Run service to generate a new micro-batch of data.
 - **Discovery**: DataPlex automatically discovers the new Parquet files as they land, making them available for querying via BigLake.
 
 ## Phase 4: Transformations
@@ -155,7 +153,7 @@ Use Dataproc Serverless PySpark batch:
 ## Validation Milestones (Quick Wins)
 
 1. OpenTofu apply → DataPlex lake + buckets visible.
-2. Deploy & trigger ingestion service → Files land in bronze → BigLake table auto-created.
+2. Run data generator → Files land in bronze → BigLake table auto-created.
 3. Run Dataproc Spark job → Iceberg tables in silver → Queryable in BigQuery.
 4. Build Looker Studio dashboard → Data visualized.
 5. CI/CD pipeline runs successfully on a commit.

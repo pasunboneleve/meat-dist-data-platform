@@ -8,18 +8,3 @@ variable "region" {
   type        = string
 }
 
-variable "app_engine_region" {
-  description = "Region for App Engine and Cloud Scheduler (must support App Engine)"
-  type        = string
-}
-
-variable "project_number" {
-  description = "GCP project number, used for service account identifiers"
-  type        = string
-}
-
-variable "image_uri" {
-  description = "URI of the container image for the ingestion service"
-  type        = string
-  default     = "us-docker.pkg.dev/cloudrun/container/hello"
-}

@@ -34,7 +34,7 @@ jobs:
       working-directory: ./ingestion/synthetic-meat
       run: |
         uv venv
-        uv pip sync --extra dev
+        uv sync --extra dev
 
     - name: Run tests
       working-directory: ./ingestion/synthetic-meat

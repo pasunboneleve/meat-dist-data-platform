@@ -35,15 +35,6 @@ jobs:
         service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
         audience: 'sts.googleapis.com'
 
-    - name: Create dummy package for initial Tofu apply
-      run: |
-        # The Cloud Function resource requires a source zip file to exist for `tofu plan`.
-        # We create a placeholder file here that will be replaced after the real artifact is built.
-        mkdir -p ${{ github.workspace }}/dist/bootstrap
-        echo "def generate_and_upload(request): return ('dummy', 200)" > ${{ github.workspace }}/dist/bootstrap/main.py
-        cd ${{ github.workspace }}/dist/bootstrap
-        zip -r ${{ github.workspace }}/dist/synthetic-meat-ingestor.zip .
-
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@v1
       with:
@@ -51,63 +42,36 @@ jobs:
 
     - name: Tofu Init
       id: init
-      run: tofu init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="prefix=${GCP_PROJECT_ID}/warehouse"
+      run: |
+        # The -upgrade flag should handle this, but as a fallback, we remove the
+        # lock file to ensure that a provider version compatible with the remote
+        # state is selected, resolving any potential lock file inconsistencies.
+        rm -f .terraform.lock.hcl
+        tofu init -upgrade -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="prefix=${GCP_PROJECT_ID}/warehouse"
       working-directory: warehouse
 
-    - name: Tofu Plan (infra)
-      id: plan_infra
+    - name: Tofu Plan (initial)
+      id: plan_initial
       run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="project_number=${GCP_PROJECT_NUMBER}" -var="app_engine_region=${GCP_APP_ENGINE_REGION}" -out=tfplan
       working-directory: warehouse
 
-    - name: Tofu Apply (infra)
+    - name: Tofu Apply (initial)
       run: tofu apply -auto-approve tfplan
       working-directory: warehouse
 
-    - name: Set up uv
-      uses: astral-sh/setup-uv@v7
-
-    - name: Build and Deploy Ingestion Function to Artifact Registry
-      working-directory: ingestion/synthetic-meat
+    - name: Build and Push Docker Image
       run: |
-        # 1. Build a wheel for the Python package.
-        uv build --wheel --out-dir dist
+        gcloud auth configure-docker ${{ GCP_REGION }}-docker.pkg.dev
+        IMAGE_TAG=${{ GCP_REGION }}-docker.pkg.dev/${GCP_PROJECT_ID}/docker-images/synthetic-meat-ingestor:${{ github.sha }}
+        docker build -t $IMAGE_TAG ./ingestion/synthetic-meat
+        docker push $IMAGE_TAG
+        echo "IMAGE_URI=$IMAGE_TAG" >> $GITHUB_ENV
 
-        # 2. Authenticate to Artifact Registry and upload the wheel.
-        #    We use `uv tool install` to manage CLI tools in an isolated environment.
-        uv tool install twine
-        gcloud artifacts print-settings python --repository=python-packages --location=${GCP_REGION} >> ~/.pypirc
-        uv tool run twine upload --repository-url https://${GCP_REGION}-python.pkg.dev/${GCP_PROJECT_ID}/python-packages/ dist/*
-
-        # 3. Create a minimal source package for the Cloud Function.
-        mkdir -p ${{ github.workspace }}/dist/bootstrap
-
-        # 3a. Generate a pinned requirements.txt from uv.lock for production dependencies.
-        #    A temporary, clean venv is created to ensure only production dependencies are included.
-        uv venv ./.prod-venv
-        uv pip install -e . --no-dev --python ./.prod-venv/bin/python
-        uv pip freeze --python ./.prod-venv/bin/python | grep -v '^-e ' > ${{ github.workspace }}/dist/bootstrap/requirements.txt
-        rm -rf ./.prod-venv
-
-        # 3b. Add our own package to requirements.txt
-        VERSION=$(grep "^version =" pyproject.toml | awk -F '"' '{print $2}')
-        echo "synthetic-meat==$VERSION" >> ${{ github.workspace }}/dist/bootstrap/requirements.txt
-
-        # 3c. Create main.py
-        echo "from src.synthesise import generate_and_upload" > ${{ github.workspace }}/dist/bootstrap/main.py
-
-        # 3d. Add a pip.conf to tell Cloud Build where to find our private package.
-        echo "[global]" > ${{ github.workspace }}/dist/bootstrap/pip.conf
-        echo "extra-index-url = https://${GCP_REGION}-python.pkg.dev/${GCP_PROJECT_ID}/python-packages/simple/" >> ${{ github.workspace }}/dist/bootstrap/pip.conf
-
-        # 4. Zip the bootstrap files into the final deployment artifact.
-        cd ${{ github.workspace }}/dist/bootstrap
-        zip -r ${{ github.workspace }}/dist/synthetic-meat-ingestor.zip .
-
-    - name: Tofu Plan (function update)
+    - name: Tofu Plan (service update)
       id: plan_update
-      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="project_number=${GCP_PROJECT_NUMBER}" -var="app_engine_region=${GCP_APP_ENGINE_REGION}" -out=tfplan
+      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="project_number=${GCP_PROJECT_NUMBER}" -var="app_engine_region=${GCP_APP_ENGINE_REGION}" -var="image_uri=${{ env.IMAGE_URI }}" -out=tfplan
       working-directory: warehouse
 
-    - name: Tofu Apply (function update)
+    - name: Tofu Apply (service update)
       run: tofu apply -auto-approve tfplan
       working-directory: warehouse

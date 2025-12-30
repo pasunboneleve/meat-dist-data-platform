@@ -6,7 +6,7 @@
 
 **Key Technologies**:
 - **Data Source**: A synthetic data generator that simulates a stream of meat processing data.
-- **Ingestion**: Cloud Functions (Python) triggered by Cloud Scheduler (every 1–5 minutes).
+- **Ingestion**: Cloud Run (Python container) triggered by Cloud Scheduler.
 - **Bronze Layer**: Raw JSON/Parquet files in GCS.
 - **Silver Layer**: Data Vault 2.0 modeled Iceberg tables in GCS.
 - **Gold Layer**: Kimball star schema views or materialized tables queried via BigQuery (over Iceberg/BigLake).
@@ -98,12 +98,12 @@ This repository uses a two-part deployment strategy:
   - Assign pseudo-random identifiers (e.g., RFID-style tags) for traceability.
   - Calculate prices based on grid formulas, applying premiums/discounts for factors like marbling, fat depth, and yield.
   - Include additional fields for rich analytics, such as slaughter date, processing plant ID, breed, and quality scores.
-- **Cloud Function (2nd gen, Python 3.11+)**:
-  - The function will host the data generation logic.
+- **Cloud Run (Python 3.11+ container)**:
+  - The service hosts the data generation logic, packaged as a Docker container.
   - It will generate a new batch of data upon each invocation.
   - Convert the generated data to Parquet format.
   - Write partitioned data to the bronze GCS bucket, e.g., `gs://bronze/carcasses/plant_id=P01/year=2025/month=12/day=27/batch_12345.parquet`
-- **Trigger**: Cloud Scheduler cron job (e.g., `*/5 * * * *` for every 5 min) makes an HTTP request to the Cloud Function to generate a new micro-batch of data.
+- **Trigger**: Cloud Scheduler cron job (e.g., `*/5 * * * *` for every 5 min) makes an authenticated HTTP request to the Cloud Run service to generate a new micro-batch of data.
 - **Discovery**: DataPlex automatically discovers the new Parquet files as they land, making them available for querying via BigLake.
 
 ## Phase 4: Transformations
@@ -161,7 +161,7 @@ Use Dataproc Serverless PySpark batch:
 ## Validation Milestones (Quick Wins)
 
 1. OpenTofu apply → DataPlex lake + buckets visible.
-2. Deploy & trigger ingestion Function → Files land in bronze → BigLake table auto-created.
+2. Deploy & trigger ingestion service → Files land in bronze → BigLake table auto-created.
 3. Run Dataproc Spark job → Iceberg tables in silver → Queryable in BigQuery.
 4. Build Looker Studio dashboard → Data visualized.
 5. CI/CD pipeline runs successfully on a commit.

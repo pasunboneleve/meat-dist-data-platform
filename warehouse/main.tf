@@ -6,6 +6,7 @@ locals {
     "cloudscheduler.googleapis.com",
     "cloudbuild.googleapis.com",
     "artifactregistry.googleapis.com",
+    "run.googleapis.com",
     "dataproc.googleapis.com",
     "bigquery.googleapis.com",
     "dataplex.googleapis.com",
@@ -66,25 +67,25 @@ resource "google_storage_bucket" "deps" {
 }
 
 # --- Artifact Registry ---
-# Python package repository for custom code
-resource "google_artifact_registry_repository" "python_packages" {
+# Docker image repository for custom code
+resource "google_artifact_registry_repository" "docker_images" {
   project       = var.project_id
   location      = var.region
-  repository_id = "python-packages"
-  description   = "Repository for Python wheels"
-  format        = "PYTHON"
+  repository_id = "docker-images"
+  description   = "Repository for Cloud Run container images"
+  format        = "DOCKER"
 
   depends_on = [google_project_service.apis]
 }
 
-# Grant the Cloud Build service account permission to read from the repository.
-# This allows Cloud Functions to install packages from here during deployment.
-resource "google_artifact_registry_repository_iam_member" "cloudbuild_artifact_registry_reader" {
-  project    = google_artifact_registry_repository.python_packages.project
-  location   = google_artifact_registry_repository.python_packages.location
-  repository = google_artifact_registry_repository.python_packages.name
+# Grant the Cloud Run Service Agent permission to pull images from the repository.
+resource "google_artifact_registry_repository_iam_member" "run_agent_artifact_registry_reader" {
+  project    = google_artifact_registry_repository.docker_images.project
+  location   = google_artifact_registry_repository.docker_images.location
+  repository = google_artifact_registry_repository.docker_images.name
   role       = "roles/artifactregistry.reader"
-  member     = "serviceAccount:${var.project_number}@cloudbuild.gserviceaccount.com"
+  # The service agent identity that runs the Cloud Run service.
+  member     = "serviceAccount:service-${var.project_number}@gcp-sa-run.iam.gserviceaccount.com"
 }
 
 

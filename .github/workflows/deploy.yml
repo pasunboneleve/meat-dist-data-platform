@@ -35,6 +35,10 @@ jobs:
         service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
         audience: 'sts.googleapis.com'
 
+    - name: Wait for IAM propagation
+      run: sleep 30s
+      shell: bash
+
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@v1
       with:

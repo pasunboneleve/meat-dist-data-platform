@@ -35,6 +35,17 @@ resource "google_app_engine_application" "app" {
   depends_on = [google_project_service.apis]
 }
 
+# --- Service Identities ---
+# Get the service agent identity for Cloud Run. This data source waits until the
+# agent has been created, which happens when the run.googleapis.com API is enabled.
+data "google_project_service_identity" "run_agent" {
+  provider = google
+  project  = var.project_id
+  service  = "run.googleapis.com"
+
+  depends_on = [google_project_service.apis["run.googleapis.com"]]
+}
+
 # --- GCS Buckets ---
 # Bronze bucket for raw data ingestion
 resource "google_storage_bucket" "bronze" {
@@ -84,13 +95,8 @@ resource "google_artifact_registry_repository_iam_member" "run_agent_artifact_re
   location   = google_artifact_registry_repository.docker_images.location
   repository = google_artifact_registry_repository.docker_images.name
   role       = "roles/artifactregistry.reader"
-  # The service agent identity that runs the Cloud Run service.
-  member     = "serviceAccount:service-${var.project_number}@gcp-sa-run.iam.gserviceaccount.com"
-
-  # This depends_on is crucial. It ensures that the Cloud Run service is created
-  # first, which in turn triggers Google to create the service agent identity.
-  # Without this, the IAM binding will fail because the service agent doesn't exist yet.
-  depends_on = [google_cloud_run_v2_service.ingestor]
+  # The service agent identity is retrieved from the `google_project_service_identity` data source.
+  member     = "serviceAccount:${data.google_project_service_identity.run_agent.email}"
 }
 
 

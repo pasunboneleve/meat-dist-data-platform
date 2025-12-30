@@ -86,6 +86,11 @@ resource "google_artifact_registry_repository_iam_member" "run_agent_artifact_re
   role       = "roles/artifactregistry.reader"
   # The service agent identity that runs the Cloud Run service.
   member     = "serviceAccount:service-${var.project_number}@gcp-sa-run.iam.gserviceaccount.com"
+
+  # This depends_on is crucial. It ensures that the Cloud Run service is created
+  # first, which in turn triggers Google to create the service agent identity.
+  # Without this, the IAM binding will fail because the service agent doesn't exist yet.
+  depends_on = [google_cloud_run_v2_service.ingestor]
 }
 
 

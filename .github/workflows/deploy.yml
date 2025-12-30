@@ -59,7 +59,7 @@ jobs:
 
     - name: Tofu Plan
       id: plan
-      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="image_uri=${{ steps.build-image.outputs.image_uri }}" -out=tfplan
+      run: tofu plan -var="project_id=${GCP_PROJECT_ID}" -var="region=${GCP_REGION}" -var="app_engine_region=${{ secrets.GCP_APP_ENGINE_REGION }}" -var="image_uri=${{ steps.build-image.outputs.image_uri }}" -out=tfplan
       working-directory: warehouse
 
     - name: Tofu Apply

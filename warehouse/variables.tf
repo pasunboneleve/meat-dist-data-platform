@@ -14,3 +14,8 @@ variable "image_uri" {
   default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
 
+variable "app_engine_region" {
+  description = "Region for App Engine and Cloud Scheduler"
+  type        = string
+}
+

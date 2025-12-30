@@ -6,7 +6,8 @@ locals {
     "bigquery.googleapis.com",
     "dataplex.googleapis.com",
     "storage.googleapis.com",
-    "run.googleapis.com"
+    "run.googleapis.com",
+    "cloudscheduler.googleapis.com"
   ]
 }
 
@@ -159,6 +160,16 @@ resource "google_service_account" "dataproc_sa" {
   account_id   = "dataproc-serverless"
   display_name = "Dataproc Serverless SA"
   description  = "Service account for Dataproc Serverless Spark jobs"
+
+  depends_on = [google_project_service.apis]
+}
+
+# Service account for Cloud Scheduler jobs
+resource "google_service_account" "scheduler_sa" {
+  project      = var.project_id
+  account_id   = "scheduler-invoker"
+  display_name = "Cloud Scheduler Invoker SA"
+  description  = "Service account for Cloud Scheduler jobs to invoke services"
 
   depends_on = [google_project_service.apis]
 }

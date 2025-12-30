@@ -61,8 +61,8 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
-        gcloud auth configure-docker ${{ GCP_REGION }}-docker.pkg.dev
-        IMAGE_TAG=${{ GCP_REGION }}-docker.pkg.dev/${GCP_PROJECT_ID}/docker-images/synthetic-meat-ingestor:${{ github.sha }}
+        gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev
+        IMAGE_TAG=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/docker-images/synthetic-meat-ingestor:${{ github.sha }}
         docker build -t $IMAGE_TAG ./ingestion/synthetic-meat
         docker push $IMAGE_TAG
         echo "IMAGE_URI=$IMAGE_TAG" >> $GITHUB_ENV

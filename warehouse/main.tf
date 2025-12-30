@@ -38,11 +38,10 @@ resource "google_app_engine_application" "app" {
 # --- Service Identities ---
 # Get the service agent identity for Cloud Run. This data source waits until the
 # agent has been created, which happens when the run.googleapis.com API is enabled.
-data "google_project_service_identity" "run_agent" {
-  provider = google
-  project  = var.project_id
-  service  = "run.googleapis.com"
-
+resource "google_project_service_identity" "run_agent" {
+  provider = google-beta
+  project  = var.project_id  # Or data.google_project.your_project.project_id
+  service  = "cloudrun.googleapis.com"
   depends_on = [google_project_service.apis["run.googleapis.com"]]
 }
 
@@ -96,9 +95,8 @@ resource "google_artifact_registry_repository_iam_member" "run_agent_artifact_re
   repository = google_artifact_registry_repository.docker_images.name
   role       = "roles/artifactregistry.reader"
   # The service agent identity is retrieved from the `google_project_service_identity` data source.
-  member     = "serviceAccount:${data.google_project_service_identity.run_agent.email}"
+  member     = "serviceAccount:${google_project_service_identity.run_agent.email}"
 }
-
 
 # --- Dataplex ---
 # Dataplex Lake for centralized management and governance

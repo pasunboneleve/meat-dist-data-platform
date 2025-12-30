@@ -3,7 +3,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 5.21"
+      version = "~> 5.45.0"
     }
     github = {
       source  = "integrations/github"

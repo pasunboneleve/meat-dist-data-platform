@@ -5,6 +5,7 @@ locals {
     "roles/serviceusage.serviceUsageAdmin",
     "roles/resourcemanager.projectIamAdmin", # Allows the SA to grant IAM roles
     "roles/iam.serviceAccountAdmin",
+    "roles/iam.serviceAccountUser",
     "roles/run.admin",
     "roles/dataplex.admin",
     "roles/bigquery.admin",

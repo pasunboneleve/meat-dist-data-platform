@@ -1,8 +1,0 @@
-# Pinned versions from uv.lock to ensure reproducible builds in GCF.
-polars>=0.20.0
-pyarrow>=15.0.0
-faker>=20.0.0
-gcsfs>=2023.0.0
-google-cloud-storage>=2.0.0
-functions-framework>=3.0.0
-requests>=2.30.0

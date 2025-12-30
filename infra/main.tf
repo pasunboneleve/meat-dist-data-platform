@@ -10,6 +10,7 @@ locals {
     "roles/dataplex.admin",
     "roles/bigquery.admin",
     "roles/artifactregistry.admin",
+    "roles/cloudscheduler.admin",
   ]
 
   # Required APIs for the deployment pipeline

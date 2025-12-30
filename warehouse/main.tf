@@ -1,4 +1,8 @@
 # Re-trigger CI/CD after local infra apply.
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
 locals {
   # APIs needed for the data warehouse infrastructure
   required_apis = [
@@ -89,6 +93,15 @@ resource "google_storage_bucket_iam_member" "biglake_sa_silver_reader" {
   member = "serviceAccount:${google_bigquery_connection.biglake.cloud_resource[0].service_account_id}"
 
   depends_on = [time_sleep.wait_for_biglake_sa]
+}
+
+# Grant the Dataplex service account permission to use the BigLake connection
+resource "google_bigquery_connection_iam_member" "dataplex_sa_connection_user" {
+  project       = google_bigquery_connection.biglake.project
+  location      = google_bigquery_connection.biglake.location
+  connection_id = google_bigquery_connection.biglake.connection_id
+  role          = "roles/bigquery.connectionUser"
+  member        = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-dataplex.iam.gserviceaccount.com"
 }
 
 

@@ -38,10 +38,10 @@ resource "google_service_account" "scheduler_sa" {
 }
 
 # 3. Grant the scheduler's service account the 'Cloud Run Invoker' role.
-resource "google_cloud_run_service_iam_member" "invoker" {
+resource "google_cloud_run_v2_service_iam_member" "invoker" {
   project  = google_cloud_run_v2_service.ingestor.project
   location = google_cloud_run_v2_service.ingestor.location
-  service  = google_cloud_run_v2_service.ingestor.name
+  name     = google_cloud_run_v2_service.ingestor.name
   role     = "roles/run.invoker"
   member   = "serviceAccount:${google_service_account.scheduler_sa.email}"
 }
@@ -72,7 +72,7 @@ resource "google_cloud_scheduler_job" "ingestor_trigger" {
   }
 
   depends_on = [
-    google_cloud_run_service_iam_member.invoker,
+    google_cloud_run_v2_service_iam_member.invoker,
     google_app_engine_application.app,
   ]
 }

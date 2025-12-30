@@ -141,6 +141,16 @@ resource "google_bigquery_dataset" "gold_meat_market" {
 
 # --- IAM / Service Accounts ---
 
+# Service account for the ingestion service (temporarily restored for cleanup)
+resource "google_service_account" "ingestion_sa" {
+  project      = var.project_id
+  account_id   = "ingestion-service"
+  display_name = "Ingestion Service SA"
+  description  = "Service account for the ingestion service"
+
+  depends_on = [google_project_service.apis]
+}
+
 # Service account for Dataproc Serverless jobs
 resource "google_service_account" "dataproc_sa" {
   project      = var.project_id

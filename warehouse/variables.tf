@@ -8,3 +8,9 @@ variable "region" {
   type        = string
 }
 
+variable "image_uri" {
+  description = "URI of the container image for the ingestion service"
+  type        = string
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
+}
+

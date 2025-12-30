@@ -15,6 +15,7 @@ locals {
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "appengine.googleapis.com", # Needed to grant App Engine roles
   ]
 
   # Full resource names

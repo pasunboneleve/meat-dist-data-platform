@@ -2,7 +2,7 @@
 locals {
   # APIs needed for the data warehouse infrastructure
   required_apis = [
-    "cloudfunctions.googleapis.com",
+    "cloudrun.googleapis.com",
     "cloudscheduler.googleapis.com",
     "cloudbuild.googleapis.com",
     "artifactregistry.googleapis.com",

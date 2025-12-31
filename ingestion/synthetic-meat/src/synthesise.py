@@ -122,7 +122,7 @@ def generate_synthetic_carcasses(
     fake = Faker("en_AU")
 
     # Try to derive parameters from the entry in base_df for the target_date
-    logging.info(f"base_df: {base_df}")
+    logging.debug(f"base_df: {base_df}")
     if base_df.shape[0] > 1:
         base_df = base_df.head(1)
 

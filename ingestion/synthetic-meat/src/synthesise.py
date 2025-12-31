@@ -162,26 +162,36 @@ def generate_synthetic_carcasses(
     return synthetic_df
 
 
-def write_to_gcs(df: pl.DataFrame, bucket_name: str, plant_id: str, target_date: date):
-    """Writes a Polars DataFrame to GCS as a partitioned Parquet file."""
+def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
+    """Writes a Polars DataFrame to GCS, partitioned by plant and date."""
     if not bucket_name:
         raise ValueError("GCS bucket name is not configured via BRONZE_BUCKET env var.")
-
-    batch_id = uuid.uuid4()
-
-    gcs_path = (
-        f"gs://{bucket_name}/carcasses/"
-        f"plant_id={plant_id}/"
-        f"year={target_date.year}/month={target_date.month:02d}/day={target_date.day:02d}/"
-        f"batch_{batch_id}.parquet"
-    )
 
     if df.is_empty():
         print(f"DataFrame is empty. Skipping write to GCS for date {target_date}.")
         return
 
-    print(f"Writing {len(df)} records to {gcs_path}...")
-    df.write_parquet(gcs_path)
+    # Add date parts as columns for partitioning
+    df_with_partitions = df.with_columns(
+        pl.lit(target_date.year).alias("year"),
+        pl.lit(target_date.month).alias("month"),
+        pl.lit(target_date.day).alias("day"),
+    )
+
+    gcs_base_path = f"gs://{bucket_name}/carcasses/"
+
+    print(
+        f"Writing {len(df_with_partitions)} records to {gcs_base_path} partitioned by "
+        "plant_id, year, month, day..."
+    )
+
+    # Polars will create the hive-style partitions automatically
+    df_with_partitions.write_parquet(
+        gcs_base_path,
+        partition_by=["plant_id", "year", "month", "day"],
+        use_pyarrow=True,
+        pyarrow_options={"partition_filename_template": f"batch-{uuid.uuid4()}.parquet"},
+    )
     print("Write to GCS successful.")
 
 
@@ -226,7 +236,7 @@ def generate_and_upload(request):
             pl.lit(batch_plant_id).alias("plant_id")
         )
 
-        write_to_gcs(synthetic_data, BUCKET_NAME, batch_plant_id, target_date)
+        write_to_gcs(synthetic_data, BUCKET_NAME, target_date)
 
         return ("Data generation and upload complete.", 200)
 

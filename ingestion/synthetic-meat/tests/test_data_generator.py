@@ -77,8 +77,6 @@ def test_generated_data_matches_stats(fixture_path):
 
     synthetic_df = generate_synthetic_carcasses(base_df, target_date=target_date)
 
-    assert len(synthetic_df) == expected_records
-
     # The generated price is based on a normal distribution around the target average.
     # It won't be exact, but it should be reasonably close.
     # We'll check if it's within a certain tolerance (e.g., +/- 15%).

@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 import uuid
@@ -12,6 +13,11 @@ import requests
 from faker import Faker
 from typing_extensions import Optional
 
+# --- Logging Configuration ---
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 # --- Configuration ---
 BUCKET_NAME = os.environ.get("BRONZE_BUCKET")
 MLA_API_URL = "https://api-mlastatistics.mla.com.au"
@@ -24,22 +30,27 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
     Fetches data from the MLA Statistics API.
     """
 
-    print(f"Requesting data from {MLA_API_URL}{endpoint} with params: {params}")
+    logging.info(f"Requesting data from {MLA_API_URL}{endpoint} with params: {params}")
     try:
         response = requests.get(f"{MLA_API_URL}{endpoint}", params=params)
         response.raise_for_status()
 
         data = response.json()
 
-        print("number of rows:", data["total number rows"])
+        logging.info(f"number of rows: {data['total number rows']}")
 
         df = pl.DataFrame(data["data"])
         # Preprocessing from the original load_base_data function
-        print("fetched:", df)
+        if df.is_empty():
+            logging.warning("fetched: empty.")
+        else:
+            logging.info(f"fetched: {df}")
         return df
 
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching base data from API: {e}. Returning empty DataFrame.")
+        logging.warning(
+            f"Error fetching base data from API: {e}. Returning empty DataFrame."
+        )
         return pl.DataFrame()
 
 
@@ -60,15 +71,15 @@ def fetch_base_data(params) -> pl.DataFrame:
         df = df.rename({"indicator_desc": "category"})
     if "calendar_date" in df.columns:
         df = df.rename({"calendar_date": "report_date"})
-    print("base_data:", df)
+    logging.info(f"base_data: {df}")
     return df
 
 
 def load_base_data(file_path: Path) -> pl.DataFrame:
     """Loads and preprocesses the base market data from a JSON fixture file."""
     if not file_path.exists():
-        print(
-            f"Warning: Fixture file not found at {file_path}. Returning empty DataFrame."
+        logging.warning(
+            f"Fixture file not found at {file_path}. Returning empty DataFrame."
         )
         return pl.DataFrame()
 
@@ -79,8 +90,8 @@ def load_base_data(file_path: Path) -> pl.DataFrame:
         if "indicator_desc" in df.columns:
             df = df.rename({"indicator_desc": "category"})
         else:
-            print(
-                "Warning: 'indicator_desc' not found in fixture. Using fallback categories."
+            logging.warning(
+                "'indicator_desc' not found in fixture. Using fallback categories."
             )
             return pl.DataFrame()
 
@@ -88,14 +99,14 @@ def load_base_data(file_path: Path) -> pl.DataFrame:
         if "calendar_date" in df.columns:
             df = df.rename({"calendar_date": "report_date"})
         else:
-            print(
-                "Warning: 'calendar_date' not found in fixture. Cannot determine report dates."
+            logging.warning(
+                "'calendar_date' not found in fixture. Cannot determine report dates."
             )
             return pl.DataFrame()
 
         return df
     except Exception as e:
-        print(f"Error reading or processing JSON file: {e}")
+        logging.error(f"Error reading or processing JSON file: {e}")
         return pl.DataFrame()
 
 
@@ -109,7 +120,7 @@ def generate_synthetic_carcasses(
     fake = Faker("en_AU")
 
     # Try to derive parameters from the entry in base_df for the target_date
-    print("base_df:", base_df)
+    logging.info(f"base_df: {base_df}")
 
     stat_for_date = base_df.filter(
         pl.col("report_date").str.to_date() == target_date
@@ -125,7 +136,7 @@ def generate_synthetic_carcasses(
     categories = base_df["category"].unique().to_list()
 
     if num_records == 0:
-        print(f"Note: Head count for {target_date} was 0. Generating no records.")
+        logging.info(f"Head count for {target_date} was 0. Generating no records.")
         return pl.DataFrame()
 
     data = {
@@ -162,7 +173,9 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
         raise ValueError("GCS bucket name is not configured via BRONZE_BUCKET env var.")
 
     if df.is_empty():
-        print(f"DataFrame is empty. Skipping write to GCS for date {target_date}.")
+        logging.info(
+            f"DataFrame is empty. Skipping write to GCS for date {target_date}."
+        )
         return
 
     # Add date parts as columns for partitioning
@@ -174,7 +187,7 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
 
     gcs_base_path = f"gs://{bucket_name}/carcasses/"
 
-    print(
+    logging.info(
         f"Writing {len(df_with_partitions)} records to {gcs_base_path} partitioned by "
         "plant_id, year, month, day..."
     )
@@ -185,7 +198,7 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
         partition_by=["plant_id", "year", "month", "day"],
         use_pyarrow=True,
     )
-    print("Write to GCS successful.")
+    logging.info("Write to GCS successful.")
 
 
 def workflow(params: Dict[str, Any]) -> Optional[str]:
@@ -199,14 +212,14 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
 
     batch_plant_id = f"P{random.randint(1, 5):02d}"
 
-    print("synthesising...", base_data)
+    logging.info(f"synthesising... {base_data}")
     synthetic_data = generate_synthetic_carcasses(base_data, from_date)
     # Overwrite plant_id with the one for this batch
     synthetic_data = synthetic_data.with_columns(
         pl.lit(batch_plant_id).alias("plant_id")
     )
 
-    print("writing to GCS...", synthetic_data)
+    logging.info(f"writing to GCS... {synthetic_data}")
     write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
 
     return f"Data generation and upload complete for {params.__str__()}"
@@ -256,10 +269,9 @@ def generate_and_upload(request):
         with futures.ProcessPoolExecutor() as pool:
             results = filter(lambda x: bool(x), pool.map(workflow, params[10:14]))
             for result in results:
-                print(result)
+                logging.info(result)
         return ("Data generation and upload complete.", 200)
 
     except Exception as e:
-        print(f"Error in function execution: {e}")
-        raise e
-        # return (f"An internal error occurred: {e}", 500)
+        logging.error(f"Error in function execution: {e.with_traceback}")
+        return (f"An internal error occurred: {e}", 500)

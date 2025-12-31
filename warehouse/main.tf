@@ -260,13 +260,3 @@ resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_writer" {
   member = "serviceAccount:${google_service_account.ingestion_sa.email}"
 }
 
-# --- Transformation Layer ---
-module "transformation" {
-  source = "./transformation"
-
-  project_id            = var.project_id
-  region                = var.region
-  silver_bucket_name    = google_storage_bucket.silver.name
-  biglake_connection_id = google_bigquery_connection.biglake.id
-  silver_dataset_id     = google_bigquery_dataset.silver_meat_market.dataset_id
-}

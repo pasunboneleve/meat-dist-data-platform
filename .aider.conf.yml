@@ -8,3 +8,4 @@ read:
   - infra/INFRA.md
   - infra/*.tf
   - infra/prod.tfvars.template
+  - .github/workflows/*

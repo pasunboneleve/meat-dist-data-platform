@@ -126,8 +126,11 @@ def generate_synthetic_carcasses(
         pl.col("report_date").str.to_date() == target_date
     ).head(1)
 
-    head_count = stat_for_date.get_column("head_count").item()
-    num_records = int(head_count) if head_count and int(head_count) > 0 else 0
+    if "head_count" in stat_for_date.columns:
+        head_count = stat_for_date.get_column("head_count").item()
+    else:
+        head_count = 0
+    num_records = int(head_count) if int(head_count) > 0 else 0
 
     price_value = stat_for_date.get_column("indicator_value").item()
     avg_price = float(price_value) / 100.0

@@ -190,7 +190,6 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
         gcs_base_path,
         partition_by=["plant_id", "year", "month", "day"],
         use_pyarrow=True,
-        pyarrow_options={"partition_filename_template": f"batch-{uuid.uuid4()}.parquet"},
     )
     print("Write to GCS successful.")
 

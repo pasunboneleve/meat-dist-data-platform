@@ -1,14 +1,16 @@
 import os
 import random
 import uuid
-from datetime import date, datetime, timedelta
+from concurrent import futures
+from datetime import UTC, date, datetime, timedelta
+from functools import partial
 from pathlib import Path
+from typing import Any, Dict, List
 
 import functions_framework
 import polars as pl
 import requests
 from faker import Faker
-from google.cloud import storage
 
 # --- Configuration ---
 BUCKET_NAME = os.environ.get("BRONZE_BUCKET")
@@ -17,23 +19,10 @@ MLA_API_URL = "https://api-mlastatistics.mla.com.au"
 # --- Helper Functions ---
 
 
-def fetch_base_data() -> pl.DataFrame:
+def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
     """
-    Fetches cattle pricing data from the MLA Statistics API for the last 90 days.
+    Fetches data from the MLA Statistics API.
     """
-    to_date = datetime.utcnow() - timedelta(days=1)
-    from_date = to_date - timedelta(days=90)
-    from_date_str = from_date.strftime("%Y-%m-%d")
-    to_date_str = to_date.strftime("%Y-%m-%d")
-
-    endpoint = "/report/6"
-    params = {
-        "indicatorID": 3,
-        "saleyardID": "DAL",
-        "fromDate": from_date_str,
-        "toDate": to_date_str,
-        "page": 1,
-    }
 
     print(f"Requesting data from {MLA_API_URL}{endpoint} with params: {params}")
     try:
@@ -46,15 +35,53 @@ def fetch_base_data() -> pl.DataFrame:
 
         df = pl.DataFrame(data["data"])
         # Preprocessing from the original load_base_data function
-        if "indicator_desc" in df.columns:
-            df = df.rename({"indicator_desc": "category"})
-        if "calendar_date" in df.columns:
-            df = df.rename({"calendar_date": "report_date"})
+
         return df
 
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching base data from API: {e}. Using fallback values.")
+        print(f"Error fetching base data from API: {e}. Returning empty DataFrame.")
         return pl.DataFrame()
+
+
+def fetch_saleyard() -> pl.DataFrame:
+    return fetch_data("/saleyard", {})
+
+
+def fetch_base_data(saleyards: List[str], target_date: date) -> pl.DataFrame:
+    """
+    Fetches cattle pricing data from the MLA Statistics API for the last 90 days.
+    """
+    from_date = target_date - timedelta(days=1)
+    from_date_str = from_date.strftime("%Y-%m-%d")
+    to_date_str = target_date.strftime("%Y-%m-%d")
+
+    endpoint = "/report/6"
+
+    params = [
+        {
+            "indicatorID": 3,
+            "saleyardID": saleyard,
+            "fromDate": from_date_str,
+            "toDate": to_date_str,
+            "page": 1,
+        }
+        for saleyard in saleyards
+    ]
+
+    fetch_data_ = partial(fetch_data, endpoint)
+
+    with futures.ProcessPoolExecutor() as pool:
+        prices = filter(lambda x: not x.is_empty(), pool.map(fetch_data_, params))
+
+    df = pl.concat(prices)
+
+    # Preprocessing from the original load_base_data function
+    if "indicator_desc" in df.columns:
+        df = df.rename({"indicator_desc": "category"})
+    if "calendar_date" in df.columns:
+        df = df.rename({"calendar_date": "report_date"})
+
+    return df
 
 
 def load_base_data(file_path: Path) -> pl.DataFrame:
@@ -101,34 +128,21 @@ def generate_synthetic_carcasses(
     """
     fake = Faker("en_AU")
 
-    # Default fallback values
-    num_records = 1000
-    avg_price = 8.50  # AUD per kg
-    price_std_dev = 0.75
-    categories = ["Yearling", "Cow", "Bull", "Steer"]
-
     # Try to derive parameters from the entry in base_df for the target_date
-    if not base_df.is_empty():
-        stat_for_date = base_df.filter(
-            pl.col("report_date").str.to_date() == target_date
-        ).head(1)
+    print("base_df:", base_df)
 
-        if not stat_for_date.is_empty():
-            head_count = stat_for_date.get_column("head_count").item()
-            num_records = int(head_count) if head_count and int(head_count) > 0 else 0
+    stat_for_date = base_df.filter(
+        pl.col("report_date").str.to_date() == target_date
+    ).head(1)
 
-            price_value = stat_for_date.get_column("indicator_value").item()
-            if price_value:
-                avg_price = float(price_value) / 100.0
-        else:
-            print(
-                f"Warning: No market data found for target date {target_date}. "
-                "Using fallback values."
-            )
+    head_count = stat_for_date.get_column("head_count").item()
+    num_records = int(head_count) if head_count and int(head_count) > 0 else 0
 
-        unique_categories = base_df["category"].unique().to_list()
-        if unique_categories:
-            categories = unique_categories
+    price_value = stat_for_date.get_column("indicator_value").item()
+    avg_price = float(price_value) / 100.0
+    price_std_dev = 0.75
+
+    categories = base_df["category"].unique().to_list()
 
     if num_records == 0:
         print(f"Note: Head count for {target_date} was 0. Generating no records.")
@@ -200,6 +214,7 @@ def generate_and_upload(request):
     Cloud Function entry point. Generates synthetic data and uploads it to GCS.
     Accepts a 'target_date' (YYYY-MM-DD) query parameter. Defaults to yesterday.
     """
+
     try:
         target_date_str = None
         # Accommodate both GET (query params) and POST (json body) requests
@@ -209,18 +224,14 @@ def generate_and_upload(request):
             target_date_str = request.get_json().get("target_date")
 
         if target_date_str:
-            try:
-                target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
-            except ValueError:
-                return (
-                    "Invalid date format for 'target_date'. Please use YYYY-MM-DD.",
-                    400,
-                )
+            target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+
         else:
-            target_date = datetime.utcnow().date() - timedelta(days=1)
+            target_date = datetime.now(UTC).date() - timedelta(days=1)
 
         # Fetch live data from the MLA API.
-        base_data = fetch_base_data()
+        saleyards = fetch_saleyard()
+        base_data = fetch_base_data(saleyards["saleyard_id"].to_list(), target_date)
         if base_data.is_empty():
             print(
                 "Warning: Base data is empty or could not be fetched. "

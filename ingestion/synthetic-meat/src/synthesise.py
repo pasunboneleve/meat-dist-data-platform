@@ -252,9 +252,13 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
 
 @functions_framework.http
 def generate_and_upload(request):
-    """
-    Cloud Function entry point. Generates synthetic data and uploads it to GCS.
-    Accepts a 'target_date' (YYYY-MM-DD) query parameter. Defaults to yesterday.
+    """Cloud Function entry point. Generates synthetic data and uploads it to GCS.
+    Accepts a 'target_date' (YYYY-MM-DD) JSON field. Defaults to yesterday.
+
+    If backfill is intended, instead of 'target_date' use 'from_date'
+    and 'to_date'. The HTTP requests run in parallel, but for
+    simplicity (they're fast) the fake data creation and writing to
+    GCS are sequential (after the data is fetched).
     """
 
     try:

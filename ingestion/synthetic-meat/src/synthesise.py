@@ -213,28 +213,36 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
     logging.info("Write to GCS successful.")
 
 
+def synthesise_and_write(base_data: pl.DataFrame, from_date: date) -> None:
+    """
+    We may fetch many dates, but we need to synthesise and write singly.
+    """
+
+    batch_plant_id = f"P{random.randint(1, 5):02d}"
+
+    logging.debug(f"synthesising... {base_data}")
+    synthetic_data = generate_synthetic_carcasses(base_data, from_date)
+    # Overwrite plant_id with the one for this batch
+    synthetic_data = synthetic_data.with_columns(
+        pl.lit(batch_plant_id).alias("plant_id")
+    )
+
+    logging.debug(f"writing to GCS... {synthetic_data}")
+    write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
+
+
 def workflow(params: Dict[str, Any]) -> Optional[str]:
     """
     Single download and write workflow, to be parallelised.
     """
     try:
-        from_date = datetime.strptime(params["fromDate"], "%Y-%m-%d").date()
         base_data = fetch_base_data(params)
         if base_data.is_empty():
             return None
 
-        batch_plant_id = f"P{random.randint(1, 5):02d}"
-
-        logging.debug(f"synthesising... {base_data}")
-        synthetic_data = generate_synthetic_carcasses(base_data, from_date)
-        # Overwrite plant_id with the one for this batch
-        synthetic_data = synthetic_data.with_columns(
-            pl.lit(batch_plant_id).alias("plant_id")
-        )
-
-        logging.debug(f"writing to GCS... {synthetic_data}")
-        write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
-
+        for report_date, report in base_data.group_by("report_date"):
+            from_date = datetime.strptime(report_date[0], "%Y-%m-%d").date()
+            synthesise_and_write(report, from_date)
         return f"Data generation and upload complete for {params.__str__()}"
     except Exception as e:
         # Log exceptions from within the worker process
@@ -255,6 +263,20 @@ def generate_and_upload(request):
             target_date_str = request.get_json().get("target_date")
             target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
 
+            # prepare params
+            from_date = target_date - timedelta(days=1)
+            from_date_str = from_date.strftime("%Y-%m-%d")
+            to_date_str = target_date.strftime("%Y-%m-%d")
+
+        elif (
+            request.is_json
+            and request.get_json().get("from_date")
+            and request.get_json().get("to_date")
+        ):
+            jdata = request.get_json()
+            from_date_str = jdata.get("from_date")
+            to_date_str = jdata.get("to_date")
+
         else:  # fetch yesterday
             target_date = datetime.now(UTC).date() - timedelta(days=1)
             from_date_str = target_date.strftime("%Y-%m-%d")
@@ -262,11 +284,6 @@ def generate_and_upload(request):
 
         # Fetch live data from the MLA API.
         saleyards = fetch_saleyard()
-
-        # prepare params
-        from_date = target_date - timedelta(days=1)
-        from_date_str = from_date.strftime("%Y-%m-%d")
-        to_date_str = target_date.strftime("%Y-%m-%d")
 
         params = [
             {

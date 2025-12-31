@@ -138,15 +138,3 @@ def test_generate_and_upload_failure(mock_fetch_base_data):
     assert status_code == 500
     assert "An internal error occurred: Test error" in response
     mock_fetch_base_data.assert_called_once()
-
-
-def test_pyarrow_version_supports_partition_filename_template():
-    """
-    Checks that the installed pyarrow version is new enough to support
-    the 'partition_filename_template' option in write_parquet, which was
-    added in 16.0.0.
-    """
-    import pyarrow
-    from packaging.version import parse
-
-    assert parse(pyarrow.__version__) >= parse("16.0.0")

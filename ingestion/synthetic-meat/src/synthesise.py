@@ -206,24 +206,29 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
     """
     Single download and write workflow, to be parallelised.
     """
-    from_date = datetime.strptime(params["fromDate"], "%Y-%m-%d").date()
-    base_data = fetch_base_data(params)
-    if base_data.is_empty():
+    try:
+        from_date = datetime.strptime(params["fromDate"], "%Y-%m-%d").date()
+        base_data = fetch_base_data(params)
+        if base_data.is_empty():
+            return None
+
+        batch_plant_id = f"P{random.randint(1, 5):02d}"
+
+        logging.debug(f"synthesising... {base_data}")
+        synthetic_data = generate_synthetic_carcasses(base_data, from_date)
+        # Overwrite plant_id with the one for this batch
+        synthetic_data = synthetic_data.with_columns(
+            pl.lit(batch_plant_id).alias("plant_id")
+        )
+
+        logging.debug(f"writing to GCS... {synthetic_data}")
+        write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
+
+        return f"Data generation and upload complete for {params.__str__()}"
+    except Exception as e:
+        # Log exceptions from within the worker process
+        logging.error(f"Error in workflow for params {params}: {e}", exc_info=True)
         return None
-
-    batch_plant_id = f"P{random.randint(1, 5):02d}"
-
-    logging.debug(f"synthesising... {base_data}")
-    synthetic_data = generate_synthetic_carcasses(base_data, from_date)
-    # Overwrite plant_id with the one for this batch
-    synthetic_data = synthetic_data.with_columns(
-        pl.lit(batch_plant_id).alias("plant_id")
-    )
-
-    logging.debug(f"writing to GCS... {synthetic_data}")
-    write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
-
-    return f"Data generation and upload complete for {params.__str__()}"
 
 
 @functions_framework.http

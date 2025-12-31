@@ -3,14 +3,14 @@ import random
 import uuid
 from concurrent import futures
 from datetime import UTC, date, datetime, timedelta
-from functools import partial
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, Tuple
 
 import functions_framework
 import polars as pl
 import requests
 from faker import Faker
+from typing_extensions import Optional
 
 # --- Configuration ---
 BUCKET_NAME = os.environ.get("BRONZE_BUCKET")
@@ -30,12 +30,12 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
         response.raise_for_status()
 
         data = response.json()
-        print(data["message"])
+
         print("number of rows:", data["total number rows"])
 
         df = pl.DataFrame(data["data"])
         # Preprocessing from the original load_base_data function
-
+        print("fetched:", df)
         return df
 
     except requests.exceptions.RequestException as e:
@@ -47,40 +47,20 @@ def fetch_saleyard() -> pl.DataFrame:
     return fetch_data("/saleyard", {})
 
 
-def fetch_base_data(saleyards: List[str], target_date: date) -> pl.DataFrame:
+def fetch_base_data(params) -> pl.DataFrame:
     """
     Fetches cattle pricing data from the MLA Statistics API for the last 90 days.
     """
-    from_date = target_date - timedelta(days=1)
-    from_date_str = from_date.strftime("%Y-%m-%d")
-    to_date_str = target_date.strftime("%Y-%m-%d")
-
     endpoint = "/report/6"
 
-    params = [
-        {
-            "indicatorID": 3,
-            "saleyardID": saleyard,
-            "fromDate": from_date_str,
-            "toDate": to_date_str,
-            "page": 1,
-        }
-        for saleyard in saleyards
-    ]
-
-    fetch_data_ = partial(fetch_data, endpoint)
-
-    with futures.ProcessPoolExecutor() as pool:
-        prices = filter(lambda x: not x.is_empty(), pool.map(fetch_data_, params))
-
-    df = pl.concat(prices)
+    df = fetch_data(endpoint, params)
 
     # Preprocessing from the original load_base_data function
     if "indicator_desc" in df.columns:
         df = df.rename({"indicator_desc": "category"})
     if "calendar_date" in df.columns:
         df = df.rename({"calendar_date": "report_date"})
-
+    print("base_data:", df)
     return df
 
 
@@ -208,6 +188,30 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
     print("Write to GCS successful.")
 
 
+def workflow(params: Dict[str, Any]) -> Optional[str]:
+    """
+    Single download and write workflow, to be parallelised.
+    """
+    from_date = datetime.strptime(params["fromDate"], "%Y-%m-%d").date()
+    base_data = fetch_base_data(params)
+    if base_data.is_empty():
+        return None
+
+    batch_plant_id = f"P{random.randint(1, 5):02d}"
+
+    print("synthesising...", base_data)
+    synthetic_data = generate_synthetic_carcasses(base_data, from_date)
+    # Overwrite plant_id with the one for this batch
+    synthetic_data = synthetic_data.with_columns(
+        pl.lit(batch_plant_id).alias("plant_id")
+    )
+
+    print("writing to GCS...", synthetic_data)
+    write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
+
+    return f"Data generation and upload complete for {params.__str__()}"
+
+
 @functions_framework.http
 def generate_and_upload(request):
     """
@@ -231,22 +235,31 @@ def generate_and_upload(request):
 
         # Fetch live data from the MLA API.
         saleyards = fetch_saleyard()
-        base_data = fetch_base_data(saleyards["saleyard_id"].to_list(), target_date)
-        if base_data.is_empty():
-            return ("Warning: Base data is empty or could not be fetched.", 200)
 
-        batch_plant_id = f"P{random.randint(1, 5):02d}"
+        # prepare params
+        from_date = target_date - timedelta(days=1)
+        from_date_str = from_date.strftime("%Y-%m-%d")
+        to_date_str = target_date.strftime("%Y-%m-%d")
 
-        synthetic_data = generate_synthetic_carcasses(base_data, target_date)
-        # Overwrite plant_id with the one for this batch
-        synthetic_data = synthetic_data.with_columns(
-            pl.lit(batch_plant_id).alias("plant_id")
-        )
+        params = [
+            {
+                "indicatorID": indicator,
+                "saleyardID": saleyard,
+                "fromDate": from_date_str,
+                "toDate": to_date_str,
+                "page": 1,
+            }
+            for saleyard in saleyards["saleyard_id"].to_list()
+            for indicator in list(range(4))
+        ]
 
-        write_to_gcs(synthetic_data, BUCKET_NAME, target_date)
-
+        with futures.ProcessPoolExecutor() as pool:
+            results = filter(lambda x: bool(x), pool.map(workflow, params[10:14]))
+            for result in results:
+                print(result)
         return ("Data generation and upload complete.", 200)
 
     except Exception as e:
         print(f"Error in function execution: {e}")
-        return (f"An internal error occurred: {e}", 500)
+        raise e
+        # return (f"An internal error occurred: {e}", 500)

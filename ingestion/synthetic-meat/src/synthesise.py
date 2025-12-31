@@ -233,10 +233,7 @@ def generate_and_upload(request):
         saleyards = fetch_saleyard()
         base_data = fetch_base_data(saleyards["saleyard_id"].to_list(), target_date)
         if base_data.is_empty():
-            print(
-                "Warning: Base data is empty or could not be fetched. "
-                "Using fallback values."
-            )
+            return ("Warning: Base data is empty or could not be fetched.", 200)
 
         batch_plant_id = f"P{random.randint(1, 5):02d}"
 

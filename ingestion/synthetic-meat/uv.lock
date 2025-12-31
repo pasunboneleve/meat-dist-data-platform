@@ -1306,7 +1306,7 @@ wheels = [
 [[package]]
 name = "synthetic-meat"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "faker" },
     { name = "functions-framework" },
@@ -1329,7 +1329,7 @@ requires-dist = [
     { name = "gcsfs", specifier = ">=2023.0.0" },
     { name = "google-cloud-storage", specifier = ">=2.0.0" },
     { name = "polars", specifier = ">=0.20.0" },
-    { name = "pyarrow", specifier = ">=15.0.0" },
+    { name = "pyarrow", specifier = ">=16.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "requests", specifier = ">=2.30.0" },
 ]

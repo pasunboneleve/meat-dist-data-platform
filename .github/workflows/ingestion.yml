@@ -39,4 +39,4 @@ jobs:
     - name: Run tests
       working-directory: ./ingestion/synthetic-meat
       run: |
-        uv run pytest
+        uv run pytest -v

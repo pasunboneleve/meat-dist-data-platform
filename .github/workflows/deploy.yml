@@ -31,9 +31,11 @@ jobs:
 
     - name: Check for changes in ingestion directory
       id: changes
-      uses: tj-actions/changed-files@v44
+      uses: dorny/paths-filter@v3
       with:
-        files: ingestion/synthetic-meat/**
+        filters: |
+          ingestion:
+            - 'ingestion/**'
 
     - name: Google Auth
       id: auth
@@ -54,7 +56,7 @@ jobs:
       continue-on-error: true
 
     - name: Build and Push Docker Image
-      if: steps.changes.outputs.any_changed == 'true' || steps.get-image.outputs.image_uri == ''
+      if: steps.changes.outputs.ingestion == 'true' || steps.get-image.outputs.image_uri == ''
       id: build-image
       run: |
         IMAGE_URI="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"

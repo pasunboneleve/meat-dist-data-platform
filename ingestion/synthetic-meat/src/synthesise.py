@@ -276,5 +276,5 @@ def generate_and_upload(request):
         return ("Data generation and upload complete.", 200)
 
     except Exception as e:
-        logging.error(f"Error in function execution: {e.with_traceback}")
+        logging.exception(f"Error in function execution: {e}")
         return (f"An internal error occurred: {e}", 500)

@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import functions_framework
+import gcsfs
 import polars as pl
+import pyarrow.parquet as pq
 import requests
 from faker import Faker
 from typing_extensions import Optional
@@ -169,7 +171,7 @@ def generate_synthetic_carcasses(
 
 
 def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
-    """Writes a Polars DataFrame to GCS, partitioned by plant and date."""
+    """Writes a Polars DataFrame to GCS as a partitioned Parquet dataset using PyArrow."""
     if not bucket_name:
         raise ValueError("GCS bucket name is not configured via BRONZE_BUCKET env var.")
 
@@ -186,18 +188,27 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
         pl.lit(target_date.day).alias("day"),
     )
 
-    gcs_base_path = f"gs://{bucket_name}/carcasses/"
+    gcs_base_path = f"{bucket_name}/carcasses"
 
     logging.info(
-        f"Writing {len(df_with_partitions)} records to {gcs_base_path} partitioned by "
+        f"Writing {len(df_with_partitions)} records to gs://{gcs_base_path} partitioned by "
         "plant_id, year, month, day..."
     )
 
-    # Polars will create the hive-style partitions automatically
-    df_with_partitions.write_parquet(
-        gcs_base_path,
-        partition_by=["plant_id", "year", "month", "day"],
-        use_pyarrow=True,
+    # Convert Polars DF to PyArrow Table
+    table = df_with_partitions.to_arrow()
+
+    # Create GCS filesystem which uses Application Default Credentials
+    fs = gcsfs.GCSFileSystem()
+
+    # Write partitioned dataset using PyArrow
+    pq.write_to_dataset(
+        table,
+        root_path=gcs_base_path,
+        partition_cols=["plant_id", "year", "month", "day"],
+        filesystem=fs,
+        basename_template=f"{uuid.uuid4()}-{{i}}.parquet",
+        existing_data_behavior="overwrite_or_ignore",
     )
     logging.info("Write to GCS successful.")
 

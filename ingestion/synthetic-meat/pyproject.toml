@@ -16,7 +16,7 @@ dependencies = [
 [project.scripts]
 synthetic-meat = "src.synthesise:generate_and_upload"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.0.0",
 ]

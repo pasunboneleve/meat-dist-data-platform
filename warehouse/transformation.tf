@@ -1,20 +1,21 @@
-
 resource "google_bigquery_table" "carcasses_silver" {
-  project    = var.project_id
-  dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
-  table_id   = "carcasses"
+  project             = var.project_id
+  dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
+  table_id            = "carcasses"
+  deletion_protection = false
 
-  deletion_protection = false # Good for dev, consider true for prod
+  table_format = "ICEBERG"  # This makes it a managed BigLake Iceberg table
+  file_format  = "PARQUET"  # Or ORC/AVRO if preferred
 
-  external_data_configuration {
-    # The source URI should point to the root folder of the Iceberg table.
-    # The Spark job will write data and metadata here.
-    # BigQuery uses the BigLake connection to find the latest metadata snapshot.
-    source_uris = [
-      "gs://${google_storage_bucket.silver.name}/carcasses/"
-    ]
-    source_format = "ICEBERG"
-    connection_id = google_bigquery_connection.biglake.id
-    autodetect    = false # Schema is managed by the Iceberg metadata
+  options {
+    storage_uri = "gs://${google_storage_bucket.silver.name}/carcasses/"  # Root folder
   }
+
+  # Connection for BigLake access (required for managed tables)
+  with_connection {
+    connection_id = "${var.project_id}.${google_bigquery_connection.biglake.name}"  # Full qualified ID
+  }
+
+  # Optional: Define schema upfront if you want (otherwise Spark job defines it on first write)
+  # schema = file("path/to/schema.json")
 }

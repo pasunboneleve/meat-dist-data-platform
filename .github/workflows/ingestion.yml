@@ -34,7 +34,7 @@ jobs:
       working-directory: ./ingestion/synthetic-meat
       run: |
         uv venv
-        uv sync --group dev
+        uv sync --locked --group dev
 
     - name: Run tests
       working-directory: ./ingestion/synthetic-meat

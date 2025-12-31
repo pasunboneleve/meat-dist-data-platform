@@ -42,9 +42,9 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
         df = pl.DataFrame(data["data"])
         # Preprocessing from the original load_base_data function
         if df.is_empty():
-            logging.warning("fetched: empty.")
+            logging.debug("fetched: empty.")
         else:
-            logging.info(f"fetched: {df}")
+            logging.debug(f"fetched: {df}")
         return df
 
     except requests.exceptions.RequestException as e:
@@ -71,7 +71,7 @@ def fetch_base_data(params) -> pl.DataFrame:
         df = df.rename({"indicator_desc": "category"})
     if "calendar_date" in df.columns:
         df = df.rename({"calendar_date": "report_date"})
-    logging.info(f"base_data: {df}")
+    logging.debug(f"base_data: {df}")
     return df
 
 
@@ -213,14 +213,14 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
 
     batch_plant_id = f"P{random.randint(1, 5):02d}"
 
-    logging.info(f"synthesising... {base_data}")
+    logging.debug(f"synthesising... {base_data}")
     synthetic_data = generate_synthetic_carcasses(base_data, from_date)
     # Overwrite plant_id with the one for this batch
     synthetic_data = synthetic_data.with_columns(
         pl.lit(batch_plant_id).alias("plant_id")
     )
 
-    logging.info(f"writing to GCS... {synthetic_data}")
+    logging.debug(f"writing to GCS... {synthetic_data}")
     write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
 
     return f"Data generation and upload complete for {params.__str__()}"

@@ -9,6 +9,7 @@ DATA="{\"target_date\":\"$REPORT_DATE\"}"
 # This scripts triggers the synthetic meat ingestor Cloud Run service
 #
 
+set +x
 token=$(gcloud auth print-identity-token)
 url=$(gcloud run services describe synthetic-meat-ingestor \
               --region australia-southeast2 --format 'value(status.address.url)')

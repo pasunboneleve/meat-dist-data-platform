@@ -3,7 +3,6 @@ resource "google_bigquery_table" "carcasses_silver" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "carcasses"
 
-  type                = "EXTERNAL_TABLE"
   deletion_protection = false # Good for dev, consider true for prod
 
   external_data_configuration {

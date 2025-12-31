@@ -5,7 +5,7 @@ import uuid
 from concurrent import futures
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 import functions_framework
 import gcsfs

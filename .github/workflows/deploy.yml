@@ -46,8 +46,13 @@ jobs:
     - name: Configure Docker
       run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
+    - name: Check if Cloud Run service exists
+      id: check-service
+      run: gcloud run services describe synthetic-meat-ingestor --region ${{ env.GCP_REGION }} --format 'value(service)'
+      continue-on-error: true
+
     - name: Build and Push Docker Image
-      if: steps.changes.outputs.ingestion == 'true'
+      if: steps.changes.outputs.ingestion == 'true' || steps.check-service.outcome == 'failure'
       id: build-image
       run: |
         IMAGE_URI="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
@@ -56,7 +61,7 @@ jobs:
         echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
 
     - name: Get current image URI from Cloud Run
-      if: steps.changes.outputs.ingestion == 'false'
+      if: steps.changes.outputs.ingestion == 'false' && steps.check-service.outcome == 'success'
       id: get-image
       run: |
         IMAGE_URI=$(gcloud run services describe synthetic-meat-ingestor --region ${{ env.GCP_REGION }} --format 'value(template.containers[0].image)')

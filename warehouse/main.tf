@@ -190,6 +190,15 @@ resource "google_dataplex_asset" "silver_asset" {
 }
 
 # --- BigQuery ---
+# Silver dataset for external tables pointing to the curated zone
+resource "google_bigquery_dataset" "silver_meat_market" {
+  project    = var.project_id
+  dataset_id = "silver_meat_market"
+  location   = var.region
+
+  depends_on = [google_project_service.apis]
+}
+
 # Gold dataset for Kimball models and BI
 resource "google_bigquery_dataset" "gold_meat_market" {
   project    = var.project_id
@@ -249,4 +258,15 @@ resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_writer" {
   bucket = google_storage_bucket.bronze.name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.ingestion_sa.email}"
+}
+
+# --- Transformation Layer ---
+module "transformation" {
+  source = "./transformation"
+
+  project_id            = var.project_id
+  region                = var.region
+  silver_bucket_name    = google_storage_bucket.silver.name
+  biglake_connection_id = google_bigquery_connection.biglake.id
+  silver_dataset_id     = google_bigquery_dataset.silver_meat_market.dataset_id
 }

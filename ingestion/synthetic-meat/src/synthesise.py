@@ -121,18 +121,16 @@ def generate_synthetic_carcasses(
 
     # Try to derive parameters from the entry in base_df for the target_date
     logging.info(f"base_df: {base_df}")
+    if base_df.shape[0] > 1:
+        base_df = base_df.head(1)
 
-    stat_for_date = base_df.filter(
-        pl.col("report_date").str.to_date() == target_date
-    ).head(1)
-
-    if "head_count" in stat_for_date.columns:
-        head_count = stat_for_date.get_column("head_count").item()
+    if "head_count" in base_df.columns:
+        head_count = base_df.get_column("head_count").item()
     else:
         head_count = 0
     num_records = int(head_count) if int(head_count) > 0 else 0
 
-    price_value = stat_for_date.get_column("indicator_value").item()
+    price_value = base_df.get_column("indicator_value").item()
     avg_price = float(price_value) / 100.0
     price_std_dev = 0.75
 

@@ -32,6 +32,7 @@ def fetch_base_data() -> pl.DataFrame:
         "saleyardID": "DAL",
         "fromDate": from_date_str,
         "toDate": to_date_str,
+        "page": 1,
     }
 
     print(f"Requesting data from {MLA_API_URL}{endpoint} with params: {params}")
@@ -39,12 +40,11 @@ def fetch_base_data() -> pl.DataFrame:
         response = requests.get(f"{MLA_API_URL}{endpoint}", params=params)
         response.raise_for_status()
 
-        data = response.json().get("data", [])
-        if not data:
-            print("Warning: No data found in API response. Using fallback values.")
-            return pl.DataFrame()
+        data = response.json()
+        print(data["message"])
+        print("number of rows:", data["total number rows"])
 
-        df = pl.DataFrame(data)
+        df = pl.DataFrame(data["data"])
         # Preprocessing from the original load_base_data function
         if "indicator_desc" in df.columns:
             df = df.rename({"indicator_desc": "category"})

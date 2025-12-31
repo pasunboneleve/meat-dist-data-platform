@@ -104,6 +104,13 @@ resource "google_bigquery_connection_iam_member" "dataplex_sa_connection_user" {
   member        = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-dataplex.iam.gserviceaccount.com"
 }
 
+# Grant the Dataplex service account BigQuery User role for table creation
+resource "google_project_iam_member" "dataplex_sa_bigquery_user" {
+  project = var.project_id
+  role    = "roles/bigquery.user"
+  member  = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-dataplex.iam.gserviceaccount.com"
+}
+
 
 # --- Dataplex ---
 # Dataplex Lake for centralized management and governance

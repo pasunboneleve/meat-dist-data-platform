@@ -267,7 +267,7 @@ def generate_and_upload(request):
         ]
 
         with futures.ProcessPoolExecutor() as pool:
-            results = filter(lambda x: bool(x), pool.map(workflow, params[10:14]))
+            results = filter(lambda x: bool(x), pool.map(workflow, params))
             for result in results:
                 logging.info(result)
         return ("Data generation and upload complete.", 200)

@@ -5,7 +5,7 @@ description = "Synthetic data generator for meat processing data."
 requires-python = ">=3.11"
 dependencies = [
     "polars>=0.20.0",
-    "pyarrow>=15.0.0",
+    "pyarrow>=16.0.0",
     "faker>=20.0.0",
     "gcsfs>=2023.0.0",
     "google-cloud-storage>=2.0.0",

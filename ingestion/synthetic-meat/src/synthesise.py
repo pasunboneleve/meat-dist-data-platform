@@ -250,18 +250,15 @@ def generate_and_upload(request):
     """
 
     try:
-        target_date_str = None
-        # Accommodate both GET (query params) and POST (json body) requests
-        if request.args and "target_date" in request.args:
-            target_date_str = request.args.get("target_date")
-        elif request.is_json and request.get_json().get("target_date"):
+        # Accommodate POST (json body) requests for backfills and manual
+        if request.is_json and request.get_json().get("target_date"):
             target_date_str = request.get_json().get("target_date")
-
-        if target_date_str:
             target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
 
-        else:
+        else:  # fetch yesterday
             target_date = datetime.now(UTC).date() - timedelta(days=1)
+            from_date_str = target_date.strftime("%Y-%m-%d")
+            to_date_str = target_date.strftime("%Y-%m-%d")
 
         # Fetch live data from the MLA API.
         saleyards = fetch_saleyard()

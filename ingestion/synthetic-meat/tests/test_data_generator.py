@@ -114,8 +114,9 @@ def test_generate_and_upload_with_target_date(
     assert response == "Data generation and upload complete."
     mock_write_to_gcs.assert_called_once()
 
+    # call_args[0] is the first positional argument tuple: (df, bucket_name, target_date)
     call_args = mock_write_to_gcs.call_args[0]
-    generated_df, _, _, call_date = call_args
+    generated_df, _, call_date = call_args
 
     assert isinstance(generated_df, pl.DataFrame)
     assert len(generated_df) == expected_records

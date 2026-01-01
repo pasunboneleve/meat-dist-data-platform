@@ -5,6 +5,21 @@ weak-model: xai/grok-4-1-fast-non-reasoning
 edit-format: whole
 editor-edit-format: editor-whole
 
+# Forces the model to use the SEARCH/REPLACE format for all edits
+model-settings:
+  - name: xai/grok-4-1-fast-reasoning
+    edit_format: diff
+    system_prompt: "Always use SEARCH/REPLACE blocks to edit files. Never output full file contents unless creating a new file."
+  - name: xai/grok-code-fast-1
+    edit_format: diff
+    system_prompt: "Always use SEARCH/REPLACE blocks to edit files. Never output full file contents unless creating a new file."
+  - name: xai/grok-4-1-fast-non-reasoning
+    edit_format: diff
+    system_prompt: "Always use SEARCH/REPLACE blocks to edit files. Never output full file contents unless creating a new file."
+  - name: xai/grok-4
+    edit_format: diff
+    system_prompt: "Always use SEARCH/REPLACE blocks to edit files. Never output full file contents unless creating a new file."
+
 read:
   - README.md
   - infra/DEPLOYMENT.md

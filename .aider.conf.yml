@@ -1,11 +1,7 @@
-model: gemini
-editor-model: flash
-weak-model: flash-lite
-
 read:
   - README.md
   - infra/DEPLOYMENT.md
   - infra/INFRA.md
-  - infra/*.tf
+  - infra/main.tf
   - infra/prod.tfvars.template
-  - .github/workflows/*
+  - .github/workflows/deploy.yml

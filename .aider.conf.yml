@@ -1,3 +1,8 @@
+model: xai/grok-4-1-fast-reasoning
+architect: true
+editor-model: xai/grok-code-fast-1
+weak-model: xai/grok-4-1-fast-non-reasoning
+
 read:
   - README.md
   - infra/DEPLOYMENT.md

@@ -5,7 +5,8 @@ resource "google_bigquery_table" "carcasses_silver" {
   deletion_protection = false
 
   external_data_configuration {
-    table_format = "ICEBERG"  # This makes it a managed BigLake Iceberg table
-    storage_uris = ["gs://${google_storage_bucket.silver.name}/carcasses/"]
+    source_format = "ICEBERG"
+    source_uris   = ["gs://${google_storage_bucket.silver.name}/carcasses"]
+    autodetect    = false
   }
 }

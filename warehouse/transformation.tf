@@ -4,18 +4,8 @@ resource "google_bigquery_table" "carcasses_silver" {
   table_id            = "carcasses"
   deletion_protection = false
 
-  table_format = "ICEBERG"  # This makes it a managed BigLake Iceberg table
-  file_format  = "PARQUET"  # Or ORC/AVRO if preferred
-
-  options {
-    storage_uri = "gs://${google_storage_bucket.silver.name}/carcasses/"  # Root folder
+  external_data_configuration {
+    table_format = "ICEBERG"  # This makes it a managed BigLake Iceberg table
+    storage_uris = ["gs://${google_storage_bucket.silver.name}/carcasses/"]
   }
-
-  # Connection for BigLake access (required for managed tables)
-  with_connection {
-    connection_id = "${var.project_id}.${google_bigquery_connection.biglake.name}"  # Full qualified ID
-  }
-
-  # Optional: Define schema upfront if you want (otherwise Spark job defines it on first write)
-  # schema = file("path/to/schema.json")
 }

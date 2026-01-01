@@ -182,9 +182,9 @@ def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
         logging.info(f"DataFrame is empty. Skipping write table {name} to GCS.")
         return
 
-    gcs_base_path = f"{bucket_name}/unpartitioned/{name}.parquet"
+    gcs_base_path = f"{bucket_name}/{name}/{name}.parquet"
 
-    logging.info(f"Writing {len(df)} records to gs://{gcs_base_path} unpartitioned.")
+    logging.info(f"Writing {len(df)} records to gs://{gcs_base_path}.")
     # Convert Polars DF to PyArrow Table
     table = df.to_arrow()
 

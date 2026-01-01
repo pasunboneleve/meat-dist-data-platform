@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 
 # --- Configuration ---
-BUCKET_NAME = os.environ.get("BRONZE_BUCKET")
+BUCKET_NAME = os.environ.get("BRONZE_BUCKET", "meatislife-bronze")
 MLA_API_URL = "https://api-mlastatistics.mla.com.au"
 
 # --- Helper Functions ---
@@ -39,7 +39,8 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
 
         data = response.json()
 
-        logging.info(f"number of rows: {data['total number rows']}")
+        if "total number rows" in data:
+            logging.info(f"number of rows: {data['total number rows']}")
 
         df = pl.DataFrame(data["data"])
         # Preprocessing from the original load_base_data function
@@ -170,6 +171,35 @@ def generate_synthetic_carcasses(
     return synthetic_df
 
 
+def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
+    """
+    Writes a table to GCS, without partition.
+    """
+    if not bucket_name:
+        raise ValueError("GCS bucket name is not configured via BRONZE_BUCKET env var.")
+
+    if df.is_empty():
+        logging.info(f"DataFrame is empty. Skipping write table {name} to GCS.")
+        return
+
+    gcs_base_path = f"{bucket_name}/unpartitioned/{name}.parquet"
+
+    logging.info(f"Writing {len(df)} records to gs://{gcs_base_path} unpartitioned.")
+    # Convert Polars DF to PyArrow Table
+    table = df.to_arrow()
+
+    # Create GCS filesystem which uses Application Default Credentials
+    fs = gcsfs.GCSFileSystem()
+
+    # Write partitioned dataset using PyArrow
+    pq.write_table(
+        table,
+        where=gcs_base_path,
+        filesystem=fs,
+    )
+    logging.info("Write to GCS successful.")
+
+
 def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
     """Writes a Polars DataFrame to GCS as a partitioned Parquet dataset using PyArrow."""
     if not bucket_name:
@@ -262,6 +292,14 @@ def generate_and_upload(request):
     """
 
     try:
+        if request.is_json and request.get_json().get("table"):
+            table = request.get_json().get("table")
+            table_data = fetch_data(f"/{table}", {})
+            write_unpartitioned_to_gcs(
+                df=table_data, bucket_name=BUCKET_NAME, name=table
+            )
+            return ("Raw data upload complete.", 200)
+
         # Accommodate POST (json body) requests for backfills and manual
         if request.is_json and request.get_json().get("target_date"):
             target_date_str = request.get_json().get("target_date")

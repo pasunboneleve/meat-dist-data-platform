@@ -23,7 +23,7 @@ include:
   models and aggregation for analytics.
 
 - **Analytics and BI**: Provide insights into weight distributions,
-  price trends, yield analysisby plant, and performance
+  price trends, yield analysis by plant, and performance
   metrics. Dashboards in Looker Studio will visualize these for
   stakeholders.
 
@@ -116,13 +116,13 @@ erDiagram
 
  HUB_CARCASS {
   string carcass_hash_key PK
-  string carcass_id BK
+  string carcass_id "BK"
   timestamp load_date
  }
 
  HUB_PROCESSOR {
   string processor_hash_key PK
-  string plant_id BK
+  string plant_id "BK"
   timestamp load_date
  }
 

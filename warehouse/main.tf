@@ -211,22 +211,20 @@ resource "google_bigquery_dataset" "gold_meat_market" {
 
 # --- Cloud Composer for Pipeline Orchestration ---
 resource "google_composer_environment" "meat_composer" {
-  project_id = var.project_id
-  name       = "meat-composer"
-  location   = var.region
+  name   = "meat-composer"
+  region = var.region
   labels = {
     environment = "prod"
   }
 
   config {
     software_config {
-      image_version = "composer-3-airflow-2.9.3"
+      image_version = "composer-2-airflow-2.7.3"
     }
 
     node_config {
       service_account = google_service_account.dataproc_sa.email
       machine_type    = "n1-standard-1"
-      node_count      = 3
     }
 
     database_config {
@@ -235,10 +233,6 @@ resource "google_composer_environment" "meat_composer" {
 
     web_server_config {
       machine_type = "composer-n1-webserver-2"
-    }
-
-    encryption_config {
-      gcs_data_encryption = "CUSTOMER_MANAGED_CSEK"
     }
   }
 

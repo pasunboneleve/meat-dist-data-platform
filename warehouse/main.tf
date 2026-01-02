@@ -284,3 +284,12 @@ resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_writer" {
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.ingestion_sa.email}"
 }
+
+# Required for Composer 2+ environment creation: Grant Composer Service Agent V2 Ext role
+resource "google_project_iam_member" "composer_service_agent_v2_ext" {
+  project = var.project_id
+  role    = "roles/composer.ServiceAgentV2Ext"
+  member  = "serviceAccount:service-${data.google_project.project.number}@cloudcomposer-accounts.iam.gserviceaccount.com"
+
+  depends_on = [google_project_service.apis]
+}

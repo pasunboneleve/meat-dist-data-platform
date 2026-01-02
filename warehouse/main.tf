@@ -211,7 +211,7 @@ resource "google_bigquery_dataset" "gold_meat_market" {
 
 # --- Cloud Composer for Pipeline Orchestration ---
 resource "google_composer_environment" "meat_composer" {
-  name   = "meat-composer-v2"
+  name   = "meat-composer"
   region = var.region
   labels = {
     environment = "prod"
@@ -267,6 +267,7 @@ resource "google_service_account" "scheduler_sa" {
 # Grant Dataproc SA permissions
 resource "google_project_iam_member" "dataproc_sa_roles" {
   for_each = toset([
+    "roles/composer.worker",         # Required for Composer worker nodes
     "roles/storage.objectAdmin",     # To read/write from GCS buckets
     "roles/bigquery.dataEditor",     # To read/write BigQuery tables
     "roles/dataplex.metadataReader", # To read metadata from Dataplex

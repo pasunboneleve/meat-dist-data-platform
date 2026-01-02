@@ -224,8 +224,9 @@ resource "google_composer_environment" "meat_composer" {
 
     environment_size = "ENVIRONMENT_SIZE_SMALL"
 
-
-
+    node_config {
+      service_account = google_service_account.dataproc_sa.email
+    }
   }
 
   depends_on = [google_project_service.apis]

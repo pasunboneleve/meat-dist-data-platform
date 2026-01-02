@@ -219,11 +219,47 @@ resource "google_composer_environment" "meat_composer" {
 
   config {
     software_config {
-      image_version = "composer-2.16.1-airflow-2.9.3"
+      image_version = "composer-3-airflow-2.9.3"
     }
 
-    environment_size = "ENVIRONMENT_SIZE_SMALL"
+    # --- AUTOSCALING CONFIG ---
+    workloads_config {
+      scheduler {
+        cpu        = 0.5
+        memory_gb  = 2
+        storage_gb = 1
+        count      = 1
+      }
+      web_server {
+        cpu        = 0.5
+        memory_gb  = 2
+        storage_gb = 1
+      }
+      worker {
+        cpu        = 0.5
+        memory_gb  = 2
+        storage_gb = 1
+        min_count  = 1
+        max_count  = 6
+      }
+      triggerer {
+        cpu       = 0.5
+        memory_gb = 1
+        count     = 1
+      }
+    }
 
+    # --- DATA RETENTION CONFIG (New) ---
+    # Automatically deletes database metadata older than 90 days.
+    # This keeps the Airflow database fast and responsive.
+    data_retention_config {
+      airflow_metadata_retention_config {
+        retention_mode = "RETENTION_MODE_ENABLED"
+        retention_days = 90
+      }
+    }
+
+    # --- IDENTITY CONFIG ---
     node_config {
       service_account = google_service_account.dataproc_sa.email
     }

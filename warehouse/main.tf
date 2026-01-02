@@ -222,7 +222,7 @@ resource "google_composer_environment" "meat_composer" {
       image_version = "composer-2.16.1-airflow-2.9.3"
     }
 
-    environment_size = "SMALL"
+    environment_size = "ENVIRONMENT_SIZE_SMALL"
 
 
 
@@ -283,4 +283,3 @@ resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_writer" {
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.ingestion_sa.email}"
 }
-

@@ -20,6 +20,12 @@ map-tokens: 1024
 max-chat-history-tokens: 32768
 cache-prompts: true
 
+# --- Automation & Testing ---
+# Replace 'pytest' or 'npm test' with your specific test command
+test-cmd: "cd ingestion/synthetic-meat/ && uv run pytest"
+auto-test: true
+auto-lint: true
+
 read:
   - README.md
   - infra/DEPLOYMENT.md

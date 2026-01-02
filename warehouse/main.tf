@@ -12,7 +12,8 @@ locals {
     "storage.googleapis.com",
     "run.googleapis.com",
     "cloudscheduler.googleapis.com",
-    "bigqueryconnection.googleapis.com"
+    "bigqueryconnection.googleapis.com",
+    "composer.googleapis.com"
   ]
 }
 
@@ -208,6 +209,42 @@ resource "google_bigquery_dataset" "gold_meat_market" {
   depends_on = [google_project_service.apis]
 }
 
+# --- Cloud Composer for Pipeline Orchestration ---
+resource "google_composer_environment" "meat_composer" {
+  project_id = var.project_id
+  name       = "meat-composer"
+  location   = var.region
+  labels = {
+    environment = "prod"
+  }
+
+  config {
+    software_config {
+      image_version = "composer-3-airflow-2.9.3"
+    }
+
+    node_config {
+      service_account = google_service_account.dataproc_sa.email
+      machine_type    = "n1-standard-1"
+      node_count      = 3
+    }
+
+    database_config {
+      machine_type = "db-n1-standard-2"
+    }
+
+    web_server_config {
+      machine_type = "composer-n1-webserver-2"
+    }
+
+    encryption_config {
+      gcs_data_encryption = "CUSTOMER_MANAGED_CSEK"
+    }
+  }
+
+  depends_on = [google_project_service.apis]
+}
+
 # --- IAM / Service Accounts ---
 
 # Service account for the ingestion service (temporarily restored for cleanup)
@@ -246,7 +283,8 @@ resource "google_project_iam_member" "dataproc_sa_roles" {
     "roles/storage.objectAdmin",     # To read/write from GCS buckets
     "roles/bigquery.dataEditor",     # To read/write BigQuery tables
     "roles/dataplex.metadataReader", # To read metadata from Dataplex
-    "roles/dataplex.dataOwner"       # To manage data in Dataplex zones
+    "roles/dataplex.dataOwner",      # To manage data in Dataplex zones
+    "roles/dataproc.editor"          # To submit serverless batches from Composer
   ])
   project = var.project_id
   role    = each.value

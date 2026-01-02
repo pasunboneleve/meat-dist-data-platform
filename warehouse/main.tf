@@ -211,7 +211,7 @@ resource "google_bigquery_dataset" "gold_meat_market" {
 
 # --- Cloud Composer for Pipeline Orchestration ---
 resource "google_composer_environment" "meat_composer" {
-  name   = "meat-composer"
+  name   = "meat-composer-v2"
   region = var.region
   labels = {
     environment = "prod"

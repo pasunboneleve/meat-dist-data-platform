@@ -45,15 +45,16 @@ jobs:
         service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
         audience: 'sts.googleapis.com'
 
-    - name: Configure Docker
-      run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
-
     - name: Get current image URI from Cloud Run
       id: get-image
       run: |
         IMAGE_URI=$(gcloud run services describe synthetic-meat-ingestor --region ${{ env.GCP_REGION }} --format 'value(IMAGE)')
         echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
       continue-on-error: true
+
+    - name: Configure Docker
+      run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+      if: steps.changes.outputs.ingestion == 'true' || steps.get-image.outputs.image_uri == ''
 
     - name: Build and Push Docker Image
       if: steps.changes.outputs.ingestion == 'true' || steps.get-image.outputs.image_uri == ''

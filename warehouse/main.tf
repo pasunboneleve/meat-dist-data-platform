@@ -36,7 +36,7 @@ resource "google_storage_bucket" "bronze" {
   location      = var.region
   force_destroy = true # Good for dev, consider false for prod
 
-  depends_on = [google_project_service.apis]
+  depends_on = [google_project_service.apis, time_sleep.wait_composer_permissions]
 }
 
 # Silver bucket for curated, structured data (e.g., Iceberg tables)
@@ -292,4 +292,11 @@ resource "google_project_iam_member" "composer_service_agent_v2_ext" {
   member  = "serviceAccount:service-${data.google_project.project.number}@cloudcomposer-accounts.iam.gserviceaccount.com"
 
   depends_on = [google_project_service.apis]
+}
+
+# Wait for IAM propagation before Composer env creation
+resource "time_sleep" "wait_composer_permissions" {
+  create_duration = "30s"
+
+  depends_on = [google_project_iam_member.composer_service_agent_v2_ext]
 }

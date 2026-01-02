@@ -6,16 +6,18 @@ Bronze to Silver DAG for Cloud Composer.
 
 from datetime import datetime, timedelta
 from airflow import DAG
+from airflow.models import Variable
 from airflow.providers.google.cloud.operators.dataproc import (
     DataprocServerlessSparkSubmitOperator,
 )
 from airflow.providers.google.cloud.sensors.gcs import GCSObjectSensor
 from airflow.operators.empty import EmptyOperator
 
-PROJECT_ID = "your-project-id"  # Set via Airflow Variable 'gcp_project'
-REGION = "australia-southeast2"
-BRONZE_BUCKET = f"{PROJECT_ID}-bronze"
-DEPS_BUCKET = f"{PROJECT_ID}-deps"
+# Dynamic config from Airflow Variables (set in UI)
+PROJECT_ID = Variable.get("gcp_project", default_var="your-project-id")
+REGION = Variable.get("gcp_region", default_var="australia-southeast2")
+BRONZE_BUCKET = Variable.get("bronze_bucket", default_var=f"{PROJECT_ID}-bronze")
+DEPS_BUCKET = Variable.get("deps_bucket", default_var=f"{PROJECT_ID}-deps")
 
 default_args = {
     "owner": "data-eng",
@@ -38,8 +40,8 @@ start = EmptyOperator(task_id="start", dag=dag)
 
 wait_bronze = GCSObjectSensor(
     task_id="wait_for_bronze_data",
-    bucket=BRONZE_BUCKET,
-    prefix=f"carcasses/year={{{{ ds_nodash[:4] }}}}/month={{{{ ds_nodash[4:6] }}}}/day={{{{ ds_nodash[6:8] }}}}/",
+    bucket="{{ var.value.bronze_bucket }}",
+    prefix="carcasses/year={{ ds_nodash[:4] }}/month={{ ds_nodash[4:6] }}/day={{ ds_nodash[6:8] }}/",
     google_cloud_conn_id="google_cloud_default",
     timeout=7200,  # 2h
     poke_interval=600,  # 10min
@@ -48,17 +50,14 @@ wait_bronze = GCSObjectSensor(
 
 submit_spark = DataprocServerlessSparkSubmitOperator(
     task_id="transform_bronze_to_silver",
-    project_id=PROJECT_ID,
-    region=REGION,
-    batch_id=f"bronze-to-silver-{{{{ ds_nodash }}}}",  # Unique ID
+    project_id="{{ var.value.gcp_project }}",
+    region="{{ var.value.gcp_region }}",
+    batch_id="bronze-to-silver-{{ ds_nodash }}",  # Unique ID
     main="job.py",
-    script_uri=f"gs://{DEPS_BUCKET}/job.py",
-    # Add jars if needed
-    spark_jars=[
-        "gs://spark-lib/bigquery/spark-bigquery-latest_2.12.jar",  # Optional
+    script_uri="{{ var.value.deps_bucket }}/job.py",
+    args=[
+        "gs://{{ var.value.bronze_bucket }}/carcasses/year={{ ds_nodash[:4] }}/month={{ ds_nodash[4:6] }}/day={{ ds_nodash[6:8] }}/*"
     ],
-    # Pass args: bronze path for the day
-    args=[f"gs://{BRONZE_BUCKET}/carcasses/year={{{{ ds_nodash[:4] }}}}/month={{{{ ds_nodash[4:6] }}}}/day={{{{ ds_nodash[6:8] }}}}/*"],
     dag=dag,
 )
 

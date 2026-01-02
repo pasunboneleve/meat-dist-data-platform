@@ -296,7 +296,7 @@ resource "google_project_iam_member" "composer_service_agent_v2_ext" {
 
 # Wait for IAM propagation before Composer env creation
 resource "time_sleep" "wait_composer_permissions" {
-  create_duration = "30s"
+  create_duration = "120s"
 
   depends_on = [google_project_iam_member.composer_service_agent_v2_ext]
 }

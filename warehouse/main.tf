@@ -3,15 +3,6 @@ data "google_project" "project" {
   project_id = var.project_id
 }
 
-data "google_compute_network" "default" {
-  name = "default"
-}
-
-data "google_compute_subnetwork" "default" {
-  name   = "default"
-  region = var.region
-}
-
 locals {
   # APIs needed for the data warehouse infrastructure
   required_apis = [
@@ -270,13 +261,7 @@ resource "google_composer_environment" "meat_composer" {
 
     # --- IDENTITY CONFIG ---
     node_config {
-      service_account             = google_service_account.dataproc_sa.email
-      network                     = data.google_compute_network.default.self_link
-      subnetwork                  = data.google_compute_subnetwork.default.self_link
-      private_cluster_config {
-        enable_private_endpoint = false
-        master_ipv4_cidr_block  = "172.110.32.0/28"
-      }
+      service_account = google_service_account.dataproc_sa.email
     }
   }
 

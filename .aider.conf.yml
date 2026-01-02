@@ -23,7 +23,7 @@ cache-prompts: true
 # --- Automation & Testing ---
 # Replace 'pytest' or 'npm test' with your specific test command
 test-cmd: "cd ingestion/synthetic-meat/ && uv run pytest"
-auto-test: true
+auto-test: false
 auto-lint: true
 
 read:

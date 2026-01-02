@@ -11,6 +11,7 @@ locals {
     "roles/bigquery.admin",
     "roles/artifactregistry.admin",
     "roles/cloudscheduler.admin",
+    "roles/composer.admin",
   ]
 
   # Required APIs for the deployment pipeline
@@ -21,6 +22,7 @@ locals {
     "artifactregistry.googleapis.com",
     "run.googleapis.com",
     "appengine.googleapis.com",
+    "composer.googleapis.com",
   ]
 
   # Full resource names

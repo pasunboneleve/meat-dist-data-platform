@@ -1,4 +1,24 @@
+## Architect settings
 architect: true
+model: xai/grok-4-1-fast-reasoning
+editor-model: gemini/gemini-2.5-flash
+weak-model: gemini/gemini-2.5-flash-lite
+
+## Edit settings
+edit-format: diff
+# Use 'editor-diff' if you want Gemini to be even more surgical
+# when acting as an editor.
+editor-edit-format: editor-diff
+
+## Performance & UI
+stream: false
+show-diffs: true
+map-tokens: 1024
+
+## History & Context
+# Since Grok-4-1 has a 2M context window, you can afford a larger history
+max-chat-history-tokens: 32768
+cache-prompts: true
 
 read:
   - README.md

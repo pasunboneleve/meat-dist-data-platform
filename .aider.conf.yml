@@ -7,7 +7,7 @@ weak-model: gemini/gemini-2.5-flash-lite
 ## Edit settings
 edit-format: diff
 # Use 'editor-diff' if you want Gemini to be even more surgical
-# when acting as an editor.
+# when acting as an editor. Saves tokens, avoid rethinking.
 editor-edit-format: editor-diff
 
 ## Performance & UI

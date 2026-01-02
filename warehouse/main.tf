@@ -219,21 +219,13 @@ resource "google_composer_environment" "meat_composer" {
 
   config {
     software_config {
-      image_version = "composer-2-airflow-2.7.3"
+      image_version = "composer-2.16.1-airflow-2.9.3"
     }
 
-    node_config {
-      service_account = google_service_account.dataproc_sa.email
-      machine_type    = "n1-standard-1"
-    }
+    environment_size = "SMALL"
 
-    database_config {
-      machine_type = "db-n1-standard-2"
-    }
 
-    web_server_config {
-      machine_type = "composer-n1-webserver-2"
-    }
+
   }
 
   depends_on = [google_project_service.apis]

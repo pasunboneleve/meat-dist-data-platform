@@ -272,6 +272,11 @@ resource "google_composer_environment" "meat_composer" {
   depends_on = [google_project_service.apis]
 }
 
+# send that info to Github Actions
+locals {
+  composer_bucket = google_composer_environment.meat_composer.config[0].dag_gcs_prefix
+}
+
 # --- IAM / Service Accounts ---
 
 # Service account for the ingestion service (temporarily restored for cleanup)

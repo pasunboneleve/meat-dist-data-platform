@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 
 # --- Configuration ---
-BUCKET_NAME = os.environ.get("BRONZE_BUCKET", "meatislife-bronze")
+BUCKET_NAME = os.environ.get("BRONZE_BUCKET", "meatislife-bronze-bucket")
 MLA_API_URL = "https://api-mlastatistics.mla.com.au"
 
 # --- Helper Functions ---

@@ -4,7 +4,7 @@ Backfills
 Backfills are better handled locally. Just run a development server:
 
 ```bash
-BRONZE_BUCKET=meatislife-bronze uv run functions-framework --source=src/synthesise.py --target=generate_and_upload
+BRONZE_BUCKET=meatislife-bronze-bucket uv run functions-framework --source=src/synthesise.py --target=generate_and_upload
 ```
 from the `synthetic-meat` directory.
 

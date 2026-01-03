@@ -34,4 +34,4 @@ jobs:
         audience: 'sts.googleapis.com'
 
     - name: Sync DAGs to Composer
-      run: gsutil rsync -d dag gs://${COMPOSER_BUCKET}/dags/
+      run: gsutil rsync -d dag "gs://${COMPOSER_BUCKET}/dags/"

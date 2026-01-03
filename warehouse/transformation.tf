@@ -9,7 +9,7 @@
 #
 #   external_data_configuration {
 #     source_format = "ICEBERG"
-#     source_uris   = ["gs://${google_storage_bucket.silver.name}/carcasses"]
+#     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/carcasses"]
 #     autodetect    = false
 #   }
 # }

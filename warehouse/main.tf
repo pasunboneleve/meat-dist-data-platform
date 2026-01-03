@@ -29,37 +29,6 @@ resource "google_project_service" "apis" {
 
 
 # --- GCS Buckets ---
-# Legacy Bronze bucket for raw data ingestion
-resource "google_storage_bucket" "bronze" {
-  project       = var.project_id
-  name          = "${var.project_id}-bronze"
-  location      = var.region
-  force_destroy = true # Good for dev, consider false for prod
-
-  depends_on = [google_project_service.apis, time_sleep.wait_composer_permissions]
-}
-
-# Legacy Silver bucket for curated, structured data (e.g., Iceberg tables)
-resource "google_storage_bucket" "silver" {
-  project       = var.project_id
-  name          = "${var.project_id}-silver"
-  location      = var.region
-  force_destroy = true
-
-  depends_on = [google_project_service.apis]
-}
-
-# Legacy Dependencies bucket for Spark jobs, temp files, etc.
-resource "google_storage_bucket" "deps" {
-  project       = var.project_id
-  name          = "${var.project_id}-deps"
-  location      = var.region
-  force_destroy = true
-
-  depends_on = [google_project_service.apis]
-}
-
-# --- GCS Buckets (aligned with compute region) ---
 resource "google_storage_bucket" "bronze_bucket" {
   project       = var.project_id
   name          = "${var.project_id}-bronze-bucket"
@@ -116,7 +85,7 @@ resource "time_sleep" "wait_for_biglake_sa" {
 
 # Grant the BigLake connection's service account access to the GCS buckets.
 resource "google_storage_bucket_iam_member" "biglake_sa_bronze_reader" {
-  bucket = google_storage_bucket.bronze.name
+  bucket = google_storage_bucket.bronze_bucket.name
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${google_bigquery_connection.biglake.cloud_resource[0].service_account_id}"
 
@@ -124,7 +93,7 @@ resource "google_storage_bucket_iam_member" "biglake_sa_bronze_reader" {
 }
 
 resource "google_storage_bucket_iam_member" "biglake_sa_silver_reader" {
-  bucket = google_storage_bucket.silver.name
+  bucket = google_storage_bucket.silver_bucket.name
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${google_bigquery_connection.biglake.cloud_resource[0].service_account_id}"
 
@@ -203,7 +172,7 @@ resource "google_dataplex_asset" "bronze_asset" {
     enabled = true
   }
   resource_spec {
-    name = "projects/${google_storage_bucket.bronze.project}/buckets/${google_storage_bucket.bronze.name}"
+    name = "projects/${google_storage_bucket.bronze_bucket.project}/buckets/${google_storage_bucket.bronze_bucket.name}"
     type = "STORAGE_BUCKET"
   }
 }
@@ -220,7 +189,7 @@ resource "google_dataplex_asset" "silver_asset" {
     enabled = true
   }
   resource_spec {
-    name = "projects/${google_storage_bucket.silver.project}/buckets/${google_storage_bucket.silver.name}"
+    name = "projects/${google_storage_bucket.silver_bucket.project}/buckets/${google_storage_bucket.silver_bucket.name}"
     type = "STORAGE_BUCKET"
   }
 }
@@ -352,7 +321,7 @@ resource "google_project_iam_member" "dataproc_sa_roles" {
 
 # Grant Ingestion SA permission to write to the bronze bucket
 resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_writer" {
-  bucket = google_storage_bucket.bronze.name
+  bucket = google_storage_bucket.bronze_bucket.name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.ingestion_sa.email}"
 }

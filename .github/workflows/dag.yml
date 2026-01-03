@@ -33,5 +33,10 @@ jobs:
         service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
         audience: 'sts.googleapis.com'
 
+    - name: Debug Composer Bucket
+      run: |
+        echo "COMPOSER_BUCKET=${{ env.COMPOSER_BUCKET }}"
+        gsutil ls "${{ env.COMPOSER_BUCKET }}"
+        gsutil iam get "(echo ${{ env.COMPOSER_BUCKET }} | SED 'S|/DAGS.*||')"
     - name: Sync DAGs to Composer
-      run: gsutil rsync -d dag "${{ secrets.COMPOSER_BUCKET }}"
+      run: gsutil rsync -d dag "${{ env.COMPOSER_BUCKET }}"

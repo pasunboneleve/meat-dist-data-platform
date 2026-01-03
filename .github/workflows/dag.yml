@@ -8,9 +8,6 @@ on:
       - 'dag/**'
       - '.github/workflows/dag.yml'
 
-env:
-  COMPOSER_BUCKET: ${{ secrets.COMPOSER_BUCKET }}
-
 jobs:
   deploy:
     name: Sync DAGs
@@ -33,14 +30,5 @@ jobs:
         service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
         audience: 'sts.googleapis.com'
 
-    - name: Debug Composer Bucket
-      run: |
-        echo "COMPOSER_BUCKET=${{ env.COMPOSER_BUCKET }}"
-        gcloud storage ls "${{ env.COMPOSER_BUCKET }}"
-        BUCKET=$(echo "${{ env.COMPOSER_BUCKET }}" | sed 's|gs://||' | sed 's|/.*||')
-        echo "Bucket: gs://$BUCKET"
-        gcloud storage buckets get-iam-policy "gs://$BUCKET" \
-          --format="table(bindings.role,bindings.members)" \
-          | grep -E "(storage.admin|github-actions-deploy|objectAdmin)"
     - name: Sync DAGs to Composer
-      run: gcloud storage rsync -d dag "${{ env.COMPOSER_BUCKET }}"
+      run: gcloud storage rsync -d dag "${{ secrets.COMPOSER_BUCKET }}"

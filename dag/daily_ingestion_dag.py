@@ -1,8 +1,10 @@
-from airflow import DAG
-from airflow.providers.http.operators.http import HttpOperator
-from airflow.providers.google.cloud.sensors.gcs import GCSObjectsPrefixSensor
-from airflow.operators.empty import EmptyOperator
 from datetime import datetime, timedelta
+
+from airflow import DAG
+from airflow.operators.empty import EmptyOperator
+from airflow.providers.google.cloud.sensors.gcs import \
+    GCSObjectsWithPrefixExistenceSensor
+from airflow.providers.http.operators.http import HttpOperator
 
 default_args = {
     "owner": "data-eng",
@@ -23,12 +25,12 @@ dag = DAG(
 trigger_ingestion = HttpOperator(
     task_id="trigger_synthetic_ingestor",
     method="POST",
+    http_conn_id="synthetic_meat_conn",
     endpoint="/",
-    url="{{ var.value.ingestor_url }}",
     dag=dag,
 )
 
-wait_bronze = GCSObjectsPrefixSensor(
+wait_bronze = GCSObjectsWithPrefixExistenceSensor(
     task_id="wait_for_bronze_data",
     bucket="{{ var.value.bronze_bucket }}",
     prefix="carcasses/",

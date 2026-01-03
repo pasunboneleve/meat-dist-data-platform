@@ -130,12 +130,12 @@ resource "google_dataplex_lake" "meat_market_lake" {
 
 # Raw zone for bronze data
 resource "google_dataplex_zone" "raw_zone" {
-  project                = var.project_id
-  lake                   = google_dataplex_lake.meat_market_lake.name
-  location               = var.app_engine_region
-  name                   = "raw"
-  display_name           = "Raw Zone (Bronze)"
-  type                   = "RAW"
+  project      = var.project_id
+  lake         = google_dataplex_lake.meat_market_lake.name
+  location     = var.app_engine_region
+  name         = "raw"
+  display_name = "Raw Zone (Bronze)"
+  type         = "RAW"
   discovery_spec {
     enabled = true
   }
@@ -146,12 +146,12 @@ resource "google_dataplex_zone" "raw_zone" {
 
 # Curated zone for silver data
 resource "google_dataplex_zone" "curated_zone" {
-  project                = var.project_id
-  lake                   = google_dataplex_lake.meat_market_lake.name
-  location               = var.app_engine_region
-  name                   = "curated"
-  display_name           = "Curated Zone (Silver)"
-  type                   = "CURATED"
+  project      = var.project_id
+  lake         = google_dataplex_lake.meat_market_lake.name
+  location     = var.app_engine_region
+  name         = "curated"
+  display_name = "Curated Zone (Silver)"
+  type         = "CURATED"
   discovery_spec {
     enabled = true
   }
@@ -162,12 +162,12 @@ resource "google_dataplex_zone" "curated_zone" {
 
 # Link bronze bucket to the raw zone
 resource "google_dataplex_asset" "bronze_asset" {
-  project          = var.project_id
-  lake             = google_dataplex_lake.meat_market_lake.name
-  location         = var.app_engine_region
-  dataplex_zone    = google_dataplex_zone.raw_zone.name
-  name             = "bronze-storage"
-  display_name     = "Bronze GCS Bucket"
+  project       = var.project_id
+  lake          = google_dataplex_lake.meat_market_lake.name
+  location      = var.app_engine_region
+  dataplex_zone = google_dataplex_zone.raw_zone.name
+  name          = "bronze-storage"
+  display_name  = "Bronze GCS Bucket"
   discovery_spec {
     enabled = true
   }
@@ -179,12 +179,12 @@ resource "google_dataplex_asset" "bronze_asset" {
 
 # Link silver bucket to the curated zone
 resource "google_dataplex_asset" "silver_asset" {
-  project          = var.project_id
-  lake             = google_dataplex_lake.meat_market_lake.name
-  location         = var.app_engine_region
-  dataplex_zone    = google_dataplex_zone.curated_zone.name
-  name             = "silver-storage"
-  display_name     = "Silver GCS Bucket"
+  project       = var.project_id
+  lake          = google_dataplex_lake.meat_market_lake.name
+  location      = var.app_engine_region
+  dataplex_zone = google_dataplex_zone.curated_zone.name
+  name          = "silver-storage"
+  display_name  = "Silver GCS Bucket"
   discovery_spec {
     enabled = true
   }
@@ -224,8 +224,13 @@ resource "google_composer_environment" "meat_composer" {
   config {
     software_config {
       image_version = "composer-3-airflow-2.9.3"
+      env_variables = {
+        # Format: AIRFLOW_CONN_{YOUR_CONN_ID_UPPERCASE}
+        # Value: URI format (scheme://user:pass@host:port/schema?extra)
+        AIRFLOW_CONN_SYNTHETIC_INGESTOR_CONN = local.ingestion_service_url
+      }
     }
-
+O
     # --- AUTOSCALING CONFIG ---
     workloads_config {
       scheduler {

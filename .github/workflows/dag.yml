@@ -8,6 +8,9 @@ on:
       - 'dag/**'
       - '.github/workflows/dag.yml'
 
+env:
+  COMPOSER_BUCKET: ${{ secrets.COMPOSER_BUCKET }}
+
 jobs:
   deploy:
     name: Sync DAGs
@@ -31,4 +34,4 @@ jobs:
         audience: 'sts.googleapis.com'
 
     - name: Sync DAGs to Composer
-      run: gcloud storage rsync -d dag "${{ secrets.COMPOSER_BUCKET }}"
+      run: gcloud storage rsync -r dag "gs://${{ env.COMPOSER_BUCKET }}/dags"

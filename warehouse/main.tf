@@ -69,7 +69,7 @@ resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_bucket_writer" 
 resource "google_bigquery_connection" "biglake" {
   project       = var.project_id
   connection_id = "biglake-connection"
-  location      = var.region
+  location      = var.app_engine_region
   friendly_name = "BigLake GCS Connection"
   description   = "Connection for BigQuery to read GCS data via BigLake"
   cloud_resource {} # This empty block specifies it's for GCS
@@ -122,7 +122,7 @@ resource "google_project_iam_member" "dataplex_sa_bigquery_user" {
 resource "google_dataplex_lake" "meat_market_lake" {
   project      = var.project_id
   name         = "meat-market-lake"
-  location     = var.region
+  location     = var.app_engine_region
   display_name = "Meat Market Data Lake"
 
   depends_on = [google_project_service.apis]
@@ -132,7 +132,7 @@ resource "google_dataplex_lake" "meat_market_lake" {
 resource "google_dataplex_zone" "raw_zone" {
   project                = var.project_id
   lake                   = google_dataplex_lake.meat_market_lake.name
-  location               = var.region
+  location               = var.app_engine_region
   name                   = "raw"
   display_name           = "Raw Zone (Bronze)"
   type                   = "RAW"
@@ -148,7 +148,7 @@ resource "google_dataplex_zone" "raw_zone" {
 resource "google_dataplex_zone" "curated_zone" {
   project                = var.project_id
   lake                   = google_dataplex_lake.meat_market_lake.name
-  location               = var.region
+  location               = var.app_engine_region
   name                   = "curated"
   display_name           = "Curated Zone (Silver)"
   type                   = "CURATED"
@@ -164,7 +164,7 @@ resource "google_dataplex_zone" "curated_zone" {
 resource "google_dataplex_asset" "bronze_asset" {
   project          = var.project_id
   lake             = google_dataplex_lake.meat_market_lake.name
-  location         = var.region
+  location         = var.app_engine_region
   dataplex_zone    = google_dataplex_zone.raw_zone.name
   name             = "bronze-storage"
   display_name     = "Bronze GCS Bucket"
@@ -181,7 +181,7 @@ resource "google_dataplex_asset" "bronze_asset" {
 resource "google_dataplex_asset" "silver_asset" {
   project          = var.project_id
   lake             = google_dataplex_lake.meat_market_lake.name
-  location         = var.region
+  location         = var.app_engine_region
   dataplex_zone    = google_dataplex_zone.curated_zone.name
   name             = "silver-storage"
   display_name     = "Silver GCS Bucket"
@@ -199,7 +199,7 @@ resource "google_dataplex_asset" "silver_asset" {
 resource "google_bigquery_dataset" "silver_meat_market" {
   project    = var.project_id
   dataset_id = "silver_meat_market"
-  location   = var.region
+  location   = var.app_engine_region
 
   depends_on = [google_project_service.apis]
 }
@@ -208,7 +208,7 @@ resource "google_bigquery_dataset" "silver_meat_market" {
 resource "google_bigquery_dataset" "gold_meat_market" {
   project    = var.project_id
   dataset_id = "gold_meat_market"
-  location   = var.region
+  location   = var.app_engine_region
 
   depends_on = [google_project_service.apis]
 }
@@ -216,7 +216,7 @@ resource "google_bigquery_dataset" "gold_meat_market" {
 # --- Cloud Composer for Pipeline Orchestration ---
 resource "google_composer_environment" "meat_composer" {
   name   = "meat-composer"
-  region = var.region
+  region = var.app_engine_region
   labels = {
     environment = "prod"
   }

@@ -54,7 +54,7 @@ resource "google_app_engine_application" "app" {
 # Docker repository for ingestion service images
 resource "google_artifact_registry_repository" "images" {
   project       = var.project_id
-  location      = var.region
+  location      = var.app_engine_region
   repository_id = "meat-data-images"
   format        = "DOCKER"
   description   = "Docker repository for meat data platform images"
@@ -122,5 +122,3 @@ resource "google_project_iam_member" "sa_roles" {
 
   depends_on = [google_project_service.apis]
 }
-
-

@@ -1,0 +1,16 @@
+name: Deploy DAGs to Composer
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dag/**'
+      - '.github/workflows/dag.yml'
+
+jobs:
+  deploy:
+    name: Sync DAGs
+    runs-on: ubuntu-latest
+    permissions:
+      contents

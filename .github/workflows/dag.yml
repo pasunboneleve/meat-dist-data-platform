@@ -12,5 +12,4 @@ jobs:
   deploy:
     name: Sync DAGs
     runs-on: ubuntu-latest
-    permissions:
-      contents
+    permissions: contents

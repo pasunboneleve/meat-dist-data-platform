@@ -36,7 +36,11 @@ jobs:
     - name: Debug Composer Bucket
       run: |
         echo "COMPOSER_BUCKET=${{ env.COMPOSER_BUCKET }}"
-        gsutil ls "${{ env.COMPOSER_BUCKET }}"
-        gsutil iam get "(echo ${{ env.COMPOSER_BUCKET }} | SED 'S|/DAGS.*||')"
+        gcloud storage ls "${{ env.COMPOSER_BUCKET }}"
+        BUCKET=$(echo "${{ env.COMPOSER_BUCKET }}" | sed 's|gs://||' | sed 's|/.*||')
+        echo "Bucket: gs://$BUCKET"
+        gcloud storage buckets get-iam-policy "gs://$BUCKET" \
+          --format="table(bindings.role,bindings.members)" \
+          | grep -E "(storage.admin|github-actions-deploy|objectAdmin)"
     - name: Sync DAGs to Composer
-      run: gsutil rsync -d dag "${{ env.COMPOSER_BUCKET }}"
+      run: gcloud storage rsync -d dag "${{ env.COMPOSER_BUCKET }}"

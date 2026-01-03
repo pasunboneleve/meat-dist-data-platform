@@ -8,6 +8,13 @@ Implement a cost-effective (~$1–5/run), serverless orchestration pipeline usin
 4. **Modern & Simple**: Airflow DAGs + Dataproc Serverless PySpark (no clusters, pay-per-use).
 5. **Low Cost**: Serverless (no idle fees), small jobs (1–2 vCPU, 30min max), daily schedule.
 
+## Key Principles
+- **DataPlex**: Auto-discovery, metadata management, lineage tracking.
+- **Idempotency**: Iceberg MERGE-into for safe retries/replays (no duplicates).
+- **Medallion Architecture**: Bronze (raw Parquet), Silver (Data Vault 2.0), Gold (Kimball star schema).
+- **BigLake**: Serverless BigQuery querying over Iceberg tables (no duplication).
+- **Zero Egress Fees**: All resources/services in single region (e.g., australia-southeast1).
+
 **Total Monthly Cost Est.**: <$20 (Composer idle ~$50, but jobs ~$0.10–0.50 each).
 
 ## Architecture Flow

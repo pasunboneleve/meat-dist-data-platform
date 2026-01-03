@@ -17,7 +17,7 @@ resource "google_cloud_run_v2_service" "ingestor" {
       image = var.image_uri
       env {
         name  = "BRONZE_BUCKET"
-        value = google_storage_bucket.bronze_se1.name
+        value = google_storage_bucket.bronze_bucket.name
       }
     }
   }

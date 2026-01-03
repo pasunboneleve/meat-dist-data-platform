@@ -15,7 +15,6 @@ variable "image_uri" {
 }
 
 variable "app_engine_region" {
-  description = "Region for App Engine and Cloud Scheduler"
+  description = "Primary region"
   type        = string
 }
-

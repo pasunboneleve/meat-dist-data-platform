@@ -29,7 +29,7 @@ resource "google_project_service" "apis" {
 
 
 # --- GCS Buckets ---
-# Bronze bucket for raw data ingestion
+# Legacy Bronze bucket for raw data ingestion
 resource "google_storage_bucket" "bronze" {
   project       = var.project_id
   name          = "${var.project_id}-bronze"
@@ -39,7 +39,7 @@ resource "google_storage_bucket" "bronze" {
   depends_on = [google_project_service.apis, time_sleep.wait_composer_permissions]
 }
 
-# Silver bucket for curated, structured data (e.g., Iceberg tables)
+# Legacy Silver bucket for curated, structured data (e.g., Iceberg tables)
 resource "google_storage_bucket" "silver" {
   project       = var.project_id
   name          = "${var.project_id}-silver"
@@ -49,7 +49,7 @@ resource "google_storage_bucket" "silver" {
   depends_on = [google_project_service.apis]
 }
 
-# Dependencies bucket for Spark jobs, temp files, etc.
+# Legacy Dependencies bucket for Spark jobs, temp files, etc.
 resource "google_storage_bucket" "deps" {
   project       = var.project_id
   name          = "${var.project_id}-deps"
@@ -57,6 +57,41 @@ resource "google_storage_bucket" "deps" {
   force_destroy = true
 
   depends_on = [google_project_service.apis]
+}
+
+# --- GCS Buckets (aligned with compute region) ---
+resource "google_storage_bucket" "bronze_bucket" {
+  project       = var.project_id
+  name          = "${var.project_id}-bronze-bucket"
+  location      = var.app_engine_region
+  force_destroy = true
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_storage_bucket" "silver_bucket" {
+  project       = var.project_id
+  name          = "${var.project_id}-silver-bucket"
+  location      = var.app_engine_region
+  force_destroy = true
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_storage_bucket" "deps_bucket" {
+  project       = var.project_id
+  name          = "${var.project_id}-deps-bucket"
+  location      = var.app_engine_region
+  force_destroy = true
+
+  depends_on = [google_project_service.apis]
+}
+
+# IAM for ingestion to new SE1 bronze bucket
+resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_bucket_writer" {
+  bucket = google_storage_bucket.bronze_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.ingestion_sa.email}"
 }
 
 

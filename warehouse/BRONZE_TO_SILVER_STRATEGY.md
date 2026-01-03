@@ -19,11 +19,10 @@ Implement a cost-effective (~$1–5/run), serverless orchestration pipeline usin
 
 ## Architecture Flow
 ```
-Cloud Scheduler (daily) → Cloud Run (synthetic generator) → Bronze GCS (Parquet: plant_id/year/month/day)
-  ↓ (Airflow DAG trigger/verify)
-Composer DAG:
-  - Task 1: Verify/Trigger new Bronze data
-  - Task 2: Dataproc Serverless Spark → Read Bronze Parquet → DV2 Iceberg → Silver GCS (table_version=1, partitioned)
+Composer DAG (daily):
+  - Task 1: HttpOperator → Cloud Run (synthetic generator) → Bronze GCS SE1 (Parquet: plant_id/year/month/day)
+  - Task 2: Verify files landed
+  - Task 3: Dataproc Serverless Spark → Read Bronze → DV2 Iceberg → Silver GCS (table_version=1, partitioned)
 Dataplex: Auto-discovers → BigLake/BigQuery queryable
 ```
 
@@ -43,7 +42,7 @@ Tasks:
 2. **BigQueryCheckOperator** or **GCSHook**: Verify new Parquet files landed (`gs://bronze/carcasses/plant_id=.../year=...`).
 3. **EmailOperator** (failures only).
 
-**Why Airflow?** Replaces/backs up Cloud Scheduler; retries, SLAs, lineage.
+**Why Airflow?** Primary trigger (replaces Cloud Scheduler); retries, SLAs, lineage.
 
 **IaC**:
 - Add `google_cloud_composer_environment_update`? No, upload DAGs to Composer GCS DAGs folder via CI/CD or Airflow UI.

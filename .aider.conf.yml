@@ -24,7 +24,7 @@ cache-prompts: true
 # Replace 'pytest' or 'npm test' with your specific test command
 test-cmd: "cd ingestion/synthetic-meat/ && uv run pytest"
 auto-test: false
-auto-lint: true
+auto-lint: false
 
 read:
   - README.md

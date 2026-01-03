@@ -1,6 +1,6 @@
 from airflow import DAG
 from airflow.providers.http.operators.http import HttpOperator
-from airflow.providers.google.cloud.sensors.gcs import GCSObjectSensor
+from airflow.providers.google.cloud.sensors.gcs_objects_sensor import GCSObjectsPrefixSensor
 from airflow.operators.empty import EmptyOperator
 from datetime import datetime, timedelta
 
@@ -28,10 +28,11 @@ trigger_ingestion = HttpOperator(
     dag=dag,
 )
 
-wait_bronze = GCSObjectSensor(
+wait_bronze = GCSObjectsPrefixSensor(
     task_id="wait_for_bronze_data",
     bucket="{{ var.value.bronze_bucket }}",
-    prefix="carcasses/year={{ ds_nodash[:4] }}/month={{ ds_nodash[4:6] }}/day={{ ds_nodash[6:8] }}/",
+    prefix="carcasses/",
+    count=1,
     google_cloud_conn_id="google_cloud_default",
     timeout=7200,
     poke_interval=600,

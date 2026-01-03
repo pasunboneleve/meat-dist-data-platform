@@ -1,6 +1,6 @@
 from airflow import DAG
 from airflow.providers.http.operators.http import HttpOperator
-from airflow.providers.google.cloud.sensors.gcs_objects_sensor import GCSObjectsPrefixSensor
+from airflow.providers.google.cloud.sensors.gcs import GCSObjectsPrefixSensor
 from airflow.operators.empty import EmptyOperator
 from datetime import datetime, timedelta
 

@@ -10,7 +10,8 @@ dependencies = [
     "gcsfs>=2023.0.0",
     "google-cloud-storage>=2.0.0",
     "functions-framework>=3.0.0",
-    "requests>=2.30.0"
+    "requests>=2.30.0",
+    "structlog>=25.5.0",
 ]
 
 [project.scripts]

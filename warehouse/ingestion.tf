@@ -24,3 +24,20 @@ resource "google_cloud_run_v2_service" "ingestor" {
   }
 
 }
+
+# Allow Composer service account (dataproc_sa) to invoke this specific Cloud Run service
+resource "google_cloud_run_v2_service_iam_member" "dataproc_sa_invoker" {
+  project  = google_cloud_run_v2_service.ingestor.project
+  location = google_cloud_run_v2_service.ingestor.location
+  name     = google_cloud_run_v2_service.ingestor.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.dataproc_sa.email}"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "dataproc_serverless_invoker" {
+  project  = google_cloud_run_v2_service.ingestor.project
+  location = google_cloud_run_v2_service.ingestor.location
+  name     = google_cloud_run_v2_service.ingestor.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:dataproc-serverless@meatislife.iam.gserviceaccount.com"
+}

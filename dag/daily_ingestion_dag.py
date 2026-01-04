@@ -34,7 +34,6 @@ wait_bronze = GCSObjectsWithPrefixExistenceSensor(
     task_id="wait_for_bronze_data",
     bucket="{{ var.value.bronze_bucket }}",
     prefix="carcasses/",
-    count=1,
     google_cloud_conn_id="google_cloud_default",
     timeout=7200,
     poke_interval=600,

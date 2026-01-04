@@ -320,7 +320,8 @@ resource "google_project_iam_member" "dataproc_sa_roles" {
     "roles/bigquery.dataEditor",     # To read/write BigQuery tables
     "roles/dataplex.metadataReader", # To read metadata from Dataplex
     "roles/dataplex.dataOwner",      # To manage data in Dataplex zones
-    "roles/dataproc.editor"          # To submit serverless batches from Composer
+    "roles/dataproc.editor",         # To submit serverless batches from Composer
+    "roles/run.invoker",             # To invoke Cloud Run ingestion service
   ])
   project = var.project_id
   role    = each.value

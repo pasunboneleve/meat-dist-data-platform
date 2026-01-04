@@ -1,9 +1,7 @@
 from datetime import date
-from unittest.mock import Mock, patch
 
 import polars as pl
-from src.synthesise import (generate_and_upload, generate_synthetic_carcasses,
-                            load_base_data)
+from src.synthesise import generate_synthetic_carcasses, load_base_data
 
 
 def test_load_base_data(fixture_path):

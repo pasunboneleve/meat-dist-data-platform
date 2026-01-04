@@ -7,7 +7,8 @@ from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
-from requests.exceptions import RequestException
+from google.auth.transport.requests import Request
+from google.oauth2 import id_token
 
 default_args = {
     "owner": "data-eng",
@@ -27,35 +28,30 @@ dag = DAG(
 
 
 def trigger_synthetic_meat_ingestion(**context):
-    """
-    Triggers the synthetic meat ingestor Cloud Run service.
-    Fails the task on any HTTP status other than 2xx (e.g., 403, 404, 500).
-    """
     url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
 
     try:
-        response = requests.post(
-            url,
-            json={},  # add payload if your endpoint expects one
-            timeout=300,
-        )
+        # Fetch ID token for the specific Cloud Run audience
+        id_token_token = id_token.fetch_id_token(Request(), audience=url)
 
-        # This line is critical: raises HTTPError for 4xx/5xx responses
+        headers = {
+            "Authorization": f"Bearer {id_token_token}",
+            "Content-Type": "application/json",
+        }
+
+        response = requests.post(url, json={}, headers=headers, timeout=300)
         response.raise_for_status()
 
         print(f"Ingestion triggered successfully: {response.status_code}")
         if response.content:
-            print("Response body:", response.text)
+            print(response.text)
 
     except requests.exceptions.HTTPError as e:
-        # Specific handling for HTTP errors (403, 404, etc.)
         raise Exception(
             f"Ingestion trigger failed with status {response.status_code}: {response.text}"
         ) from e
-
-    except requests.exceptions.RequestException as e:
-        # Handles timeout, connection error, etc.
-        raise Exception(f"Failed to reach ingestor at {url}: {e}") from e
+    except Exception as e:
+        raise Exception(f"Failed to trigger ingestor: {e}") from e
 
 
 trigger_ingestion = PythonOperator(

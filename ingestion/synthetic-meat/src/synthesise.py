@@ -14,10 +14,9 @@ import polars as pl
 import pyarrow.parquet as pq
 import requests
 import structlog
+from structlog.stdlib import filter_by_level
 from faker import Faker
 from typing_extensions import Optional
-
-
 def add_gcp_severity(_, method_name, event_dict):
     severity_map = {
         "debug": "DEBUG",
@@ -30,31 +29,41 @@ def add_gcp_severity(_, method_name, event_dict):
     return event_dict
 
 
-# --- Logging Configuration ---
-structlog.configure(
-    processors=[
-        structlog.processors.add_log_level,
-        add_gcp_severity,
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.TimeStamper(fmt="iso", utc=True),
-        structlog.processors.JSONRenderer(sort_keys=True),
-    ],
-    wrapper_class=structlog.BoundLogger,
-    context_class=dict,
-    logger_factory=structlog.PrintLoggerFactory(sys.stdout),
-    cache_logger_on_first_use=True,
-)
+def init_logging():
+    log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
+    try:
+        log_level = getattr(logging, log_level_str)
+    except AttributeError:
+        log_level = logging.INFO
 
-# Set base logging level
-logger = structlog.get_logger()
+    structlog.configure(
+        processors=[
+            filter_by_level(log_level),
+            structlog.processors.add_log_level,
+            add_gcp_severity,
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.processors.TimeStamper(fmt="iso", utc=True),
+            structlog.processors.JSONRenderer(sort_keys=True),
+        ],
+        wrapper_class=structlog.BoundLogger,
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(sys.stdout),
+        cache_logger_on_first_use=True,
+    )
 
-log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
-try:
-    log_level = getattr(logging, log_level_str)
-except AttributeError:
-    log_level = logging.INFO
-logging.getLogger().setLevel(log_level)
+    logging.getLogger().setLevel(log_level)
+
+    # Silence noisy third-party loggers
+    logging.getLogger("pyarrow").setLevel(logging.WARNING)
+    logging.getLogger("pyarrow.parquet").setLevel(logging.WARNING)
+    logging.getLogger("polars").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("gcsfs").setLevel(logging.WARNING)
+
+
+init_logging()
 
 # --- Configuration ---
 BUCKET_NAME = os.environ.get("BRONZE_BUCKET", "meatislife-bronze-bucket")
@@ -301,6 +310,10 @@ def synthesise_and_write(base_data: pl.DataFrame, from_date: date) -> None:
     write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
 
 
+def worker_init():
+    init_logging()
+
+
 def workflow(params: Dict[str, Any]) -> Optional[str]:
     """
     Single download and write workflow, to be parallelised.
@@ -379,7 +392,7 @@ def generate_and_upload(request):
             for indicator in list(range(4))
         ]
 
-        with futures.ProcessPoolExecutor() as pool:
+        with futures.ProcessPoolExecutor(initializer=worker_init) as pool:
             results = filter(lambda x: bool(x), pool.map(workflow, params))
             for result in results:
                 logger.info("workflow result", message=result)

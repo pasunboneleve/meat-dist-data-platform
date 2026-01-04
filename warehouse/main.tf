@@ -225,9 +225,7 @@ resource "google_composer_environment" "meat_composer" {
     software_config {
       image_version = "composer-3-airflow-2.9.3"
       env_variables = {
-        # Format: AIRFLOW_CONN_{YOUR_CONN_ID_UPPERCASE}
-        # Value: URI format (scheme://user:pass@host:port/schema?extra)
-        AIRFLOW_CONN_SYNTHETIC_INGESTOR_CONN = local.ingestion_service_url
+        SYNTHETIC_MEAT_URL = local.ingestion_service_url
       }
     }
 

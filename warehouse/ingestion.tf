@@ -1,6 +1,6 @@
 locals {
   ingestion_service_name = "synthetic-meat-ingestor"
-  ingestion_service_url = google_cloud_run_v2_service.ingestor.uri
+  ingestion_service_url  = google_cloud_run_v2_service.ingestor.uri
 }
 
 # Deploys the synthetic meat data generator as a Cloud Run service.

@@ -15,7 +15,6 @@ import pyarrow.parquet as pq
 import requests
 import structlog
 from faker import Faker
-from structlog.stdlib import filter_by_level
 from typing_extensions import Optional
 
 
@@ -33,7 +32,6 @@ def init_logging():
 
     structlog.configure(
         processors=[
-            structlog.stdlib.filter_by_level,
             structlog.processors.add_log_level,
             add_gcp_severity,
             structlog.processors.StackInfoRenderer(),
@@ -41,22 +39,13 @@ def init_logging():
             structlog.processors.TimeStamper(fmt="iso", utc=True),
             structlog.processors.JSONRenderer(sort_keys=True),
         ],
-        wrapper_class=structlog.BoundLogger,
+        wrapper_class=structlog.make_filtering_bound_logger(log_level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(sys.stdout),
         cache_logger_on_first_use=True,
     )
 
-    logging.getLogger().setLevel(log_level)
-
-    # Silence noisy third-party loggers
-    logging.getLogger("pyarrow").setLevel(logging.WARNING)
-    logging.getLogger("pyarrow.parquet").setLevel(logging.WARNING)
-    logging.getLogger("polars").setLevel(logging.WARNING)
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.getLogger("gcsfs").setLevel(logging.WARNING)
-    return logging
+    return structlog.getLogger()
 
 
 logger = init_logging()

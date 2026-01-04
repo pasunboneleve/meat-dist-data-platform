@@ -17,10 +17,24 @@ import structlog
 from faker import Faker
 from typing_extensions import Optional
 
+
+def add_gcp_severity(_, method_name, event_dict):
+    severity_map = {
+        "debug": "DEBUG",
+        "info": "INFO",
+        "warning": "WARNING",
+        "error": "ERROR",
+        "critical": "CRITICAL",
+    }
+    event_dict["severity"] = severity_map.get(method_name, "DEFAULT")
+    return event_dict
+
+
 # --- Logging Configuration ---
 structlog.configure(
     processors=[
         structlog.processors.add_log_level,
+        add_gcp_severity,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.TimeStamper(fmt="iso", utc=True),

@@ -14,9 +14,11 @@ import polars as pl
 import pyarrow.parquet as pq
 import requests
 import structlog
-from structlog.stdlib import filter_by_level
 from faker import Faker
+from structlog.stdlib import filter_by_level
 from typing_extensions import Optional
+
+
 def add_gcp_severity(_, method_name, event_dict):
     severity_map = {
         "debug": "DEBUG",
@@ -38,7 +40,7 @@ def init_logging():
 
     structlog.configure(
         processors=[
-            filter_by_level(log_level),
+            structlog.stdlib.filter_by_level,
             structlog.processors.add_log_level,
             add_gcp_severity,
             structlog.processors.StackInfoRenderer(),
@@ -61,9 +63,10 @@ def init_logging():
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("gcsfs").setLevel(logging.WARNING)
+    return logging
 
 
-init_logging()
+logger = init_logging()
 
 # --- Configuration ---
 BUCKET_NAME = os.environ.get("BRONZE_BUCKET", "meatislife-bronze-bucket")

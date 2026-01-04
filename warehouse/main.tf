@@ -230,7 +230,7 @@ resource "google_composer_environment" "meat_composer" {
         AIRFLOW_CONN_SYNTHETIC_INGESTOR_CONN = local.ingestion_service_url
       }
     }
-O
+
     # --- AUTOSCALING CONFIG ---
     workloads_config {
       scheduler {

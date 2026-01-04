@@ -32,4 +32,5 @@ read:
   - infra/INFRA.md
   - infra/main.tf
   - infra/prod.tfvars.template
+  - warehouse/BRONZE_TO_SILVER_STRATEGY.md
   - .github/workflows/deploy.yml

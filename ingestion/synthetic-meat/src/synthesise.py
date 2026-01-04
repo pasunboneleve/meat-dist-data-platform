@@ -20,14 +20,7 @@ from typing_extensions import Optional
 
 
 def add_gcp_severity(_, method_name, event_dict):
-    severity_map = {
-        "debug": "DEBUG",
-        "info": "INFO",
-        "warning": "WARNING",
-        "error": "ERROR",
-        "critical": "CRITICAL",
-    }
-    event_dict["severity"] = severity_map.get(method_name, "DEFAULT")
+    event_dict["severity"] = method_name or "DEFAULT"
     return event_dict
 
 

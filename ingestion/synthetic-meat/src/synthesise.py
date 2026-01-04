@@ -35,6 +35,13 @@ structlog.configure(
 # Set base logging level
 logger = structlog.get_logger()
 
+log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
+try:
+    log_level = getattr(logging, log_level_str)
+except AttributeError:
+    log_level = logging.INFO
+logging.getLogger().setLevel(log_level)
+
 # --- Configuration ---
 BUCKET_NAME = os.environ.get("BRONZE_BUCKET", "meatislife-bronze-bucket")
 MLA_API_URL = "https://api-mlastatistics.mla.com.au"
@@ -55,7 +62,9 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
         data = response.json()
 
         if "total number rows" in data:
-            logger.info("API returned number of rows", total_rows=data["total number rows"])
+            logger.info(
+                "API returned number of rows", total_rows=data["total number rows"]
+            )
 
         df = pl.DataFrame(data["data"])
         # Preprocessing from the original load_base_data function
@@ -147,7 +156,11 @@ def generate_synthetic_carcasses(
     categories = base_df["category"].unique().to_list()
 
     if num_records == 0:
-        logger.info("Head count was 0, generating no records", target_date=target_date, head_count=head_count)
+        logger.info(
+            "Head count was 0, generating no records",
+            target_date=target_date,
+            head_count=head_count,
+        )
         return pl.DataFrame()
 
     data = {
@@ -191,7 +204,11 @@ def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
 
     gcs_base_path = f"{bucket_name}/{name}/{name}.parquet"
 
-    logger.info("Writing unpartitioned records to GCS", record_count=len(df), gcs_path=gcs_base_path)
+    logger.info(
+        "Writing unpartitioned records to GCS",
+        record_count=len(df),
+        gcs_path=gcs_base_path,
+    )
     # Convert Polars DF to PyArrow Table
     table = df.to_arrow()
 
@@ -213,7 +230,9 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
         raise ValueError("GCS bucket name is not configured via BRONZE_BUCKET env var.")
 
     if df.is_empty():
-        logger.info("DataFrame empty, skipping partitioned write", target_date=target_date)
+        logger.info(
+            "DataFrame empty, skipping partitioned write", target_date=target_date
+        )
         return
 
     # Add date parts as columns for partitioning
@@ -225,7 +244,12 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
 
     gcs_base_path = f"{bucket_name}/carcasses"
 
-    logger.info("Writing partitioned records to GCS", record_count=len(df_with_partitions), base_path=gcs_base_path, partition_cols=["plant_id", "year", "month", "day"])
+    logger.info(
+        "Writing partitioned records to GCS",
+        record_count=len(df_with_partitions),
+        base_path=gcs_base_path,
+        partition_cols=["plant_id", "year", "month", "day"],
+    )
 
     # Convert Polars DF to PyArrow Table
     table = df_with_partitions.to_arrow()

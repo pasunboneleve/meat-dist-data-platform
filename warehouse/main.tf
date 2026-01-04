@@ -47,6 +47,15 @@ resource "google_storage_bucket" "silver_bucket" {
   depends_on = [google_project_service.apis]
 }
 
+resource "google_storage_bucket" "gold_bucket" {
+  project       = var.project_id
+  name          = "${var.project_id}-gold-bucket"
+  location      = var.app_engine_region
+  force_destroy = true
+
+  depends_on = [google_project_service.apis]
+}
+
 resource "google_storage_bucket" "deps_bucket" {
   project       = var.project_id
   name          = "${var.project_id}-deps-bucket"
@@ -226,6 +235,9 @@ resource "google_composer_environment" "meat_composer" {
       image_version = "composer-3-airflow-2.9.3"
       env_variables = {
         SYNTHETIC_MEAT_URL = local.ingestion_service_url
+        BRONZE_BUCKET = google_storage_bucket.bronze_bucket.name
+        SILVER_BUCKET = google_storage_bucket.silver_bucket.name
+        GOLD_BUCKET = google_storage_bucket.gold_bucket.name
       }
     }
 

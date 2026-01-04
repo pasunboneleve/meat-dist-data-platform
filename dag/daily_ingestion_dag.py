@@ -27,16 +27,35 @@ dag = DAG(
 
 
 def trigger_synthetic_meat_ingestion(**context):
+    """
+    Triggers the synthetic meat ingestor Cloud Run service.
+    Fails the task on any HTTP status other than 2xx (e.g., 403, 404, 500).
+    """
     url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
 
     try:
-        response = requests.post(url, json={}, timeout=300)  # add payload if needed
+        response = requests.post(
+            url,
+            json={},  # add payload if your endpoint expects one
+            timeout=300,
+        )
+
+        # This line is critical: raises HTTPError for 4xx/5xx responses
         response.raise_for_status()
+
         print(f"Ingestion triggered successfully: {response.status_code}")
         if response.content:
-            print(response.text)
-    except RequestException as e:
-        raise Exception(f"Failed to trigger synthetic meat ingestor at {url}: {e}")
+            print("Response body:", response.text)
+
+    except requests.exceptions.HTTPError as e:
+        # Specific handling for HTTP errors (403, 404, etc.)
+        raise Exception(
+            f"Ingestion trigger failed with status {response.status_code}: {response.text}"
+        ) from e
+
+    except requests.exceptions.RequestException as e:
+        # Handles timeout, connection error, etc.
+        raise Exception(f"Failed to reach ingestor at {url}: {e}") from e
 
 
 trigger_ingestion = PythonOperator(

@@ -38,8 +38,11 @@ Dataplex: Auto-discovers → BigLake/BigQuery queryable
 **DAG**: `daily_ingestion_orchestrator` (schedule `@daily`, `start_date=now-1d`).
 
 Tasks:
-1. **HttpSensor** / **HttpOperator**: Trigger Cloud Run (`POST https://synthetic-meat-ingestor-...run.app/generate`).
-2. **BigQueryCheckOperator** or **GCSHook**: Verify new Parquet files landed (`gs://bronze/carcasses/plant_id=.../year=...`).
+1. **PythonOperator**: Trigger Cloud Run
+(`POST https://synthetic-meat-ingestor-...run.app`). Needs `id_token`
+(The DAG is run via Composer 3, serverless).
+2. **BigQueryCheckOperator** or **GCSHook**: Verify new Parquet files
+   landed (`gs://bronze/carcasses/plant_id=.../year=...`).
 3. **EmailOperator** (failures only).
 
 **Why Airflow?** Primary trigger (replaces Cloud Scheduler); retries, SLAs, lineage.

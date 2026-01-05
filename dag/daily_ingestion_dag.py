@@ -1,5 +1,6 @@
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from typing import Dict
 
 import requests
 from airflow import DAG
@@ -27,8 +28,20 @@ dag = DAG(
 )
 
 
+def yesterday() -> Dict[str, str]:
+    """
+    Create a JSON payload to fetch yesterday's stats.
+    """
+    target_date = datetime.now(UTC).date() - timedelta(days=1)
+    from_date_str = target_date.strftime("%Y-%m-%d")
+    to_date_str = target_date.strftime("%Y-%m-%d")
+    return {"from_date": from_date_str, "to_date": to_date_str}
+
+
 def trigger_synthetic_meat_ingestion(**context):
     url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
+    payload = yesterday()
+    response = None
 
     try:
         # Fetch ID token for the specific Cloud Run audience
@@ -39,7 +52,7 @@ def trigger_synthetic_meat_ingestion(**context):
             "Content-Type": "application/json",
         }
 
-        response = requests.post(url, json={}, headers=headers, timeout=300)
+        response = requests.post(url, json=payload, headers=headers, timeout=300)
         response.raise_for_status()
 
         print(f"Ingestion triggered successfully: {response.status_code}")
@@ -47,9 +60,12 @@ def trigger_synthetic_meat_ingestion(**context):
             print(response.text)
 
     except requests.exceptions.HTTPError as e:
-        raise Exception(
-            f"Ingestion trigger failed with status {response.status_code}: {response.text}"
-        ) from e
+        if response:
+            raise Exception(
+                f"Ingestion trigger failed with status {response.status_code}: {response.text}"
+            ) from e
+        else:
+            raise Exception(f"Ingestion failed with {e}")
     except Exception as e:
         raise Exception(f"Failed to trigger ingestor: {e}") from e
 

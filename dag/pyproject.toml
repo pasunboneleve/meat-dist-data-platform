@@ -1,0 +1,9 @@
+[project]
+name = "dag"
+version = "0.1.0"
+description = "DAGs for meat-dist-data-platform"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "apache-airflow>=3.1.5",
+]

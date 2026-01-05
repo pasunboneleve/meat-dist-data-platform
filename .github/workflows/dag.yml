@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'dag/**'
+      - 'dag/**.py'
       - '.github/workflows/dag.yml'
 
 env:

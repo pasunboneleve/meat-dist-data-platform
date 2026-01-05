@@ -4,6 +4,31 @@ version = "0.1.0"
 description = "DAGs for meat-dist-data-platform"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
+
+[dependency-groups]
+dev = [
+    "apache-airflow-providers-google",
     "apache-airflow>=3.1.5",
+    "basedpyright>=1.37.0",
+    "google-auth",
+    "mypy>=1.19.1",
+    "pylsp-mypy>=0.7.0",
+    "python-lsp-server[all]>=1.14.0",
+    "requests",
+    "types-requests>=2.32.4.20250913",
 ]
+
+[tool.mypy]
+# Your existing mypy options (e.g., strict = true, etc.)
+
+plugins = [
+    "airflow.mypy.plugin.decorators",  # Handles @task and decorator magic
+    "airflow.mypy.plugin.outputs",     # Handles .output and XComArg patterns
+]
+
+# Recommended for Airflow DAG projects
+ignore_missing_imports = false
+warn_unused_ignores = true
+show_error_codes = true
+pretty = true
+namespace_packages = true

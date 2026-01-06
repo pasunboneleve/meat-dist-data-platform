@@ -55,3 +55,9 @@ variable "artifact_registry_repository" {
   type        = string
   default     = "meat-data-images"
 }
+
+variable "image_name" {
+  description = "synthetic meat image name"
+  type        = string
+  default     = "synthetic-meat"
+}

@@ -91,7 +91,7 @@ trigger_ingestion = trigger_synthetic_meat_ingestion()
 # Task 3: GCS sensor using the bucket from XCom
 wait_bronze = GCSObjectsWithPrefixExistenceSensor(
     task_id="wait_for_bronze_data",
-    bucket=get_bucket_task.output["bronze_bucket"],  # pyright: ignore[reportAttributeAccessIssue]
+    bucket="{{ ti.xcom_pull(task_ids='set_bucket') }}",
     prefix="carcasses/",
     google_cloud_conn_id="google_cloud_default",
     timeout=7200,

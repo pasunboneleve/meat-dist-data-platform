@@ -1,5 +1,6 @@
 import os
 from datetime import UTC, datetime, timedelta
+from typing import Any, Dict
 
 import requests
 from airflow import DAG
@@ -28,20 +29,20 @@ dag = DAG(
 )
 
 
-def yesterday() -> dict[str, str]:
+def yesterday(context: Dict[str, Any]) -> Dict[str, str]:
     """
     Create a JSON payload to fetch yesterday's stats.
     """
-    target_date = datetime.now(UTC).date() - timedelta(days=1)
+    target_date = context["logical_date"].date() - timedelta(days=1)
     from_date_str = target_date.strftime("%Y-%m-%d")
     to_date_str = target_date.strftime("%Y-%m-%d")
     return {"from_date": from_date_str, "to_date": to_date_str}
 
 
 @task(dag=dag)
-def trigger_synthetic_meat_ingestion():
+def trigger_synthetic_meat_ingestion(**context):
     url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
-    payload = yesterday()
+    payload = yesterday(context)
     response = None
 
     try:

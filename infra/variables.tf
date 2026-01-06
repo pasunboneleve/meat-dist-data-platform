@@ -49,3 +49,9 @@ variable "tf_state_bucket" {
   description = "GCS bucket for Terraform state"
   type        = string
 }
+
+variable "artifact_registry_repository" {
+  description = "Artifact Registry repository for synthetic meat"
+  type        = string
+  default     = "meat-data-images"
+}

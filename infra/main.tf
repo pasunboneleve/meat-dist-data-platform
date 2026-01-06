@@ -55,7 +55,7 @@ resource "google_app_engine_application" "app" {
 resource "google_artifact_registry_repository" "images" {
   project       = var.project_id
   location      = var.app_engine_region
-  repository_id = "meat-data-images"
+  repository_id = var.artifact_registry_repository
   format        = "DOCKER"
   description   = "Docker repository for meat data platform images"
 

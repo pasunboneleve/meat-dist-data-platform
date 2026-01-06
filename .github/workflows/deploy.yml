@@ -12,8 +12,9 @@ on:
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: ${{ secrets.GCP_REGION }}
-  GAR_REPOSITORY: 'meat-data-images'
-  IMAGE_NAME: 'synthetic-meat'
+  GAR_REPOSITORY: ${{ secrets.GAR_REPOSITORY }}
+  IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+  GCP_APP_ENGINE_REGION: ${{ secrets.GCP_APP_ENGINE_REGION }}
 
 jobs:
   deploy:
@@ -48,7 +49,7 @@ jobs:
     - name: Get current image URI from Cloud Run
       id: get-image
       run: |
-        IMAGE_URI=$(gcloud run services describe synthetic-meat-ingestor --region ${{ env.GCP_REGION }} --format 'value(IMAGE)')
+        IMAGE_URI=$(gcloud run services describe synthetic-meat-ingestor --region ${{ env.GCP_APP_ENGINE_REGION }} --format 'value(IMAGE)')
         echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
       continue-on-error: true
 
@@ -60,7 +61,7 @@ jobs:
       if: steps.changes.outputs.ingestion == 'true' || steps.get-image.outputs.image_uri == ''
       id: build-image
       run: |
-        IMAGE_URI="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        IMAGE_URI="${{ env.GCP_APP_ENGINE_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
         docker build -t $IMAGE_URI ./ingestion/synthetic-meat
         docker push $IMAGE_URI
         echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT

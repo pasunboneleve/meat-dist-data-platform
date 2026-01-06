@@ -42,3 +42,15 @@ resource "github_actions_secret" "tf_state_bucket" {
   secret_name     = "TF_STATE_BUCKET"
   plaintext_value = var.tf_state_bucket
 }
+
+resource "github_actions_secret" "gar_repository" {
+  repository      = var.github_repo
+  secret_name     = "GAR_REPOSITORY"
+  plaintext_value = var.artifact_registry_repository
+}
+
+resource "github_actions_secret" "image_name" {
+  repository      = var.github_repo
+  secret_name     = "IMAGE_NAME"
+  plaintext_value = var.image_name
+}

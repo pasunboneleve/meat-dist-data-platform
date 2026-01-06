@@ -263,7 +263,7 @@ resource "google_composer_environment" "meat_composer" {
       }
       triggerer {
         cpu       = 0.5
-        memory_gb = 1
+        memory_gb = 2.0
         count     = 1
       }
     }

@@ -63,7 +63,7 @@ jobs:
         IMAGE_URI="${{ env.GCP_APP_ENGINE_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ env.IMAGE_NAME }}"
         docker build -t "$IMAGE_URI:${{ github.sha }}" -t "$IMAGE_URI:latest" ./ingestion/synthetic-meat
         docker push $IMAGE_URI
-        echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+        echo "image_uri=$IMAGE_URI:${{ github.sha }}" >> $GITHUB_OUTPUT
 
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@v1

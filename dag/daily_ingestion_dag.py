@@ -8,6 +8,7 @@ from airflow.providers.google.cloud.sensors.gcs import \
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import task
 from google.auth.transport.requests import Request
+from google.cloud.storage._helpers import _validate_name
 from google.oauth2 import id_token
 
 default_args = {
@@ -72,7 +73,7 @@ with status {response.status_code}: {response.text}"
 
 
 @task
-def set_bucket():
+def set_bucket(**context):
     bucket = os.environ.get("BRONZE_BUCKET")
     if not bucket:
         raise ValueError(
@@ -80,7 +81,8 @@ def set_bucket():
 is not set in Composer"
         )
     print(f"Retrieved bronze bucket from env: {bucket}")
-    return {"bronze_bucket": bucket}
+    _validate_name(bucket)  # raises ValueError early if invalid
+    return bucket
 
 
 get_bucket_task = set_bucket()

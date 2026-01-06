@@ -9,6 +9,9 @@ on:
       - '.github/workflows/dag.yml'
 
 env:
+  # COMPOSER_BUCKET is set manually in GitHub Secrets. Use the name of the
+  # bucket found in the Composer configuration page under
+  # 'DAGs folder' (stripped of the /dags and gs://).
   COMPOSER_BUCKET: ${{ secrets.COMPOSER_BUCKET }}
 
 jobs:

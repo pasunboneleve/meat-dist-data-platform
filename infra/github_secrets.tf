@@ -13,18 +13,11 @@ resource "github_actions_secret" "gcp_project_number" {
   plaintext_value = var.project_number
 }
 
-resource "github_actions_secret" "gcp_region" {
-  repository      = var.github_repo
-  secret_name     = "GCP_REGION"
-  plaintext_value = var.app_engine_region
-}
-
 resource "github_actions_secret" "gcp_app_engine_region" {
   repository      = var.github_repo
   secret_name     = "GCP_APP_ENGINE_REGION"
   plaintext_value = var.app_engine_region
 }
-
 
 resource "github_actions_secret" "gcp_workload_identity_pool" {
   repository      = var.github_repo

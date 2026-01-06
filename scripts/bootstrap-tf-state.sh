@@ -4,11 +4,11 @@ set -euo pipefail
 # Bootstrap a GCS bucket for Terraform/OpenTofu state with best-practices.
 # Usage:
 #   GCP_PROJECT_ID=<id> GCS_BUCKET=<name> ./scripts/bootstrap-tf-state.sh
-# Optional: GCP_REGION (defaults to us-central1), RETENTION_DAYS (defaults to 30)
+# Optional: GCP_REGION (defaults to australia-southeast1), RETENTION_DAYS (defaults to 30)
 
 : "${GCP_PROJECT_ID:?Set GCP_PROJECT_ID}"
 : "${GCS_BUCKET:?Set GCS_BUCKET}"
-LOCATION=${LOCATION:-us-central1}
+LOCATION=${LOCATION:-australia-southeast1}
 RETENTION_DAYS=${RETENTION_DAYS:-30}
 
 echo "Creating bucket gs://${GCS_BUCKET} in ${GCP_REGION} (if not exists)"

@@ -20,7 +20,7 @@ from typing_extensions import Optional
 
 def add_gcp_severity(_, method_name, event_dict):
     """
-    Make logs compatible with Logs Explorer standard for filtering.
+    Make logs compatible to GCP standard for filtering.
     """
     event_dict["severity"] = method_name or "DEFAULT"
     return event_dict

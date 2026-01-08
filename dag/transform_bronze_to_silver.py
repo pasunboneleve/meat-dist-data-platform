@@ -12,6 +12,10 @@ from pyspark.sql.functions import col, lit, udf
 from pyspark.sql.types import StringType
 
 
+class DagConfigError(Exception):
+    pass
+
+
 def hash_key(*cols) -> Column:
     """Generate HK as hex(SHA256 of concatenated cols)."""
 
@@ -35,6 +39,8 @@ def main():
     bronze_bucket = spark.conf.get("spark.sql.bronze_bucket")
     silver_bucket = spark.conf.get("spark.sql.silver_bucket")
     target_date_str = spark.conf.get("spark.sql.target_date")  # e.g., "2024/12/27"
+    if not target_date_str:
+        raise DagConfigError("target_date_str missing.")
     year, month, day = map(int, target_date_str.split("/"))
     load_dts = datetime.now().isoformat()
 

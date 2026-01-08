@@ -1,3 +1,4 @@
+import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
@@ -32,11 +33,11 @@ dag = DAG(
 @task(dag=dag)
 def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     """Load config from Airflow Variables."""
-    project_id = Variable.get("GCP_PROJECT_ID")
-    region = Variable.get("DATAPROC_REGION", default="australia-southeast1")
-    bronze_bucket = Variable.get("BRONZE_BUCKET")
-    silver_bucket = Variable.get("SILVER_BUCKET")
-    deps_bucket = Variable.get("DEPS_BUCKET")
+    project_id = os.environ["GCP_PROJECT_ID"]
+    region = os.environ["DATAPROC_REGION"]
+    bronze_bucket = os.environ["BRONZE_BUCKET"]
+    silver_bucket = os.environ["SILVER_BUCKET"]
+    deps_bucket = os.environ["DEPS_BUCKET"]
     logical_date: date = context["logical_date"].date()  # type: ignore
     target_date_str = logical_date.strftime("%Y/%m/%d")
     prefix = f"carcasses/**/year={logical_date.year}/month={logical_date.month:02d}/day={logical_date.day:02d}/"

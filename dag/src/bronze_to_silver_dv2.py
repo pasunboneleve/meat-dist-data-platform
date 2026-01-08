@@ -71,7 +71,7 @@ spark_transform = DataprocCreateBatchOperator(
     task_id="transform_dv2_iceberg",
     project_id="{{ ti.xcom_pull(task_ids='get_config')['GCP_PROJECT_ID'] }}",
     region="{{ ti.xcom_pull(task_ids='get_config')['DATAPROC_REGION'] }}",
-    batch_id="bronze-to-silver-dv2-{{ ds_nodash }}-{{ try_number }}",
+    batch_id="bronze-to-silver-dv2-{{ ds_nodash }}-{{ task_instance.try_number }}",
     batch={
         "pyspark_batch": {
             "main_python_file_uri": "gs://{{ ti.xcom_pull(task_ids='get_config')['DEPS_BUCKET'] }}/spark_jobs/transform_bronze_to_silver.py",

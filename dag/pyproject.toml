@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 
 [dependency-groups]
 dev = [
-    "apache-airflow-providers-google",
+    "apache-airflow-providers-google>=19.3.0",
     "apache-airflow>=3.1.5",
     "basedpyright>=1.37.0",
     "google-auth",

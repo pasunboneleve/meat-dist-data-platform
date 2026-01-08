@@ -3,10 +3,8 @@
 # Run via DataprocServerlessSparkBatchOperator
 # Filters to target_date partition only (passed via spark.conf)
 
-import argparse
 import hashlib
-import sys
-from datetime import date, datetime
+from datetime import datetime
 
 from pyspark.sql import SparkSession
 from pyspark.sql.column import Column

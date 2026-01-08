@@ -41,11 +41,11 @@ def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     target_date_str = logical_date.strftime("%Y/%m/%d")
     prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day}/"
     return {
-        "project_id": project_id,
-        "region": region,
-        "bronze_bucket": bronze_bucket,
-        "silver_bucket": silver_bucket,
-        "deps_bucket": deps_bucket,
+        "GCP_PROJECT_ID": project_id,
+        "DATAPROC_REGION": region,
+        "BRONZE_BUCKET": bronze_bucket,
+        "SILVER_BUCKET": silver_bucket,
+        "DEPS_BUCKET": deps_bucket,
         "target_prefix": prefix,
         "target_date": target_date_str,
     }
@@ -56,7 +56,7 @@ config = get_config()
 # Task 1: Verify new Bronze files for yesterday
 verify_bronze = GCSObjectsWithPrefixExistenceSensor(
     task_id="verify_new_bronze",
-    bucket="{{ ti.xcom_pull(task_ids='get_config')['bronze_bucket'] }}",
+    bucket="{{ ti.xcom_pull(task_ids='get_config')['BRONZE_BUCKET'] }}",
     prefix="{{ ti.xcom_pull(task_ids='get_config')['target_prefix'] }}",
     google_cloud_conn_id="google_cloud_default",
     timeout=300,  # Short for testing (5min)
@@ -108,7 +108,7 @@ verify_silver = BigQueryCheckOperator(
     task_id="verify_silver_tables",
     sql="""
     SELECT COUNT(*) > 0
-    FROM `{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}.meat_market_lake.curated_zone.hub_carcass`
+    FROM `{{ ti.xcom_pull(task_ids='get_config')['GCP_PROJECT_ID'] }}.meat_market_lake.curated_zone.hub_carcass`
     """,
     use_legacy_sql=False,
     gcp_conn_id="google_cloud_default",

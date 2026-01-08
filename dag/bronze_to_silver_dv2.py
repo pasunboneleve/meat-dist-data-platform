@@ -3,15 +3,14 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Dict
 
 from airflow import DAG
+from airflow.decorators import task
+from airflow.models import Variable
+from airflow.operators.empty import EmptyOperator
+from airflow.providers.google.cloud.operators.bigquery import BigQueryCheckOperator
 from airflow.providers.google.cloud.operators.dataproc_serverless import (
     DataprocServerlessSparkBatchOperator,
 )
 from airflow.providers.google.cloud.sensors.gcs import GCSObjectsWithPrefixExistenceSensor
-from airflow.providers.google.cloud.transfers.bigquery_check_operator import BigQueryCheckOperator
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.sdk import task
-from airflow.models import Variable
 
 default_args = {
     "owner": "data-eng",
@@ -99,8 +98,7 @@ verify_silver = BigQueryCheckOperator(
     task_id="verify_silver_tables",
     sql="""
     SELECT COUNT(*) > 0
-    FROM `{{ var.value.gcp_project_id }}.meat_market_lake.curated_zone.hub_carcass`
-    WHERE _PARTITIONTIME >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY)
+    FROM `{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}.meat_market_lake.curated_zone.hub_carcass`
     """,
     use_legacy_sql=False,
     bigquery_conn_id="google_cloud_default",

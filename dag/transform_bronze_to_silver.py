@@ -9,18 +9,19 @@ import sys
 from datetime import date, datetime
 
 from pyspark.sql import SparkSession
+from pyspark.sql.column import Column
 from pyspark.sql.functions import col, lit, udf
 from pyspark.sql.types import StringType
 
 
-def hash_key(*cols):
+def hash_key(*cols) -> Column:
     """Generate HK as hex(SHA256 of concatenated cols)."""
 
     def _hash(col_values):
         key_str = "".join([str(v) for v in col_values if v is not None])
         return hashlib.sha256(key_str.encode()).hexdigest()
 
-    return udf(_hash, StringType())
+    return udf(_hash, StringType())  # type: ignore
 
 
 def main():

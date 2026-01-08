@@ -71,7 +71,7 @@ spark_transform = DataprocCreateBatchOperator(
     task_id="transform_dv2_iceberg",
     project_id="{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}",
     region="{{ ti.xcom_pull(task_ids='get_config')['region'] }}",
-    batch_id="bronze-to-silver-dv2-{{ ds_nodash }}-{{ try_number }}",  # Unique per run & retry
+    batch_id="bronze-to-silver-dv2-{{ ds_nodash }}-{{ try_number }}",
     batch={
         "pyspark_batch": {
             "main_python_file_uri": "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket'] }}/spark_jobs/transform_bronze_to_silver.py",
@@ -80,19 +80,20 @@ spark_transform = DataprocCreateBatchOperator(
                 "--bronze-bucket={{ ti.xcom_pull(task_ids='get_config')['BRONZE_BUCKET'] }}",
                 "--silver-bucket={{ ti.xcom_pull(task_ids='get_config')['SILVER_BUCKET'] }}",
             ],
-            "python_file_uris": [],
+            "python_file_uris": [],  # Correctly nested and safe (empty is fine)
             "jar_file_uris": [
-                "gs://spark-lib/iceberg/iceberg-spark-runtime-3.5_2.12-1.5.2.jar",  # Adjust version if needed
+                "gs://spark-lib/iceberg/iceberg-spark-runtime-3.5_2.12-1.5.2.jar",
             ],
         },
-        "runtime_config": {  # Moved to top level
-            "version": "3.5-Debian12",
-            "properties": {  # Spark properties here
+        "runtime_config": {
+            "version": "3.0",  # Valid: latest GA Serverless runtime (recommended)
+            # "2.2" is also excellent if you prefer the LTS default
+            "properties": {
                 "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-                "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog",
+                "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",  # Correct class for REST
                 "spark.sql.catalog.spark_catalog.type": "rest",
                 "spark.sql.catalog.spark_catalog.uri": "https://biglake.googleapis.com/iceberg/v1beta/restcatalog",
-                "spark.sql.catalog.spark_catalog.warehouse": "gs://{{ ti.xcom_pull(task_ids='get_config')['silver_bucket'] }}/iceberg_warehouse/",
+                "spark.sql.catalog.spark_catalog.warehouse": "gs://{{ ti.xcom_pull(task_ids='get_config')['SILVER_BUCKET'] }}/iceberg_warehouse/",
             },
         },
         "labels": {
@@ -101,9 +102,7 @@ spark_transform = DataprocCreateBatchOperator(
         },
     },
     gcp_conn_id="google_cloud_default",
-    impersonation_chain=None,
 )
-
 # Task 3: Verify Silver tables updated via BigLake query
 verify_silver = BigQueryCheckOperator(
     task_id="verify_silver_tables",

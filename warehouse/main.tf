@@ -234,6 +234,7 @@ resource "google_composer_environment" "meat_composer" {
     software_config {
       image_version = "composer-3-airflow-3.1.0-build.6"
       env_variables = {
+        GCP_PROJECT_ID = var.project_id
         SYNTHETIC_MEAT_URL = local.ingestion_service_url
         BRONZE_BUCKET = google_storage_bucket.bronze_bucket.name
         SILVER_BUCKET = google_storage_bucket.silver_bucket.name

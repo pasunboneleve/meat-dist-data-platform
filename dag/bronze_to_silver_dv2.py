@@ -1,4 +1,3 @@
-import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
@@ -12,7 +11,6 @@ from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import DAG, Variable, task
-from pendulum.date import Date  # New Airflow 3 Task SDK imports
 
 default_args = {
     "owner": "data-eng",

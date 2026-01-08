@@ -77,8 +77,8 @@ spark_transform = DataprocCreateBatchOperator(
             "main_python_file_uri": "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket'] }}/spark_jobs/transform_bronze_to_silver.py",
             "args": [
                 "--execution-date={{ ds }}",
-                "--bronze-bucket={{ env['BRONZE_BUCKET'] }}",
-                "--silver-bucket={{ env['SILVER_BUCKET'] }}",
+                "--bronze-bucket={{ ti.xcom_pull(task_ids='get_config')['BRONZE_BUCKET'] }}",
+                "--silver-bucket={{ ti.xcom_pull(task_ids='get_config')['SILVER_BUCKET'] }}",
             ],
             "python_file_uris": [],
             "jar_file_uris": [

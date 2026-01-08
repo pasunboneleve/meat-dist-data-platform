@@ -3,27 +3,33 @@
 # Run via DataprocServerlessSparkBatchOperator
 # Filters to target_date partition only (passed via spark.conf)
 
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
-import hashlib
-from datetime import datetime, date
-import sys
 import argparse
+import hashlib
+import sys
+from datetime import date, datetime
+
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, lit, udf
+from pyspark.sql.types import StringType
+
 
 def hash_key(*cols):
     """Generate HK as hex(SHA256 of concatenated cols)."""
+
     def _hash(col_values):
         key_str = "".join([str(v) for v in col_values if v is not None])
         return hashlib.sha256(key_str.encode()).hexdigest()
+
     return udf(_hash, StringType())
 
+
 def main():
-    spark = SparkSession.builder \
-        .appName("bronze-to-silver-dv2") \
-        .config("spark.sql.adaptive.enabled", "true") \
-        .config("spark.sql.adaptive.coalescePartitions.enabled", "true") \
+    spark = (
+        SparkSession.builder.appName("bronze-to-silver-dv2")
+        .config("spark.sql.adaptive.enabled", "true")
+        .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
         .getOrCreate()
+    )
 
     # Get params from Spark conf (passed via Airflow templating)
     project_id = spark.conf.get("spark.sql.project_id")
@@ -37,10 +43,12 @@ def main():
     bronze_path += f"year={year}/month={month:02d}/day={day:02d}/*.parquet"
 
     # Assume indicator data in same Parquet (or union if separate prefix)
-    df = spark.read.parquet(bronze_path) \
-        .filter(col("year") == year) \
-        .filter(col("month") == month) \
+    df = (
+        spark.read.parquet(bronze_path)
+        .filter(col("year") == year)
+        .filter(col("month") == month)
         .filter(col("day") == day)
+    )
 
     # Cache for multiple uses
     df.cache()
@@ -50,17 +58,16 @@ def main():
     hub_carcass = df.select(
         col("carcass_id").alias("carcass_id"),
         lit(load_dts).alias("load_dts"),
-        lit("BRONZE").alias("rec_src")
+        lit("BRONZE").alias("rec_src"),
     ).distinct()
-    hub_carcass.write \
-        .format("iceberg") \
-        .mode("append") \
-        .saveAsTable("iceberg.hub_carcass")  # MERGE not needed for hub if no updates
+    hub_carcass.write.format("iceberg").mode("append").saveAsTable(
+        "iceberg.hub_carcass"
+    )  # MERGE not needed for hub if no updates
 
     # For idempotency, use MERGE (example for hub_carcass)
     spark.sql(f"""
         MERGE INTO iceberg.hub_carcass t
-        USING (SELECT * FROM {hub_carcass.createOrReplaceTempView('source_hub_carcass')})
+        USING (SELECT * FROM {hub_carcass.createOrReplaceTempView("source_hub_carcass")})
         s ON t.carcass_id = s.carcass_id
         WHEN NOT MATCHED THEN INSERT *
     """)
@@ -69,7 +76,7 @@ def main():
     hub_plant = df.select(
         col("plant_id").alias("plant_id"),
         lit(load_dts).alias("load_dts"),
-        lit("BRONZE").alias("rec_src")
+        lit("BRONZE").alias("rec_src"),
     ).distinct()
     spark.sql("""
         MERGE INTO iceberg.hub_plant t
@@ -81,7 +88,7 @@ def main():
     hub_indicator = df.select(
         col("indicator_id").alias("indicator_id"),
         lit(load_dts).alias("load_dts"),
-        lit("BRONZE").alias("rec_src")
+        lit("BRONZE").alias("rec_src"),
     ).distinct()
     hub_indicator.createOrReplaceTempView("source_hub_indicator")
     spark.sql("""
@@ -136,6 +143,7 @@ def main():
 
     df.unpersist()
     spark.stop()
+
 
 if __name__ == "__main__":
     main()

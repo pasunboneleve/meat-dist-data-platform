@@ -97,8 +97,8 @@ spark_transform = DataprocCreateBatchOperator(
             },
         },
         "labels": {
-            "dag_id": "{{ dag.dag_id }}",
-            "run_id": "{{ run_id }}",
+            "dag_id": "bronze-to-silver-dv2",
+            "date": "{{ ds_nodash }}",
         },
     },
     gcp_conn_id="google_cloud_default",

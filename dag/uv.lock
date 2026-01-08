@@ -884,6 +884,7 @@ dev = [
     { name = "google-auth" },
     { name = "mypy" },
     { name = "pylsp-mypy" },
+    { name = "pyspark" },
     { name = "python-lsp-server", extra = ["all"] },
     { name = "requests" },
     { name = "types-requests" },
@@ -894,11 +895,12 @@ dev = [
 [package.metadata.requires-dev]
 dev = [
     { name = "apache-airflow", specifier = ">=3.1.5" },
-    { name = "apache-airflow-providers-google" },
+    { name = "apache-airflow-providers-google", specifier = ">=19.3.0" },
     { name = "basedpyright", specifier = ">=1.37.0" },
     { name = "google-auth" },
     { name = "mypy", specifier = ">=1.19.1" },
     { name = "pylsp-mypy", specifier = ">=0.7.0" },
+    { name = "pyspark", specifier = ">=4.1.0" },
     { name = "python-lsp-server", extras = ["all"], specifier = ">=1.14.0" },
     { name = "requests" },
     { name = "types-requests", specifier = ">=2.32.4.20250913" },
@@ -3949,6 +3951,15 @@ wheels = [
 ]
 
 [[package]]
+name = "py4j"
+version = "0.10.9.9"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/31/0b210511177070c8d5d3059556194352e5753602fa64b85b7ab81ec1a009/py4j-0.10.9.9.tar.gz", hash = "sha256:f694cad19efa5bd1dee4f3e5270eb406613c974394035e5bfc4ec1aba870b879", size = 761089, upload-time = "2025-01-15T03:53:18.624Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/db/ea0203e495be491c85af87b66e37acfd3bf756fd985f87e46fc5e3bf022c/py4j-0.10.9.9-py2.py3-none-any.whl", hash = "sha256:c7c26e4158defb37b0bb124933163641a2ff6e3a3913f7811b0ddbe07ed61533", size = 203008, upload-time = "2025-01-15T03:53:15.648Z" },
+]
+
+[[package]]
 name = "pyarrow"
 version = "22.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4230,6 +4241,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/33/c1/1d9de9aeaa1b89b01
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8b/40/2614036cdd416452f5bf98ec037f38a1afb17f327cb8e6b652d4729e0af8/pyparsing-3.3.1-py3-none-any.whl", hash = "sha256:023b5e7e5520ad96642e2c6db4cb683d3970bd640cdf7115049a6e9c3682df82", size = 121793, upload-time = "2025-12-23T03:14:02.103Z" },
 ]
+
+[[package]]
+name = "pyspark"
+version = "4.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "py4j" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/88/0d/f280cbd070e424008f370c068c6a371e0cbb902e33d9709b01e97d479b01/pyspark-4.1.0.tar.gz", hash = "sha256:09c714ada88dfac3e1213c066617c6f473c1e22fbe279855028f77e12434147d", size = 455337789, upload-time = "2025-12-16T12:30:47.141Z" }
 
 [[package]]
 name = "python-daemon"

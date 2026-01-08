@@ -13,6 +13,7 @@ dev = [
     "google-auth",
     "mypy>=1.19.1",
     "pylsp-mypy>=0.7.0",
+    "pyspark>=4.1.0",
     "python-lsp-server[all]>=1.14.0",
     "requests",
     "types-requests>=2.32.4.20250913",

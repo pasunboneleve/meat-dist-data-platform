@@ -222,6 +222,13 @@ resource "google_bigquery_dataset" "gold_meat_market" {
   depends_on = [google_project_service.apis]
 }
 
+
+# --- Dynamically set Python dependencies for DAGs.
+data "external" "uv_lock_deps" {
+  program = ["python3", "${path.root}/../scripts/parse_uv_lock.py"]
+  working_dir = "${path.root}/../dag"
+}
+
 # --- Cloud Composer for Pipeline Orchestration ---
 resource "google_composer_environment" "meat_composer" {
   name   = "meat-composer"
@@ -233,13 +240,14 @@ resource "google_composer_environment" "meat_composer" {
   config {
     software_config {
       image_version = "composer-3-airflow-3.1.0-build.6"
+      pypi_packages = data.external.uv_lock_deps.result
       env_variables = {
-        GCP_PROJECT_ID = var.project_id
-        DATAPROC_REGION = var.app_engine_region
+        GCP_PROJECT_ID     = var.project_id
+        DATAPROC_REGION    = var.app_engine_region
         SYNTHETIC_MEAT_URL = local.ingestion_service_url
-        BRONZE_BUCKET = google_storage_bucket.bronze_bucket.name
-        SILVER_BUCKET = google_storage_bucket.silver_bucket.name
-        GOLD_BUCKET = google_storage_bucket.gold_bucket.name
+        BRONZE_BUCKET      = google_storage_bucket.bronze_bucket.name
+        SILVER_BUCKET      = google_storage_bucket.silver_bucket.name
+        GOLD_BUCKET        = google_storage_bucket.gold_bucket.name
       }
     }
 

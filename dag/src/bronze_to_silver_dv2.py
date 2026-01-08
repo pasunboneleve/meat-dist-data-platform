@@ -86,7 +86,7 @@ spark_transform = DataprocCreateBatchOperator(
             ],
         },
         "runtime_config": {  # Moved to top level
-            "version": "3.0",  # Recommended: current default LTS (Spark 3.5+); use "3.0" for latest
+            "version": "3.5-Debian12",
             "properties": {  # Spark properties here
                 "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                 "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog",

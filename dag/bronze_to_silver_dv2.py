@@ -73,35 +73,37 @@ spark_transform = DataprocCreateBatchOperator(
     task_id="transform_dv2_iceberg",
     project_id="{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}",
     region="{{ ti.xcom_pull(task_ids='get_config')['region'] }}",
+    # Updated: Ensure batch_id is unique per execution to avoid 409 Conflicts
     batch_id=f"bronze-to-silver-dv2-{{ ds_nodash }}",
-    spark_batch={
-        "jar_file_uris": [
-            "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket'] }}/iceberg-spark-runtime-3.5_2.12-1.6.1.jar",
-        ],
-        "python_file_uris": [
-            "gs://{{ var.value.composer_bucket }}/dags/transform_bronze_to_silver.py",  # Synced by CI/CD
-        ],
-        "file_uris": [],
-        "main_python_file_uri": "gs://{{ var.value.composer_bucket }}/dags/transform_bronze_to_silver.py",
-        "runtime_config": {
-            "version": "3.5-Debian12",
-            "container_image": "gcr.io/dataproc-serverless/spark:3.5.0",
-            "properties": {
-                "spark.sql.project_id": "{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}",
-                "spark.sql.bronze_bucket": "{{ ti.xcom_pull(task_ids='get_config')['bronze_bucket'] }}",
-                "spark.sql.silver_bucket": "{{ ti.xcom_pull(task_ids='get_config')['silver_bucket'] }}",
-                "spark.sql.target_date": "{{ ti.xcom_pull(task_ids='get_config')['target_date'] }}",
-                "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-                "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog",
-                "spark.sql.catalog.spark_catalog.type": "hadoop",
-                "spark.sql.catalog.iceberg": "org.apache.iceberg.spark.SparkCatalog",
-                "spark.sql.catalog.iceberg.type": "hadoop",
-                "spark.sql.catalog.iceberg.warehouse": "gs://{{ ti.xcom_pull(task_ids='get_config')['silver_bucket'] }}/tables",
+    batch={
+        "spark_batch": {
+            "jar_file_uris": [
+                "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket'] }}/iceberg-spark-runtime-3.5_2.12-1.6.1.jar",
+            ],
+            "python_file_uris": [
+                "gs://{{ var.value.composer_bucket }}/dags/transform_bronze_to_silver.py",
+            ],
+            "main_python_file_uri": "gs://{{ var.value.composer_bucket }}/dags/transform_bronze_to_silver.py",
+            "runtime_config": {
+                "version": "3.5-Debian12",
+                "container_image": "gcr.io/dataproc-serverless/spark:3.5.0",
+                "properties": {
+                    "spark.sql.project_id": "{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}",
+                    "spark.sql.bronze_bucket": "{{ ti.xcom_pull(task_ids='get_config')['bronze_bucket'] }}",
+                    "spark.sql.silver_bucket": "{{ ti.xcom_pull(task_ids='get_config')['silver_bucket'] }}",
+                    "spark.sql.target_date": "{{ ti.xcom_pull(task_ids='get_config')['target_date'] }}",
+                    "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+                    "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog",
+                    "spark.sql.catalog.spark_catalog.type": "hadoop",
+                    "spark.sql.catalog.iceberg": "org.apache.iceberg.spark.SparkCatalog",
+                    "spark.sql.catalog.iceberg.type": "hadoop",
+                    "spark.sql.catalog.iceberg.warehouse": "gs://{{ ti.xcom_pull(task_ids='get_config')['silver_bucket'] }}/tables",
+                },
             },
         },
     },
-    dag=dag,
 )
+
 
 # Task 3: Verify Silver tables updated via BigLake query
 verify_silver = BigQueryCheckOperator(

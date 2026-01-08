@@ -111,7 +111,7 @@ verify_silver = BigQueryCheckOperator(
     FROM `{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}.meat_market_lake.curated_zone.hub_carcass`
     """,
     use_legacy_sql=False,
-    bigquery_conn_id="google_cloud_default",
+    gcp_conn_id="google_cloud_default",
     dag=dag,
 )
 

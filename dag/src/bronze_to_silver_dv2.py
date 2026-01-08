@@ -77,24 +77,17 @@ transform_dv2_iceberg = DataprocCreateBatchOperator(
     batch_id="bronze-to-silver-dv2-{{ ds_nodash }}-{{ try_number }}",  # Unique per run & retry
     batch={
         "pyspark_batch": {
-            "main_python_file_uri": "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket']  }}/spark_jobs/transform_bronze_to_silver.py",  # Your actual main script
+            "main_python_file_uri": "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket'] }}/spark_jobs/transform_bronze_to_silver.py",
             "args": [
                 "--execution-date={{ ds }}",
-                "--bronze-bucket={{ env['BRONZE_BUCKET'] }}",  # Using Composer env vars
+                "--bronze-bucket={{ env['BRONZE_BUCKET'] }}",
                 "--silver-bucket={{ env['SILVER_BUCKET'] }}",
-                # Add any other args your script needs
             ],
-            "python_file_uris": [
-                # Any additional .py, .zip, or .egg files (e.g., shared utils)
-                # "gs://gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket']  }}/spark_jobs/transform_bronze_to_silver.py",
-            ],
+            "python_file_uris": [],
             "jar_file_uris": [
-                # Iceberg runtime + bundle (pre-installed in recent images, but safe to include)
-                "gs://spark-lib/iceberg/iceberg-spark-runtime-3.5_2.12-1.5.2.jar",  # Adjust version if needed
-                # Any other custom JARs
+                "gs://spark-lib/iceberg/iceberg-spark-runtime-3.5_2.12-1.5.2.jar",
             ],
-        },
-        "runtime_config": {
+            "runtime_config": {
             "version": "2.2",  # Latest stable Serverless runtime (Spark 3.5+ as of 2026)
             "properties": {
                 # Core Iceberg + GCS configs (adjust catalog type as needed)

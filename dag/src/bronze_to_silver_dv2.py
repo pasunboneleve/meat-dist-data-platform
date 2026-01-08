@@ -3,7 +3,6 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
 from airflow import DAG
-from airflow.models import Variable
 from airflow.providers.google.cloud.operators.bigquery import \
     BigQueryCheckOperator
 from airflow.providers.google.cloud.operators.dataproc import \
@@ -11,7 +10,7 @@ from airflow.providers.google.cloud.operators.dataproc import \
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
 from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.sdk import DAG, Variable, task
+from airflow.sdk import DAG, task
 
 default_args = {
     "owner": "data-eng",
@@ -65,40 +64,68 @@ verify_bronze = GCSObjectsWithPrefixExistenceSensor(
     dag=dag,
 )
 
+import os
+
 # Task 2: Spark transform
-spark_transform = DataprocCreateBatchOperator(
+from airflow.providers.google.cloud.operators.dataproc import \
+    DataprocCreateBatchOperator
+
+transform_dv2_iceberg = DataprocCreateBatchOperator(
     task_id="transform_dv2_iceberg",
     project_id="{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}",
     region="{{ ti.xcom_pull(task_ids='get_config')['region'] }}",
-    # Updated: Ensure batch_id is unique per execution to avoid 409 Conflicts
-    batch_id=f"bronze-to-silver-dv2-{{ ds_nodash }}",
+    batch_id="bronze-to-silver-dv2-{{ ds_nodash }}-{{ try_number }}",  # Unique per run & retry
     batch={
-        "spark_batch": {
-            "jar_file_uris": [
-                "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket'] }}/iceberg-spark-runtime-3.5_2.12-1.6.1.jar",
+        "pyspark_batch": {
+            "main_python_file_uri": "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket']  }}/spark_jobs/transform_bronze_to_silver.py",  # Your actual main script
+            "args": [
+                "--execution-date={{ ds }}",
+                "--bronze-bucket={{ env['BRONZE_BUCKET'] }}",  # Using Composer env vars
+                "--silver-bucket={{ env['SILVER_BUCKET'] }}",
+                # Add any other args your script needs
             ],
             "python_file_uris": [
-                "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket'] }}/spark_jobs/transform_bronze_to_silver.py",
+                # Any additional .py, .zip, or .egg files (e.g., shared utils)
+                # "gs://gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket']  }}/spark_jobs/transform_bronze_to_silver.py",
             ],
-            "main_python_file_uri": "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket']}}/spark_jobs/transform_bronze_to_silver.py",
-            "runtime_config": {
-                "version": "3.5-Debian12",
-                "container_image": "gcr.io/dataproc-serverless/spark:3.5.0",
-                "properties": {
-                    "spark.sql.project_id": "{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}",
-                    "spark.sql.bronze_bucket": "{{ ti.xcom_pull(task_ids='get_config')['bronze_bucket'] }}",
-                    "spark.sql.silver_bucket": "{{ ti.xcom_pull(task_ids='get_config')['silver_bucket'] }}",
-                    "spark.sql.target_date": "{{ ti.xcom_pull(task_ids='get_config')['target_date'] }}",
-                    "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-                    "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog",
-                    "spark.sql.catalog.spark_catalog.type": "hadoop",
-                    "spark.sql.catalog.iceberg": "org.apache.iceberg.spark.SparkCatalog",
-                    "spark.sql.catalog.iceberg.type": "hadoop",
-                    "spark.sql.catalog.iceberg.warehouse": "gs://{{ ti.xcom_pull(task_ids='get_config')['silver_bucket'] }}/tables",
-                },
+            "jar_file_uris": [
+                # Iceberg runtime + bundle (pre-installed in recent images, but safe to include)
+                "gs://spark-lib/iceberg/iceberg-spark-runtime-3.5_2.12-1.5.2.jar",  # Adjust version if needed
+                # Any other custom JARs
+            ],
+        },
+        "runtime_config": {
+            "version": "2.2",  # Latest stable Serverless runtime (Spark 3.5+ as of 2026)
+            "properties": {
+                # Core Iceberg + GCS configs (adjust catalog type as needed)
+                "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+                "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog",
+                "spark.sql.catalog.spark_catalog.type": "hive",  # Use "hadoop" for GCS-only or "rest" for BigLake REST
+                "spark.hadoop.fs.gs.impl": "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem",
+                "spark.hadoop.google.cloud.auth.service.account.enable": "true",
+                # Optional: warehouse directory
+                # "spark.sql.catalog.spark_catalog.warehouse": "gs://meatislife-silver-bucket/iceberg_warehouse/",
             },
         },
+        "environment_config": {
+            "execution_config": {
+                # "service_account": "your-sa@meatislife.iam.gserviceaccount.com",  # Optional override
+                # "subnetwork_uri": "projects/.../regions/australia-southeast1/subnetworks/your-subnet",
+            },
+            "peripherals_config": {
+                # Uncomment if using Dataproc Metastore for Hive catalog
+                # "metastore_service": "projects/meatislife/locations/australia-southeast1/services/your-metastore-service",
+            },
+        },
+        "labels": {
+            "dag_id": "{{ dag.dag_id }}",
+            "run_id": "{{ run_id }}",
+        },
     },
+    # Optional: wait asynchronously and use a sensor for completion
+    # asynchronous=True,
+    gcp_conn_id="google_cloud_default",
+    impersonation_chain=None,  # If needed
 )
 
 

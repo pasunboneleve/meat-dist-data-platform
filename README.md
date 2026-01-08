@@ -99,7 +99,7 @@ This repository uses a two-part deployment strategy:
 - **Execution**: A Cloud Scheduler job triggers the Cloud Run service via an HTTP request on a daily schedule.
   - The service generates a new batch of data upon each invocation.
   - It converts the generated data to Parquet format.
-  - It writes the partitioned data to the bronze GCS bucket, e.g., `gs://bronze/carcasses/plant_id=P01/year=2025/month=12/day=27/batch_12345.parquet`
+  - It writes the partitioned data to the bronze GCS bucket, e.g., `gs://bronze/carcasses/year=2025/month=12/day=27/plant_id=P01/batch_12345.parquet`
 - **Discovery**: DataPlex automatically discovers the new Parquet files as they land, making them available for querying via BigLake.
 
 ## Phase 4: Transformations

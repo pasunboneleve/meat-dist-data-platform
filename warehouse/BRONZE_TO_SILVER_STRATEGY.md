@@ -20,7 +20,7 @@ Implement a cost-effective (~$1–5/run), serverless orchestration pipeline usin
 ## Architecture Flow
 ```
 Composer DAG (daily):
-  - Task 1: HttpOperator → Cloud Run (synthetic generator) → Bronze GCS SE1 (Parquet: plant_id/year/month/day)
+  - Task 1: HttpOperator → Cloud Run (synthetic generator) → Bronze GCS SE1 (Parquet: year/month/day/plant_id)
   - Task 2: Verify files landed
   - Task 3: Dataproc Serverless Spark → Read Bronze → DV2 Iceberg → Silver GCS (table_version=1, partitioned)
 Dataplex: Auto-discovers → BigLake/BigQuery queryable
@@ -42,7 +42,7 @@ Tasks:
 (`POST https://synthetic-meat-ingestor-...run.app`). Needs `id_token`
 (The DAG is run via Composer 3, serverless).
 2. **BigQueryCheckOperator** or **GCSHook**: Verify new Parquet files
-   landed (`gs://bronze/carcasses/plant_id=.../year=...`).
+   landed (`gs://bronze/carcasses/year=.../month=...`).
 3. **EmailOperator** (failures only).
 
 **Why Airflow?** Primary trigger (replaces Cloud Scheduler); retries, SLAs, lineage.

@@ -50,7 +50,7 @@ synthetic meat processing data generator.
 - **Format**: Parquet files in Google Cloud Storage (GCS) bucket
   `${project_id}-bronze`.
 - **Partitioning**: `plant_id/year/month/day/batch_id.parquet` (e.g.,
-`gs://bronze/carcasses/plant_id=P01/year=2025/month=12/day=27/batch_12345.parquet`).
+`gs://bronze/carcasses/year=2025/month=12/day=27/plant_id=P01/batch_12345.parquet`).
 - **Schema**: Raw JSON/Parquet with fields like:
   - `carcass_id` (string, RFID-style tag for traceability).
   - `plant_id` (string, processing plant identifier).

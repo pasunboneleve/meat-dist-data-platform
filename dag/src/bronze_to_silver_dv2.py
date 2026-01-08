@@ -40,7 +40,7 @@ def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     deps_bucket = os.environ["DEPS_BUCKET"]
     logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore
     target_date_str = logical_date.strftime("%Y/%m/%d")
-    prefix = f"carcasses/year={logical_date.year}/month={logical_date.month:02d}/day={logical_date.day:02d}/**/"
+    prefix = f"carcasses/year={logical_date.year}/month={logical_date.month:02d}/day={logical_date.day:02d}/"
     return {
         "project_id": project_id,
         "region": region,
@@ -60,8 +60,8 @@ verify_bronze = GCSObjectsWithPrefixExistenceSensor(
     bucket="{{ ti.xcom_pull(task_ids='get_config')['bronze_bucket'] }}",
     prefix="{{ ti.xcom_pull(task_ids='get_config')['target_prefix'] }}",
     google_cloud_conn_id="google_cloud_default",
-    timeout_seconds=3600,
-    poke_interval=300,
+    timeout_seconds=300,  # Short for testing (5min)
+    poke_interval=60,     # Poke every 1min
     dag=dag,
 )
 

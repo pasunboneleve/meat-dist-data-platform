@@ -33,7 +33,7 @@ dag = DAG(
 def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     """Load config from Airflow Variables."""
     project_id = Variable.get("GCP_PROJECT_ID")
-    region = Variable.get("dataproc_region", default="australia-southeast1")
+    region = Variable.get("DATAPROC_REGION", default="australia-southeast1")
     bronze_bucket = Variable.get("BRONZE_BUCKET")
     silver_bucket = Variable.get("SILVER_BUCKET")
     deps_bucket = (

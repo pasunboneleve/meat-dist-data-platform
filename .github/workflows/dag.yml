@@ -41,6 +41,7 @@ jobs:
     - name: Sync DAGs to Composer
       run: |
         gcloud storage rsync dag/src/ "gs://${{ env.COMPOSER_BUCKET }}/dags/" \
-        --delete-unmatched-destination-objects --recursive
+        --delete-unmatched-destination-objects --recursive \
+        --exclude "airflow_monitoring.py"
         gcloud storage rsync dag/spark_jobs/ "gs://${{ env.DEPS_BUCKET }}/spark_jobs/" \
         --delete-unmatched-destination-objects --recursive

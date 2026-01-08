@@ -1,17 +1,18 @@
 import os
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
 from airflow import DAG
-from airflow.decorators import task
 from airflow.models import Variable
-from airflow.operators.empty import EmptyOperator
 from airflow.providers.google.cloud.operators.bigquery import \
     BigQueryCheckOperator
-from airflow.providers.google.cloud.operators.dataproc_serverless import \
-    DataprocServerlessSparkBatchOperator
+from airflow.providers.google.cloud.operators.dataproc import \
+    DataprocCreateBatchOperator
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.sdk import DAG, Variable, task
+from pendulum.date import Date  # New Airflow 3 Task SDK imports
 
 default_args = {
     "owner": "data-eng",
@@ -34,13 +35,13 @@ dag = DAG(
 def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     """Load config from Airflow Variables."""
     project_id = Variable.get("gcp_project_id")
-    region = Variable.get("dataproc_region", default_var="australia-southeast1")
+    region = Variable.get("dataproc_region", default="australia-southeast1")
     bronze_bucket = Variable.get("BRONZE_BUCKET")
     silver_bucket = Variable.get("SILVER_BUCKET")
     deps_bucket = (
         f"{bronze_bucket.replace('-bronze', '-deps')}"  # Assume deps bucket pattern
     )
-    logical_date = context["logical_date"].date()
+    logical_date: date = context["logical_date"].date()  # type: ignore
     target_date_str = logical_date.strftime("%Y/%m/%d")
     prefix = f"carcasses/**/year={logical_date.year}/month={logical_date.month:02d}/day={logical_date.day:02d}/"
     return {
@@ -68,7 +69,7 @@ verify_bronze = GCSObjectsWithPrefixExistenceSensor(
 )
 
 # Task 2: Spark transform
-spark_transform = DataprocServerlessSparkBatchOperator(
+spark_transform = DataprocCreateBatchOperator(
     task_id="transform_dv2_iceberg",
     project_id="{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}",
     region="{{ ti.xcom_pull(task_ids='get_config')['region'] }}",

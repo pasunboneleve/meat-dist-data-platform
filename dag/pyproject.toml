@@ -4,9 +4,7 @@ version = "0.1.0"
 description = "DAGs for meat-dist-data-platform"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "pyspark>=4.1.0",
-]
+dependencies = []
 
 [dependency-groups]
 dev = [
@@ -16,6 +14,7 @@ dev = [
     "google-auth",
     "mypy>=1.19.1",
     "pylsp-mypy>=0.7.0",
+    "pyspark>=4.1.0",
     "python-lsp-server[all]>=1.14.0",
     "requests",
     "types-requests>=2.32.4.20250913",

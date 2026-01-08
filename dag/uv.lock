@@ -875,9 +875,6 @@ wheels = [
 name = "dag"
 version = "0.1.0"
 source = { virtual = "." }
-dependencies = [
-    { name = "pyspark" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -887,13 +884,13 @@ dev = [
     { name = "google-auth" },
     { name = "mypy" },
     { name = "pylsp-mypy" },
+    { name = "pyspark" },
     { name = "python-lsp-server", extra = ["all"] },
     { name = "requests" },
     { name = "types-requests" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pyspark", specifier = ">=4.1.0" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -903,6 +900,7 @@ dev = [
     { name = "google-auth" },
     { name = "mypy", specifier = ">=1.19.1" },
     { name = "pylsp-mypy", specifier = ">=0.7.0" },
+    { name = "pyspark", specifier = ">=4.1.0" },
     { name = "python-lsp-server", extras = ["all"], specifier = ">=1.14.0" },
     { name = "requests" },
     { name = "types-requests", specifier = ">=2.32.4.20250913" },

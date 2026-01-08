@@ -248,6 +248,7 @@ resource "google_composer_environment" "meat_composer" {
         BRONZE_BUCKET      = google_storage_bucket.bronze_bucket.name
         SILVER_BUCKET      = google_storage_bucket.silver_bucket.name
         GOLD_BUCKET        = google_storage_bucket.gold_bucket.name
+        DEPS_BUCKET        = google_storage_bucket.deps_bucket.name
       }
     }
 

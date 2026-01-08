@@ -13,6 +13,8 @@ env:
   # bucket found in the Composer configuration page under
   # 'DAGs folder' (stripped of the /dags and gs://).
   COMPOSER_BUCKET: ${{ secrets.COMPOSER_BUCKET }}
+  # This is being set manually too
+  DEPS_BUCKET: ${{ secrets.DEPS_BUCKET }}
 
 jobs:
   deploy:
@@ -37,4 +39,6 @@ jobs:
         audience: 'sts.googleapis.com'
 
     - name: Sync DAGs to Composer
-      run: gcloud storage rsync -r dag "gs://${{ env.COMPOSER_BUCKET }}/dags"
+      run: |
+        gcloud storage rsync dag "gs://${{ env.COMPOSER_BUCKET }}/dags"
+        gcloud storage rsync -r dag/spark_jobs "gs://${{ env.DEPS_BUCKET }}/spark_jobs"

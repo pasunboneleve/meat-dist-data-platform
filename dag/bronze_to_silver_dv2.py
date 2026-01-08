@@ -36,9 +36,7 @@ def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     region = Variable.get("DATAPROC_REGION", default="australia-southeast1")
     bronze_bucket = Variable.get("BRONZE_BUCKET")
     silver_bucket = Variable.get("SILVER_BUCKET")
-    deps_bucket = (
-        f"{bronze_bucket.replace('-bronze', '-deps')}"  # Assume deps bucket pattern
-    )
+    deps_bucket = Variable.get("DEPS_BUCKET")
     logical_date: date = context["logical_date"].date()  # type: ignore
     target_date_str = logical_date.strftime("%Y/%m/%d")
     prefix = f"carcasses/**/year={logical_date.year}/month={logical_date.month:02d}/day={logical_date.day:02d}/"
@@ -79,9 +77,9 @@ spark_transform = DataprocCreateBatchOperator(
                 "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket'] }}/iceberg-spark-runtime-3.5_2.12-1.6.1.jar",
             ],
             "python_file_uris": [
-                "gs://{{ var.value.composer_bucket }}/dags/transform_bronze_to_silver.py",
+                "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket'] }}/spark_jobs/transform_bronze_to_silver.py",
             ],
-            "main_python_file_uri": "gs://{{ var.value.composer_bucket }}/dags/transform_bronze_to_silver.py",
+            "main_python_file_uri": "gs://{{ ti.xcom_pull(task_ids='get_config')['deps_bucket']}}/spark_jobs/transform_bronze_to_silver.py",
             "runtime_config": {
                 "version": "3.5-Debian12",
                 "container_image": "gcr.io/dataproc-serverless/spark:3.5.0",

@@ -60,8 +60,8 @@ verify_bronze = GCSObjectsWithPrefixExistenceSensor(
     bucket="{{ ti.xcom_pull(task_ids='get_config')['bronze_bucket'] }}",
     prefix="{{ ti.xcom_pull(task_ids='get_config')['target_prefix'] }}",
     google_cloud_conn_id="google_cloud_default",
-    timeout_seconds=300,  # Short for testing (5min)
-    poke_interval=60,     # Poke every 1min
+    timeout=300,  # Short for testing (5min)
+    poke_interval=60,  # Poke every 1min
     dag=dag,
 )
 

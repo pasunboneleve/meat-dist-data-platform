@@ -40,7 +40,7 @@ def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     deps_bucket = os.environ["DEPS_BUCKET"]
     logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore
     target_date_str = logical_date.strftime("%Y/%m/%d")
-    prefix = f"carcasses/year={logical_date.year}/month={logical_date.month:02d}/day={logical_date.day:02d}/"
+    prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day:02d}/"
     return {
         "project_id": project_id,
         "region": region,

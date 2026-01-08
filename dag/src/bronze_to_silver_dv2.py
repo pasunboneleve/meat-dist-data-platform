@@ -67,10 +67,7 @@ verify_bronze = GCSObjectsWithPrefixExistenceSensor(
 import os
 
 # Task 2: Spark transform
-from airflow.providers.google.cloud.operators.dataproc import \
-    DataprocCreateBatchOperator
-
-transform_dv2_iceberg = DataprocCreateBatchOperator(
+spark_transform = DataprocCreateBatchOperator(
     task_id="transform_dv2_iceberg",
     project_id="{{ ti.xcom_pull(task_ids='get_config')['project_id'] }}",
     region="{{ ti.xcom_pull(task_ids='get_config')['region'] }}",
@@ -85,29 +82,17 @@ transform_dv2_iceberg = DataprocCreateBatchOperator(
             ],
             "python_file_uris": [],
             "jar_file_uris": [
-                "gs://spark-lib/iceberg/iceberg-spark-runtime-3.5_2.12-1.5.2.jar",
+                "gs://spark-lib/iceberg/iceberg-spark-runtime-3.5_2.12-1.5.2.jar",  # Adjust version if needed
             ],
-            "runtime_config": {
-            "version": "2.2",  # Latest stable Serverless runtime (Spark 3.5+ as of 2026)
-            "properties": {
-                # Core Iceberg + GCS configs (adjust catalog type as needed)
+        },
+        "runtime_config": {  # Moved to top level
+            "version": "3.0",  # Recommended: current default LTS (Spark 3.5+); use "3.0" for latest
+            "properties": {  # Spark properties here
                 "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                 "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog",
-                "spark.sql.catalog.spark_catalog.type": "hive",  # Use "hadoop" for GCS-only or "rest" for BigLake REST
-                "spark.hadoop.fs.gs.impl": "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem",
-                "spark.hadoop.google.cloud.auth.service.account.enable": "true",
-                # Optional: warehouse directory
-                # "spark.sql.catalog.spark_catalog.warehouse": "gs://meatislife-silver-bucket/iceberg_warehouse/",
-            },
-        },
-        "environment_config": {
-            "execution_config": {
-                # "service_account": "your-sa@meatislife.iam.gserviceaccount.com",  # Optional override
-                # "subnetwork_uri": "projects/.../regions/australia-southeast1/subnetworks/your-subnet",
-            },
-            "peripherals_config": {
-                # Uncomment if using Dataproc Metastore for Hive catalog
-                # "metastore_service": "projects/meatislife/locations/australia-southeast1/services/your-metastore-service",
+                "spark.sql.catalog.spark_catalog.type": "rest",
+                "spark.sql.catalog.spark_catalog.uri": "https://biglake.googleapis.com/iceberg/v1beta/restcatalog",
+                "spark.sql.catalog.spark_catalog.warehouse": "gs://{{ ti.xcom_pull(task_ids='get_config')['silver_bucket'] }}/iceberg_warehouse/",
             },
         },
         "labels": {
@@ -115,12 +100,9 @@ transform_dv2_iceberg = DataprocCreateBatchOperator(
             "run_id": "{{ run_id }}",
         },
     },
-    # Optional: wait asynchronously and use a sensor for completion
-    # asynchronous=True,
     gcp_conn_id="google_cloud_default",
-    impersonation_chain=None,  # If needed
+    impersonation_chain=None,
 )
-
 
 # Task 3: Verify Silver tables updated via BigLake query
 verify_silver = BigQueryCheckOperator(

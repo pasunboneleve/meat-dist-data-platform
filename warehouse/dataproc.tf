@@ -7,7 +7,7 @@ resource "google_service_account" "dataproc_batch_sa" {
 
 # 2. Grant necessary roles to the batch SA
 resource "google_project_iam_member" "dataproc_worker" {
-  project = var.projecPt_id
+  project = var.project_id
   role    = "roles/dataproc.worker"
   member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
 }

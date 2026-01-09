@@ -12,3 +12,4 @@ github_token                 = "ghp_your_github_personal_access_token" # Create 
 tf_state_bucket              = "your-tf-state-bucket-name"
 artifact_registry_repository = "meat-data-images"
 image_name                   = "synthetic-meat"
+image_uri                    = "us-docker.pkg.dev/cloudrun/container/hello"

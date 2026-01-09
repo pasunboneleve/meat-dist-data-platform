@@ -317,7 +317,7 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
             return None
 
         for report_date, report in base_data.group_by("report_date"):
-            from_date = datetime.strptime(report_date[0], "%Y-%m-%d").date()
+            from_date = datetime.fromisoformat(report_date[0]).date()
             synthesise_and_write(report, from_date)
         return f"Data generation and upload complete for {params}"
     except Exception as e:
@@ -349,7 +349,7 @@ def generate_and_upload(request):
         # Accommodate POST (json body) requests for backfills and manual
         if request.is_json and request.get_json().get("target_date"):
             target_date_str = request.get_json().get("target_date")
-            target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+            target_date = datetime.fromisoformat(target_date_str).date()
 
             # prepare params
             from_date = target_date - timedelta(days=1)

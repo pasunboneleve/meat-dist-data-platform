@@ -85,7 +85,7 @@ resource "google_project_service" "biglake_api" {
 resource "google_biglake_catalog" "meat_iceberg" {
   project    = var.project_id
   location   = var.app_engine_region
-  name       = "meat-iceberg-catalog"
+  name       = "meat_iceberg_catalog"
   depends_on = [google_project_service.biglake_api]
 }
 

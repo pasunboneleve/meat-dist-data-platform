@@ -38,7 +38,6 @@ def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     target_date_str = logical_date.strftime("%Y/%m/%d")
     prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day}/"
     return {
-        "target_date": logical_date,
         "from_date_str": target_date_str,
         "to_date_str": target_date_str,
         "target_prefix": prefix,

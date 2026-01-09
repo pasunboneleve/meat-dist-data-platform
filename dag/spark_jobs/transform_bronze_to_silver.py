@@ -37,7 +37,7 @@ def main():
     # Get params from Spark conf (passed via Airflow templating)
     bronze_bucket = spark.conf.get("spark.sql.bronze_bucket")
     silver_bucket = spark.conf.get("spark.sql.silver_bucket")
-    target_date_str = spark.conf.get("spark.sql.target_date")  # e.g., "2024-12-27"
+    target_date_str = spark.conf.get("spark.sql.target_date_str")  # e.g., "2024-12-27"
     if not target_date_str:
         raise DagConfigError("target_date_str missing.")
     target_date = date.fromisoformat(target_date_str)

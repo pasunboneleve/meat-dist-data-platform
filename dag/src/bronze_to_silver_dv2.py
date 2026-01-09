@@ -35,7 +35,7 @@ def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     target_date_str = logical_date.isoformat()
     prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day}/"
     return {
-        "target_date": target_date_str,
+        "target_date_str": target_date_str,
         "target_prefix": prefix,
     }
 
@@ -79,7 +79,7 @@ spark_transform = DataprocCreateBatchOperator(
                 "spark.sql.execution_date": "{{ ds }}",  # e.g., 2026-01-09
                 "spark.sql.bronze_bucket": os.environ["BRONZE_BUCKET"],
                 "spark.sql.silver_bucket": os.environ["SILVER_BUCKET"],
-                "spark.sql.target_date": "{{ ti.xcom_pull(task_ids='get_config')['target_date_str'] }}",
+                "spark.sql.target_date_str": "{{ ti.xcom_pull(task_ids='get_config')['target_date_str'] }}",
             },
         },
         "environment_config": {

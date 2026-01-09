@@ -99,7 +99,7 @@ spark_transform = DataprocCreateBatchOperator(
             },
             "environment_config": {
                 "execution_config": {
-                    "service_account": "{{ ti.xcom_pull(task_ids='get_config)['DATAPROC_BATCH_SERVICE_ACCOUNT']}}",
+                    "service_account": "{{ ti.xcom_pull(task_ids='get_config)['DATAPROC_BATCH_SERVICE_ACCOUNT'] }}",
                 }
             },
         },

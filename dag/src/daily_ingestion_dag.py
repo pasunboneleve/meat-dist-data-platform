@@ -1,5 +1,5 @@
 import os
-from datetime import UTC, datetime, date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
 import requests
@@ -11,7 +11,6 @@ from airflow.providers.standard.operators.trigger_dagrun import \
     TriggerDagRunOperator
 from airflow.sdk import task
 from google.auth.transport.requests import Request
-from google.cloud.storage._helpers import _validate_name
 from google.oauth2 import id_token
 
 default_args = {
@@ -49,7 +48,7 @@ config = get_config()
 
 @task(dag=dag)
 def trigger_synthetic_meat_ingestion(**context: Dict[str, Any]) -> None:
-    config = context["ti"].xcom_pull(task_ids="get_config")
+    config = context["ti"].xcom_pull(task_ids="get_config")  # type: ignore
     url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
     payload = {
         "from_date": config["from_date_str"],

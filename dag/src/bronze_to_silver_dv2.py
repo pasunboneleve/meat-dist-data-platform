@@ -71,10 +71,13 @@ spark_transform = DataprocCreateBatchOperator(
             "version": "2.2",  # is also excellent if you prefer the LTS default
             "properties": {
                 "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-                "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",  # Correct class for REST
+                "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
                 "spark.sql.catalog.spark_catalog.type": "rest",
                 "spark.sql.catalog.spark_catalog.uri": "https://biglake.googleapis.com/iceberg/v1beta/restcatalog",
                 "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
+                "spark.sql.catalog.spark_catalog.auth": "oauth2",  # Enable OAuth
+                "spark.sql.catalog.spark_catalog.oauth2.token": "",  # Empty = use ADC (will work on Dataproc)
+                "spark.sql.catalog.spark_catalog.client.session-catalog-impl": "org.apache.iceberg.rest.auth.OAuth2SessionCatalog",
                 # === Your templated config values ===
                 "spark.sql.execution_date": "{{ ds }}",  # e.g., 2026-01-09
                 "spark.sql.bronze_bucket": os.environ["BRONZE_BUCKET"],

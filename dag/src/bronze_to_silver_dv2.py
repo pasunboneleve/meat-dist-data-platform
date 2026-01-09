@@ -85,11 +85,11 @@ spark_transform = DataprocCreateBatchOperator(
                 "spark.sql.catalog.spark_catalog.uri": "https://biglake.googleapis.com/iceberg/v1beta/restcatalog",
                 "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
             },
-            "environment_config": {
-                "execution_config": {
-                    "service_account": f"{os.environ['DATAPROC_BATCH_SERVICE_ACCOUNT']}",
-                }
-            },
+        },
+        "environment_config": {
+            "execution_config": {
+                "service_account": f"{os.environ['DATAPROC_BATCH_SERVICE_ACCOUNT']}",
+            }
         },
         "labels": {
             "dag_id": "bronze-to-silver-dv2",

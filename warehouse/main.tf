@@ -266,6 +266,8 @@ resource "google_composer_environment" "meat_composer" {
         SILVER_BUCKET                  = google_storage_bucket.silver_bucket.name
         GOLD_BUCKET                    = google_storage_bucket.gold_bucket.name
         DEPS_BUCKET                    = google_storage_bucket.deps_bucket.name
+        CATALOG_NAME                   = google_biglake_catalog.meat_iceberg.name
+
       }
     }
 

@@ -78,6 +78,14 @@ spark_transform = DataprocCreateBatchOperator(
                 "spark.sql.catalog.spark_catalog.auth": "oauth2",  # Enable OAuth
                 "spark.sql.catalog.spark_catalog.oauth2.token": "",  # Empty = use ADC (will work on Dataproc)
                 "spark.sql.catalog.spark_catalog.client.session-catalog-impl": "org.apache.iceberg.rest.auth.OAuth2SessionCatalog",
+                # === Minimal resource config for small data + low cost ===
+                "spark.executor.instances": "2",  # The minimum allowed
+                "spark.executor.cores": "4",  # 4 vCPUs per executor
+                "spark.executor.memory": "4g",  # 4 GB memory (plenty for thousands of rows)
+                "spark.driver.cores": "4",
+                "spark.driver.memory": "4g",
+                # Disable dynamic allocation — no need for scaling with small data
+                "spark.dynamicAllocation.enabled": "false",
                 # === Your templated config values ===
                 "spark.sql.execution_date": "{{ ds }}",  # e.g., 2026-01-09
                 "spark.sql.bronze_bucket": os.environ["BRONZE_BUCKET"],

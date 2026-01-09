@@ -94,6 +94,8 @@ spark_transform = DataprocCreateBatchOperator(
     },
     gcp_conn_id="google_cloud_default",
 )
+
+
 # Task 3: Verify Silver tables updated via BigLake query
 verify_silver = BigQueryCheckOperator(
     task_id="verify_silver_tables",

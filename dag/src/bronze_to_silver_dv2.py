@@ -13,7 +13,7 @@ from airflow.sdk import DAG, task
 
 default_args = {
     "owner": "data-eng",
-    "retries": 3,
+    "retries": 0,
     "retry_delay": timedelta(minutes=5),
 }
 

@@ -43,7 +43,7 @@ def main():
     target_date = date.fromisoformat(target_date_str)
     load_dts = datetime.now().isoformat()
 
-    bronze_path = f"gs://{bronze_bucket}/carcasses/*/"
+    bronze_path = f"gs://{bronze_bucket}/carcasses/"
     bronze_path += f"year={target_date.year}/month={target_date.month}/day={target_date.day}/*.parquet"
 
     # Assume indicator data in same Parquet (or union if separate prefix)

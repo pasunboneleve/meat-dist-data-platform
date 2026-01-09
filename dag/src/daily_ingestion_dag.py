@@ -31,20 +31,24 @@ dag = DAG(
 )
 
 
-def yesterday(context: Dict[str, Any]) -> Dict[str, str]:
-    """
-    Create a JSON payload to fetch yesterday's stats.
-    """
-    target_date = context["logical_date"].date() - timedelta(days=1)
-    from_date_str = target_date.strftime("%Y-%m-%d")
-    to_date_str = target_date.strftime("%Y-%m-%d")
-    return {"from_date": from_date_str, "to_date": to_date_str}
+@task(dag=dag)
+def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
+    """Load config from Airflow Variables."""
+    logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore
+    target_date_str = logical_date.strftime("%Y/%m/%d")
+    prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day}/"
+    return {
+        "target_date": logical_date,
+        "from_date_str": target_date_str,
+        "to_date_str": target_date_str,
+        "target_prefix": prefix,
+    }
 
 
 @task(dag=dag)
 def trigger_synthetic_meat_ingestion(**context):
     url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
-    payload = yesterday(context)
+    payload = dict(from_date=context["from_date_str"], to_date=context["to_date_str"])
     response = None
 
     try:
@@ -75,29 +79,14 @@ with status {response.status_code}: {response.text}"
         raise Exception(f"Failed to trigger ingestor: {e}") from e
 
 
-@task
-def set_bucket():
-    bucket = os.environ.get("BRONZE_BUCKET")
-    if not bucket:
-        raise ValueError(
-            "Environment variable BRONZE_BUCKET \
-is not set in Composer"
-        )
-    print(f"Retrieved bronze bucket from env: {bucket}")
-    _validate_name(bucket)  # raises ValueError early if invalid
-    return bucket
-
-
-get_bucket_task = set_bucket()
-
-# Task 2: Trigger ingestion
+config = get_config()
 trigger_ingestion = trigger_synthetic_meat_ingestion()
 
 # Task 3: GCS sensor using the bucket from XCom
 wait_bronze = GCSObjectsWithPrefixExistenceSensor(
     task_id="wait_for_bronze_data",
-    bucket="{{ ti.xcom_pull(task_ids='set_bucket') }}",
-    prefix="carcasses/",
+    bucket=os.environ["BRONZE_BUCKET"],
+    prefix="{{ ti.xcom_pull(task_ids='get_config')['target_prefix'] }}",
     google_cloud_conn_id="google_cloud_default",
     timeout=7200,
     poke_interval=600,
@@ -114,4 +103,4 @@ trigger_transform = TriggerDagRunOperator(
 
 end = EmptyOperator(task_id="end", dag=dag)
 
-get_bucket_task >> trigger_ingestion >> wait_bronze >> trigger_transform >> end
+config >> trigger_ingestion >> wait_bronze >> trigger_transform >> end

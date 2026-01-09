@@ -48,9 +48,12 @@ config = get_config()
 
 
 @task(dag=dag)
-def trigger_synthetic_meat_ingestion(**context):
+def trigger_synthetic_meat_ingestion():
     url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
-    payload = dict(from_date=context["from_date_str"], to_date=context["to_date_str"])
+    payload = dict(
+        from_date="{{ ti.xcom_pull(task_ids='get_config')['from_date_str'] }}",
+        to_date="{{ ti.xcom_pull(task_ids='get_config')['to_date_str'] }}",
+    )
     response = None
 
     try:

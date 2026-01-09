@@ -1,3 +1,4 @@
+import hashlib
 import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
@@ -57,7 +58,7 @@ spark_transform = DataprocCreateBatchOperator(
     task_id="transform_dv2_iceberg",
     project_id=f"{os.environ['GCP_PROJECT_ID']}",
     region=f"{os.environ['DATAPROC_REGION']}",
-    batch_id="bronze-to-silver-dv2-{{ ds_nodash }}-{{ ti.try_number }}",
+    batch_id="bronze-to-silver-dv2-{{ ds_nodash }}-{{ ts_nodash | replace('T', '') | replace('+', '-') | lower }}-{{ ti.try_number }}",
     batch={
         "pyspark_batch": {
             "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",
@@ -89,6 +90,8 @@ spark_transform = DataprocCreateBatchOperator(
         "labels": {
             "dag_id": "bronze-to-silver-dv2",
             "date": "{{ ds_nodash }}",
+            "run_id_hash": "{{ ts_nodash | replace('T', '') | replace('+', '-') | lower }}",
+            "try_number": "{{ ti.try_number }}",
         },
     },
     gcp_conn_id="google_cloud_default",

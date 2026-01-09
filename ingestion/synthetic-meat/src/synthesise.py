@@ -6,7 +6,7 @@ import uuid
 from concurrent import futures
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import functions_framework
 import gcsfs
@@ -235,7 +235,12 @@ def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
     logger.info("Write unpartitioned to GCS successful", table=name)
 
 
-def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
+def write_to_gcs(
+    df: pl.DataFrame,
+    bucket_name: str,
+    target_date: date,
+    partition_cols: List[str] = ["year", "month", "day"],
+):
     """Writes a Polars DataFrame to GCS as a partitioned Parquet dataset using PyArrow."""
     if not bucket_name:
         raise ValueError("GCS bucket name is not configured via BRONZE_BUCKET env var.")
@@ -259,7 +264,7 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
         "Writing partitioned records to GCS",
         record_count=len(df_with_partitions),
         base_path=gcs_base_path,
-        partition_cols=["year", "month", "day", "plant_id"],
+        partition_cols=partition_cols,
     )
 
     # Convert Polars DF to PyArrow Table
@@ -272,7 +277,7 @@ def write_to_gcs(df: pl.DataFrame, bucket_name: str, target_date: date):
     pq.write_to_dataset(
         table,
         root_path=gcs_base_path,
-        partition_cols=["year", "month", "day", "plant_id"],
+        partition_cols=partition_cols,
         filesystem=fs,
         basename_template=f"{uuid.uuid4()}-{{i}}.parquet",
         existing_data_behavior="overwrite_or_ignore",

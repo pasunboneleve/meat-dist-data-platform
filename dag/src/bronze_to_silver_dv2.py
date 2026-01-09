@@ -86,8 +86,8 @@ spark_transform = DataprocCreateBatchOperator(
             ],
         },
         "runtime_config": {
-            "version": "3.0",  # Valid: latest GA Serverless runtime (recommended)
-            # "2.2" is also excellent if you prefer the LTS default
+            # "version": "3.0",  # latest GA Serverless (requires auth_config in tf)
+            "version": "2.2",  # is also excellent if you prefer the LTS default
             "properties": {
                 "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                 "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",  # Correct class for REST

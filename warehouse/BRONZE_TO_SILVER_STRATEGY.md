@@ -65,33 +65,14 @@ Tasks:
 - Iceberg: `df.writeTo("silver.hub_carcass").using("iceberg").createOrReplace()` (MERGE for SCD).
 - Config: REST Catalog (`iceberg.catalog.warehouse=gs://silver/tables`).
 
-**Airflow Operator**: `DataprocServerlessSparkBatchOperator`
-```python
-DataprocServerlessSparkBatchOperator(
-  task_id="transform_silver",
-  project_id="{{ var.value.gcp_project }}",
-  region="australia-southeast2",
-  batch_id="bronze-to-silver-{{ ds_nodash }}",
-  spark_batch={
-    "jar_file_uris": ["gs://deps/iceberg-spark-runtime-1.6.1.jar"],
-    "main_class": "NoMain",  # PySpark script
-    "python_file_uris": ["gs://dags/transform_bronze_to_silver.py"],
-    "runtime_config": {
-      "version": "3.1-Debian10",
-      "container_image": "gcr.io/dataproc-serverless/spark:3.1.1"
-    },
-    "spark_sql_job": {... args for script},
-  },
-  ...
-)
-```
-- **Jars**: Pre-upload Iceberg runtime to `deps` bucket (Terraform).
+**Airflow Operator**: `DataprocBatchOperator`
+
+- **Jars**: Not needed, we'll use the ones provided by Composer 3.
 
 **Why Dataproc Serverless?** ~$0.05/vCPU-hour, auto-scales, Iceberg native, no cluster mgmt.
 
 ## Phase 3: IaC & CI/CD Updates (1 hour)
 **Terraform (warehouse/)**:
-- Upload Iceberg JARs to `deps` bucket (`null_resource` w/ local-exec gsutil cp).
 - Composer DAG folder policy for GitHub Actions SA.
 - Output Composer Airflow URI/GCS DAGs path.
 
@@ -110,7 +91,7 @@ DataprocServerlessSparkBatchOperator(
 ## Next Steps (Use this as guide)
 1. Create `warehouse/dags/` dir + sample DAG YAML/Python.
 2. Add Iceberg JAR to deps (Terraform).
-3. Implement PySpark script in `warehouse/spark_jobs/`.
+3. Implement PySpark script in `dag/spark_jobs/`.
 4. Test end-to-end: Trigger DAG → Query Silver via BigQuery (`SELECT * FROM biglake.silver.hub_carcass`).
 5. Gold layer: Simple BQ views (next phase).
 

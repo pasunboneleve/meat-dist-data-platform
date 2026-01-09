@@ -8,7 +8,7 @@ from datetime import date, datetime
 
 from pyspark.sql import SparkSession
 from pyspark.sql.column import Column
-from pyspark.sql.functions import col, lit, udf
+from pyspark.sql.functions import col, dayofmonth, lit, month, udf, year
 from pyspark.sql.types import StringType
 
 
@@ -46,12 +46,10 @@ def main():
     bronze_path = f"gs://{bronze_bucket}/carcasses/"
     bronze_path += f"year={target_date.year}/month={target_date.month}/day={target_date.day}/*.parquet"
 
-    # Assume indicator data in same Parquet (or union if separate prefix)
-    df = (
-        spark.read.parquet(bronze_path)
-        .filter(col("year") == target_date.year)
-        .filter(col("month") == target_date.month)
-        .filter(col("day") == target_date.day)
+    df = spark.read.parquet(bronze_path).filter(
+        (year("slaughter_date") == target_date.year)
+        & (month("slaughter_date") == target_date.month)
+        & (dayofmonth("slaughter_date") == target_date.day)
     )
 
     # Cache for multiple uses

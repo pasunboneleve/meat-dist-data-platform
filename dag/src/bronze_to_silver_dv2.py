@@ -32,22 +32,24 @@ dag = DAG(
 @task(dag=dag)
 def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     """Load config from Airflow Variables."""
+    batch_sa = os.environ["DATAPROC_BATCH_SERVICE_ACCOUNT"]
+    bronze_bucket = os.environ["BRONZE_BUCKET"]
+    deps_bucket = os.environ["DEPS_BUCKET"]
     project_id = os.environ["GCP_PROJECT_ID"]
     region = os.environ["DATAPROC_REGION"]
-    bronze_bucket = os.environ["BRONZE_BUCKET"]
     silver_bucket = os.environ["SILVER_BUCKET"]
-    deps_bucket = os.environ["DEPS_BUCKET"]
     logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore
     target_date_str = logical_date.strftime("%Y/%m/%d")
     prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day}/"
     return {
-        "GCP_PROJECT_ID": project_id,
-        "DATAPROC_REGION": region,
         "BRONZE_BUCKET": bronze_bucket,
-        "SILVER_BUCKET": silver_bucket,
+        "DATAPROC_BATCH_SERVICE_ACCOUNT": batch_sa,
+        "DATAPROC_REGION": region,
         "DEPS_BUCKET": deps_bucket,
-        "target_prefix": prefix,
+        "GCP_PROJECT_ID": project_id,
+        "SILVER_BUCKET": silver_bucket,
         "target_date": target_date_str,
+        "target_prefix": prefix,
     }
 
 
@@ -94,6 +96,11 @@ spark_transform = DataprocCreateBatchOperator(
                 "spark.sql.catalog.spark_catalog.type": "rest",
                 "spark.sql.catalog.spark_catalog.uri": "https://biglake.googleapis.com/iceberg/v1beta/restcatalog",
                 "spark.sql.catalog.spark_catalog.warehouse": "gs://{{ ti.xcom_pull(task_ids='get_config')['SILVER_BUCKET'] }}/iceberg_warehouse/",
+            },
+            "environment_config": {
+                "execution_config": {
+                    "service_account": "{{ ti.xcom_pull(task_ids='get_config)['DATAPROC_BATCH_SERVICE_ACCOUNT']}}",
+                }
             },
         },
         "labels": {

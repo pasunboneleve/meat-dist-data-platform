@@ -14,14 +14,14 @@ resource "google_project_iam_member" "dataproc_worker" {
 
 resource "google_project_iam_member" "storage_access" {
   project = var.project_id
-  role    = "roles/storage.objectAdmin" # Adjust to least privilege if possible
+  role    = "roles/storage.objectAdmin"
   member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
 }
 
 # Add if using BigLake Metastore / Iceberg REST catalog
 resource "google_project_iam_member" "biglake_access" {
   project = var.project_id
-  role    = "roles/biglake.catalogUser" # Or more specific if you have a catalog resource
+  role    = "roles/biglake.editor"
   member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
 }
 

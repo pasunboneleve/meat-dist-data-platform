@@ -1,0 +1,33 @@
+# 1. Create custom service account for Dataproc Serverless batches
+resource "google_service_account" "dataproc_batch_sa" {
+  account_id   = "dataproc-batch-sa"
+  display_name = "Dataproc Serverless Batch Service Account"
+  description  = "Dedicated SA for Dataproc Serverless Spark batches run from Composer"
+}
+
+# 2. Grant necessary roles to the batch SA
+resource "google_project_iam_member" "dataproc_worker" {
+  project = var.project_id
+  role    = "roles/dataproc.worker"
+  member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
+}
+
+resource "google_project_iam_member" "storage_access" {
+  project = var.project_id
+  role    = "roles/storage.objectAdmin" # Adjust to least privilege if possible
+  member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
+}
+
+# Add if using BigLake Metastore / Iceberg REST catalog
+resource "google_project_iam_member" "biglake_access" {
+  project = var.project_id
+  role    = "roles/biglake.catalogUser" # Or more specific if you have a catalog resource
+  member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
+}
+
+# 3. Allow Composer's runtime SA to impersonate (act as) this custom SA
+resource "google_service_account_iam_member" "composer_act_as_batch_sa" {
+  service_account_id = google_service_account.dataproc_batch_sa.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.dataproc_sa.email}"
+}

@@ -73,7 +73,23 @@ resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_bucket_writer" 
 }
 
 
-# --- BigLake Connection ---
+# --- BigLake ---
+resource "google_project_service" "biglake_api" {
+  project = var.project_id
+  service = "biglake.googleapis.com"
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+}
+
+resource "google_biglake_catalog" "meat_iceberg" {
+  project     = var.project_id
+  location    = var.app_engine_region
+  catalog_id  = "meat-iceberg-catalog"
+  description = "Iceberg REST catalog for meat lakehouse silver layer"
+  depends_on  = [google_project_service.biglake_api]
+}
+
 # BigLake connection for querying GCS data from BigQuery
 resource "google_bigquery_connection" "biglake" {
   project       = var.project_id

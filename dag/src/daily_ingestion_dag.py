@@ -44,6 +44,9 @@ def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     }
 
 
+config = get_config()
+
+
 @task(dag=dag)
 def trigger_synthetic_meat_ingestion(**context):
     url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
@@ -78,7 +81,6 @@ with status {response.status_code}: {response.text}"
         raise Exception(f"Failed to trigger ingestor: {e}") from e
 
 
-config = get_config()
 trigger_ingestion = trigger_synthetic_meat_ingestion()
 
 # Task 3: GCS sensor using the bucket from XCom

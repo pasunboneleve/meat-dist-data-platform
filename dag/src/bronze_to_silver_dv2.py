@@ -31,7 +31,7 @@ dag = DAG(
 def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     """Load config from Airflow Variables."""
     logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore
-    target_date_str = logical_date.strftime("%Y/%m/%d")
+    target_date_str = logical_date.isoformat()
     prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day}/"
     return {
         "target_date": target_date_str,

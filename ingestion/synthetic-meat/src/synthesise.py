@@ -353,8 +353,8 @@ def generate_and_upload(request):
 
             # prepare params
             from_date = target_date - timedelta(days=1)
-            from_date_str = from_date.strftime("%Y-%m-%d")
-            to_date_str = target_date.strftime("%Y-%m-%d")
+            from_date_str = from_date.isoformat()
+            to_date_str = target_date.isoformat()
 
         elif (
             request.is_json
@@ -367,8 +367,8 @@ def generate_and_upload(request):
 
         else:  # fetch yesterday
             target_date = datetime.now(UTC).date() - timedelta(days=1)
-            from_date_str = target_date.strftime("%Y-%m-%d")
-            to_date_str = target_date.strftime("%Y-%m-%d")
+            from_date_str = target_date.isoformat()
+            to_date_str = target_date.isoformat()
 
         # Fetch live data from the MLA API.
         saleyards = fetch_saleyard()

@@ -1,8 +1,9 @@
-from pathlib import Path
-import pytest
-import requests
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
+
+import pytest
+import requests
 
 MLA_API_URL = "https://api-mlastatistics.mla.com.au"
 
@@ -14,12 +15,12 @@ def _create_fixture(path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
 
     # API might not have data for "today", so we'll fetch up to yesterday.
-    to_date = datetime.utcnow() - timedelta(days=1)
+    to_date = datetime.today() - timedelta(days=1)
     # Fetch data from the last 90 days for a decent sample size.
     from_date = to_date - timedelta(days=90)
 
-    from_date_str = from_date.strftime("%Y-%m-%d")
-    to_date_str = to_date.strftime("%Y-%m-%d")
+    from_date_str = from_date.isoformat()
+    to_date_str = to_date.isoformat()
 
     # Fetch National Feeder Steer Indicator (3) from Dalby saleyard (DAL).
     # This provides a consistent set of real-world price and volume data.
@@ -40,7 +41,9 @@ def _create_fixture(path: Path):
         results = data.get("data", [])
 
         if not results:
-            raise RuntimeError("No data found in API response for the given parameters.")
+            raise RuntimeError(
+                "No data found in API response for the given parameters."
+            )
 
         with open(path, "w") as f:
             json.dump(results, f, indent=2)
@@ -68,6 +71,8 @@ def fixture_path() -> Path:
             pytest.fail(f"Failed to create fixture: {e}")
 
     if not path.exists():
-        pytest.fail(f"Fixture file still not found at {path} after attempting to create it.")
+        pytest.fail(
+            f"Fixture file still not found at {path} after attempting to create it."
+        )
 
     return path

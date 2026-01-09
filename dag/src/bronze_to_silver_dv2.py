@@ -32,22 +32,10 @@ dag = DAG(
 @task(dag=dag)
 def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
     """Load config from Airflow Variables."""
-    batch_sa = os.environ["DATAPROC_BATCH_SERVICE_ACCOUNT"]
-    bronze_bucket = os.environ["BRONZE_BUCKET"]
-    deps_bucket = os.environ["DEPS_BUCKET"]
-    project_id = os.environ["GCP_PROJECT_ID"]
-    region = os.environ["DATAPROC_REGION"]
-    silver_bucket = os.environ["SILVER_BUCKET"]
     logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore
     target_date_str = logical_date.strftime("%Y/%m/%d")
     prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day}/"
     return {
-        "BRONZE_BUCKET": bronze_bucket,
-        "DATAPROC_BATCH_SERVICE_ACCOUNT": batch_sa,
-        "DATAPROC_REGION": region,
-        "DEPS_BUCKET": deps_bucket,
-        "GCP_PROJECT_ID": project_id,
-        "SILVER_BUCKET": silver_bucket,
         "target_date": target_date_str,
         "target_prefix": prefix,
     }
@@ -58,7 +46,7 @@ config = get_config()
 # Task 1: Verify new Bronze files for yesterday
 verify_bronze = GCSObjectsWithPrefixExistenceSensor(
     task_id="verify_new_bronze",
-    bucket="{{ ti.xcom_pull(task_ids='get_config')['BRONZE_BUCKET'] }}",
+    bucket=f"{os.environ['BRONZE_BUCKET']}",
     prefix="{{ ti.xcom_pull(task_ids='get_config')['target_prefix'] }}",
     google_cloud_conn_id="google_cloud_default",
     timeout=300,  # Short for testing (5min)
@@ -71,16 +59,16 @@ import os
 # Task 2: Spark transform
 spark_transform = DataprocCreateBatchOperator(
     task_id="transform_dv2_iceberg",
-    project_id="{{ ti.xcom_pull(task_ids='get_config')['GCP_PROJECT_ID'] }}",
-    region="{{ ti.xcom_pull(task_ids='get_config')['DATAPROC_REGION'] }}",
+    project_id=f"{os.environ['GCP_PROJECT_ID']}",
+    region=f"{os.environ['DATAPROC_REGION']}",
     batch_id="bronze-to-silver-dv2-{{ ds_nodash }}-{{ ti.try_number }}",
     batch={
         "pyspark_batch": {
-            "main_python_file_uri": "gs://{{ ti.xcom_pull(task_ids='get_config')['DEPS_BUCKET'] }}/spark_jobs/transform_bronze_to_silver.py",
+            "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",
             "args": [
                 "--execution-date={{ ds }}",
-                "--bronze-bucket={{ ti.xcom_pull(task_ids='get_config')['BRONZE_BUCKET'] }}",
-                "--silver-bucket={{ ti.xcom_pull(task_ids='get_config')['SILVER_BUCKET'] }}",
+                f"--bronze-bucket={os.environ['BRONZE_BUCKET']}",
+                f"--silver-bucket={os.environ['SILVER_BUCKET']}",
             ],
             "python_file_uris": [],  # Correctly nested and safe (empty is fine)
             "jar_file_uris": [
@@ -95,11 +83,11 @@ spark_transform = DataprocCreateBatchOperator(
                 "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",  # Correct class for REST
                 "spark.sql.catalog.spark_catalog.type": "rest",
                 "spark.sql.catalog.spark_catalog.uri": "https://biglake.googleapis.com/iceberg/v1beta/restcatalog",
-                "spark.sql.catalog.spark_catalog.warehouse": "gs://{{ ti.xcom_pull(task_ids='get_config')['SILVER_BUCKET'] }}/iceberg_warehouse/",
+                "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
             },
             "environment_config": {
                 "execution_config": {
-                    "service_account": "{{ ti.xcom_pull(task_ids='get_config)['DATAPROC_BATCH_SERVICE_ACCOUNT'] }}",
+                    "service_account": f"{os.environ['DATAPROC_BATCH_SERVICE_ACCOUNT']}",
                 }
             },
         },
@@ -113,9 +101,9 @@ spark_transform = DataprocCreateBatchOperator(
 # Task 3: Verify Silver tables updated via BigLake query
 verify_silver = BigQueryCheckOperator(
     task_id="verify_silver_tables",
-    sql="""
+    sql=f"""
     SELECT COUNT(*) > 0
-    FROM `{{ ti.xcom_pull(task_ids='get_config')['GCP_PROJECT_ID'] }}.meat_market_lake.curated_zone.hub_carcass`
+    FROM `{os.environ["GCP_PROJECT_ID"]}.meat_market_lake.curated_zone.hub_carcass`
     """,
     use_legacy_sql=False,
     gcp_conn_id="google_cloud_default",

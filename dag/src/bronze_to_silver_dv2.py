@@ -70,10 +70,6 @@ spark_transform = DataprocCreateBatchOperator(
                 f"--bronze-bucket={os.environ['BRONZE_BUCKET']}",
                 f"--silver-bucket={os.environ['SILVER_BUCKET']}",
             ],
-            "python_file_uris": [],  # Correctly nested and safe (empty is fine)
-            "jar_file_uris": [
-                "gs://spark-lib/iceberg/iceberg-spark-runtime-3.5_2.12-1.5.2.jar",
-            ],
         },
         "runtime_config": {
             # "version": "3.0",  # latest GA Serverless (requires auth_config in tf)

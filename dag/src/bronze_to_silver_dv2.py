@@ -3,8 +3,6 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
 from airflow import DAG
-from airflow.providers.google.cloud.operators.bigquery import \
-    BigQueryCheckOperator
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
 from airflow.providers.google.cloud.sensors.gcs import \
@@ -46,15 +44,13 @@ config = get_config()
 # Task 1: Verify new Bronze files for yesterday
 verify_bronze = GCSObjectsWithPrefixExistenceSensor(
     task_id="verify_new_bronze",
-    bucket=f"{os.environ['BRONZE_BUCKET']}",
+    bucket=os.environ["BRONZE_BUCKET"],
     prefix="{{ ti.xcom_pull(task_ids='get_config')['target_prefix'] }}",
     google_cloud_conn_id="google_cloud_default",
     timeout=300,  # Short for testing (5min)
     poke_interval=60,  # Poke every 1min
     dag=dag,
 )
-
-import os
 
 # Task 2: Spark transform
 spark_transform = DataprocCreateBatchOperator(
@@ -96,15 +92,14 @@ spark_transform = DataprocCreateBatchOperator(
 )
 
 
-# Task 3: Verify Silver tables updated via BigLake query
-verify_silver = BigQueryCheckOperator(
+# Task 3: Verify Silver Iceberg metadata files created
+verify_silver = GCSObjectsWithPrefixExistenceSensor(
     task_id="verify_silver_tables",
-    sql=f"""
-    SELECT COUNT(*) > 0
-    FROM `{os.environ["GCP_PROJECT_ID"]}.meat_market_lake.curated_zone.hub_carcass`
-    """,
-    use_legacy_sql=False,
-    gcp_conn_id="google_cloud_default",
+    bucket=os.environ["SILVER_BUCKET"],
+    prefix="iceberg_warehouse/hub_carcass/metadata/",
+    google_cloud_conn_id="google_cloud_default",
+    timeout=300,
+    poke_interval=30,
     dag=dag,
 )
 

@@ -1,5 +1,5 @@
 import os
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, date, timedelta
 from typing import Any, Dict
 
 import requests
@@ -48,12 +48,14 @@ config = get_config()
 
 
 @task(dag=dag)
-def trigger_synthetic_meat_ingestion():
+def trigger_synthetic_meat_ingestion(**context: Dict[str, Any]) -> None:
+    config = context["ti"].xcom_pull(task_ids="get_config")
     url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
-    payload = dict(
-        from_date="{{ ti.xcom_pull(task_ids='get_config')['from_date_str'] }}",
-        to_date="{{ ti.xcom_pull(task_ids='get_config')['to_date_str'] }}",
-    )
+    payload = {
+        "from_date": config["from_date_str"],
+        "to_date": config["to_date_str"],
+    }
+    print(f"Triggering ingestion with payload: {payload}")
     response = None
 
     try:
@@ -75,8 +77,8 @@ def trigger_synthetic_meat_ingestion():
     except requests.exceptions.HTTPError as e:
         if response:
             raise Exception(
-                f"Ingestion trigger failed \
-with status {response.status_code}: {response.text}"
+                f"Ingestion trigger failed "
+                f"with status {response.status_code}: {response.text}"
             ) from e
         else:
             raise Exception(f"Ingestion failed with {e}")

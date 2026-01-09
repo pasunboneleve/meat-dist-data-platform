@@ -67,7 +67,7 @@ spark_transform = DataprocCreateBatchOperator(
                 f"--silver-bucket={os.environ['SILVER_BUCKET']}",
             ],
             "jar_file_uris": [
-                "gs://spark-lib/iceberg/iceberg-spark-runtime-3.5_2.12-1.6.1.jar",
+                f"gs://{os.environ['DEPS_BUCKET']}/iceberg-spark-runtime-3.5_2.13-1.10.1.jar",
             ],
         },
         "runtime_config": {

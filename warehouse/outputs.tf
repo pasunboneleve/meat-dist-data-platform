@@ -22,6 +22,10 @@ output "gold_bucket" {
   value = google_storage_bucket.gold_bucket.name
 }
 
+output "biglake_catalog" {
+  value = google_biglake_catalog.meat_iceberg.name
+}
+
 output "dataproc_batch_sa_email" {
   value       = google_service_account.dataproc_batch_sa.email
   description = "Service account email to use in Dataproc batches"

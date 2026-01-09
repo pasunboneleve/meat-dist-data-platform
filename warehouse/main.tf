@@ -83,11 +83,10 @@ resource "google_project_service" "biglake_api" {
 }
 
 resource "google_biglake_catalog" "meat_iceberg" {
-  project     = var.project_id
-  location    = var.app_engine_region
-  catalog_id  = "meat-iceberg-catalog"
-  description = "Iceberg REST catalog for meat lakehouse silver layer"
-  depends_on  = [google_project_service.biglake_api]
+  project    = var.project_id
+  location   = var.app_engine_region
+  name       = "meat-iceberg-catalog"
+  depends_on = [google_project_service.biglake_api]
 }
 
 # BigLake connection for querying GCS data from BigQuery

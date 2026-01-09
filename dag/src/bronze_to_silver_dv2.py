@@ -62,11 +62,6 @@ spark_transform = DataprocCreateBatchOperator(
     batch={
         "pyspark_batch": {
             "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",
-            "args": [
-                "--execution-date={{ ds }}",
-                f"--bronze-bucket={os.environ['BRONZE_BUCKET']}",
-                f"--silver-bucket={os.environ['SILVER_BUCKET']}",
-            ],
             "jar_file_uris": [
                 f"gs://{os.environ['DEPS_BUCKET']}/iceberg-spark-runtime-3.5_2.13-1.10.1.jar",
             ],
@@ -80,6 +75,11 @@ spark_transform = DataprocCreateBatchOperator(
                 "spark.sql.catalog.spark_catalog.type": "rest",
                 "spark.sql.catalog.spark_catalog.uri": "https://biglake.googleapis.com/iceberg/v1beta/restcatalog",
                 "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
+                # === Your templated config values ===
+                "spark.sql.execution_date": "{{ ds }}",  # e.g., 2026-01-09
+                "spark.sql.bronze_bucket": os.environ["BRONZE_BUCKET"],
+                "spark.sql.silver_bucket": os.environ["SILVER_BUCKET"],
+                "spark.sql.target_date": "{{ ti.xcom_pull(task_ids='get_config')['target_date_str'] }}",
             },
         },
         "environment_config": {

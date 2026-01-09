@@ -4,7 +4,7 @@
 # Filters to target_date partition only (passed via spark.conf)
 
 import hashlib
-from datetime import datetime
+from datetime import date, datetime
 
 from pyspark.sql import SparkSession
 from pyspark.sql.column import Column
@@ -37,21 +37,21 @@ def main():
     # Get params from Spark conf (passed via Airflow templating)
     bronze_bucket = spark.conf.get("spark.sql.bronze_bucket")
     silver_bucket = spark.conf.get("spark.sql.silver_bucket")
-    target_date_str = spark.conf.get("spark.sql.target_date")  # e.g., "2024/12/27"
+    target_date_str = spark.conf.get("spark.sql.target_date")  # e.g., "2024-12-27"
     if not target_date_str:
         raise DagConfigError("target_date_str missing.")
-    year, month, day = map(int, target_date_str.split("/"))
+    target_date = date.fromisoformat(target_date_str)
     load_dts = datetime.now().isoformat()
 
     bronze_path = f"gs://{bronze_bucket}/carcasses/*/"
-    bronze_path += f"year={year}/month={month}/day={day}/*.parquet"
+    bronze_path += f"year={target_date.year}/month={target_date.month}/day={target_date.day}/*.parquet"
 
     # Assume indicator data in same Parquet (or union if separate prefix)
     df = (
         spark.read.parquet(bronze_path)
-        .filter(col("year") == year)
-        .filter(col("month") == month)
-        .filter(col("day") == day)
+        .filter(col("year") == target_date.year)
+        .filter(col("month") == target_date.month)
+        .filter(col("day") == target_date.day)
     )
 
     # Cache for multiple uses

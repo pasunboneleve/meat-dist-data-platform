@@ -71,9 +71,9 @@ spark_transform = DataprocCreateBatchOperator(
             "version": "2.2",  # is also excellent if you prefer the LTS default
             "properties": {
                 "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-                "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
+                "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkSessionCatalog",
                 "spark.sql.catalog.spark_catalog.type": "rest",
-                "spark.sql.catalog.spark_catalog.uri": f"https://biglake.googleapis.com/projects/{os.environ['GCP_PROJECT_ID']}/locations/{os.environ['DATAPROC_REGION']}/catalogs/{os.environ['CATALOG_NAME']}",
+                "spark.sql.catalog.spark_catalog.uri": "https://biglake.googleapis.com/iceberg/v1beta/restcatalog",
                 "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
                 "spark.sql.catalog.spark_catalog.auth": "oauth2",  # Enable OAuth
                 "spark.sql.catalog.spark_catalog.oauth2.token": "",  # Empty = use ADC (will work on Dataproc)

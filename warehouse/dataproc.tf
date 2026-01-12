@@ -43,3 +43,18 @@ resource "google_service_account_iam_member" "composer_act_as_batch_sa" {
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.dataproc_sa.email}"
 }
+
+resource "google_project_iam_custom_role" "biglake_rest_consumer" {
+  role_id     = "BigLakeRestConsumer"
+  title       = "BigLake REST Catalog Consumer"
+  description = "Minimal permissions for Iceberg REST catalog via BigLake"
+  permissions = [
+    "serviceusage.services.use",
+  ]
+}
+
+resource "google_project_iam_member" "custom_rest_consumer" {
+  project = var.project_id
+  role    = "projects/${var.project_id}/roles/BigLakeRestConsumer"
+  member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
+}

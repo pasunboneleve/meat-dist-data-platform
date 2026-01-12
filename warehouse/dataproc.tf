@@ -31,6 +31,12 @@ resource "google_project_iam_member" "bigquery_access" {
   member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
 }
 
+resource "google_service_account_iam_member" "oauth_access" {
+  service_account_id = google_service_account.dataproc_batch_sa.name
+  role    = "roles/iam.serviceAccountTokenCreator"
+  member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
+}
+
 # 3. Allow Composer's runtime SA to impersonate (act as) this custom SA
 resource "google_service_account_iam_member" "composer_act_as_batch_sa" {
   service_account_id = google_service_account.dataproc_batch_sa.name

@@ -107,6 +107,8 @@ def fetch_base_data(params) -> pl.DataFrame:
         df = df.rename({"indicator_desc": "category"})
     if "calendar_date" in df.columns:
         df = df.rename({"calendar_date": "report_date"})
+    # Add indicator_id from params for linking
+    df = df.with_columns(pl.lit(params["indicatorID"]).alias("indicator_id"))
     logger.debug("base data loaded", shape=df.shape)
     return df
 
@@ -165,6 +167,7 @@ def generate_synthetic_carcasses(
     price_std_dev = 0.75
 
     categories = base_df["category"].unique().to_list()
+    indicator_id = base_df.get_column("indicator_id").item()
 
     if num_records == 0:
         logger.info(
@@ -183,6 +186,7 @@ def generate_synthetic_carcasses(
         ],
         "plant_id": [f"P{random.randint(1, 5):02d}" for _ in range(num_records)],
         "animal_class": [random.choice(categories) for _ in range(num_records)],
+        "indicator_id": [indicator_id] * num_records,
         "hscw_kg": [
             round(random.normalvariate(320, 40), 2) for _ in range(num_records)
         ],

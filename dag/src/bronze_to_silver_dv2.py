@@ -75,7 +75,7 @@ spark_transform = DataprocCreateBatchOperator(
                 "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
                 "spark.sql.catalog.spark_catalog.type": "rest",
                 # FIXED URI: Use the standard base endpoint (no /projects/... path)
-                "spark.sql.catalog.spark_catalog.uri": f"https://biglake.googleapis.com/v1alpha1/projects/{os.environ['GCP_PROJECT_ID']}/locations/{os.environ['DATAPROC_REGION']}/catalogs/{os.environ['CATALOG_NAME']}",
+                "spark.sql.catalog.spark_catalog.uri": "https://biglake.googleapis.com/iceberg/v1/restcatalog",  # Note: v1, not v1beta
                 "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
                 # Google-specific auth manager for ADC (attached SA)
                 "spark.sql.catalog.spark_catalog.rest.auth.type": "org.apache.iceberg.gcp.auth.GoogleAuthManager",

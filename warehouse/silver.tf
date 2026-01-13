@@ -32,9 +32,10 @@ EOF
 }
 
 resource "google_bigquery_table" "hub_plant" {
-  project    = var.project_id
-  dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
-  table_id   = "hub_plant"
+  project             = var.project_id
+  dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
+  table_id            = "hub_plant"
+  deletion_protection = false
 
   schema = <<EOF
 [
@@ -64,9 +65,10 @@ EOF
 }
 
 resource "google_bigquery_table" "hub_indicator" {
-  project    = var.project_id
-  dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
-  table_id   = "hub_indicator"
+  project             = var.project_id
+  dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
+  table_id            = "hub_indicator"
+  deletion_protection = false
 
   schema = <<EOF
 [
@@ -96,9 +98,10 @@ EOF
 }
 
 resource "google_bigquery_table" "sat_carcass_detail" {
-  project    = var.project_id
-  dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
-  table_id   = "sat_carcass_detail"
+  project             = var.project_id
+  dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
+  table_id            = "sat_carcass_detail"
+  deletion_protection = false
 
   schema = <<EOF
 [
@@ -160,9 +163,10 @@ EOF
 }
 
 resource "google_bigquery_table" "link_carcass_plant" {
-  project    = var.project_id
-  dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
-  table_id   = "link_carcass_plant"
+  project             = var.project_id
+  dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
+  table_id            = "link_carcass_plant"
+  deletion_protection = false
 
   schema = <<EOF
 [
@@ -196,9 +200,10 @@ EOF
 }
 
 resource "google_bigquery_table" "link_carcass_indicator" {
-  project    = var.project_id
-  dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
-  table_id   = "link_carcass_indicator"
+  project             = var.project_id
+  dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
+  table_id            = "link_carcass_indicator"
+  deletion_protection = false
 
   schema = <<EOF
 [

@@ -58,3 +58,9 @@ resource "google_project_iam_member" "custom_rest_consumer" {
   role    = "projects/${var.project_id}/roles/BigLakeRestConsumer"
   member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
 }
+
+resource "google_project_iam_member" "service_usage_consumer_temp" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageConsumer"
+  member  = "serviceAccount:${google_service_account.dataproc_batch_sa.email}"
+}

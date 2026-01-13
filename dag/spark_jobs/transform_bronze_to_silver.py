@@ -62,15 +62,14 @@ def main():
         lit(load_dts).alias("load_dts"),
         lit("BRONZE").alias("rec_src"),
     ).distinct()
-    hub_carcass.write.format("iceberg").mode("append").saveAsTable(
-        "iceberg.hub_carcass"
-    )  # MERGE not needed for hub if no updates
-
-    # For idempotency, use MERGE (example for hub_carcass)
-    spark.sql(f"""
+    hub_carcass.createOrReplaceTempView("source_hub_carcass")
+    spark.sql("""
+        CREATE TABLE IF NOT EXISTS iceberg.hub_carcass USING iceberg AS SELECT * FROM source_hub_carcass LIMIT 0
+    """)
+    spark.sql("""
         MERGE INTO iceberg.hub_carcass t
-        USING (SELECT * FROM {hub_carcass.createOrReplaceTempView("source_hub_carcass")})
-        s ON t.carcass_id = s.carcass_id
+        USING source_hub_carcass s
+        ON t.carcass_id = s.carcass_id
         WHEN NOT MATCHED THEN INSERT *
     """)
 
@@ -80,11 +79,15 @@ def main():
         lit(load_dts).alias("load_dts"),
         lit("BRONZE").alias("rec_src"),
     ).distinct()
+    hub_plant.createOrReplaceTempView("source_hub_plant")
+    spark.sql("""
+        CREATE TABLE IF NOT EXISTS iceberg.hub_plant USING iceberg AS SELECT * FROM source_hub_plant LIMIT 0
+    """)
     spark.sql("""
         MERGE INTO iceberg.hub_plant t
         USING source_hub_plant s ON t.plant_id = s.plant_id
         WHEN NOT MATCHED THEN INSERT *
-    """)  # Assume temp view created similarly
+    """)
 
     # Hub_Indicator (new)
     hub_indicator = df.select(
@@ -93,6 +96,9 @@ def main():
         lit("BRONZE").alias("rec_src"),
     ).distinct()
     hub_indicator.createOrReplaceTempView("source_hub_indicator")
+    spark.sql("""
+        CREATE TABLE IF NOT EXISTS iceberg.hub_indicator USING iceberg AS SELECT * FROM source_hub_indicator LIMIT 0
+    """)
     spark.sql("""
         MERGE INTO iceberg.hub_indicator t
         USING source_hub_indicator s ON t.indicator_id = s.indicator_id
@@ -116,6 +122,9 @@ def main():
     )
     sat_carcass.createOrReplaceTempView("source_sat_carcass")
     spark.sql("""
+        CREATE TABLE IF NOT EXISTS iceberg.sat_carcass_detail USING iceberg AS SELECT * FROM source_sat_carcass LIMIT 0
+    """)
+    spark.sql("""
         MERGE INTO iceberg.sat_carcass_detail t
         USING source_sat_carcass s
         ON t.carcass_hk = s.carcass_hk
@@ -132,6 +141,9 @@ def main():
         col("process_date").cast("date").alias("process_date"),
     ).distinct()
     link_carcass_plant.createOrReplaceTempView("source_link_carcass_plant")
+    spark.sql("""
+        CREATE TABLE IF NOT EXISTS iceberg.link_carcass_plant USING iceberg AS SELECT * FROM source_link_carcass_plant LIMIT 0
+    """)
     spark.sql("""
         MERGE INTO iceberg.link_carcass_plant t
         USING source_link_carcass_plant s

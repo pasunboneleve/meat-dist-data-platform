@@ -73,18 +73,9 @@ spark_transform = DataprocCreateBatchOperator(
                 "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                 # Use SparkCatalog (Google's examples use this for BigLake REST)
                 "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
-                "spark.sql.catalog.spark_catalog.type": "rest",
+                "spark.sql.catalog.spark_catalog.type": "hadoop",
                 # FIXED URI: Use the standard base endpoint (no /projects/... path)
-                "spark.sql.catalog.spark_catalog.uri": "https://biglake.googleapis.com/iceberg/v1/restcatalog",  # Note: v1, not v1beta
                 "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
-                # Google-specific auth manager for ADC (attached SA)
-                "spark.sql.catalog.spark_catalog.rest.auth.type": "org.apache.iceberg.gcp.auth.GoogleAuthManager",
-                # Required header for project scoping
-                "spark.sql.catalog.spark_catalog.header.x-goog-user-project": os.environ[
-                    "GCP_PROJECT_ID"
-                ],
-                # Optional but recommended: Disable metrics if not needed (reduces calls)
-                "spark.sql.catalog.spark_catalog.rest-metrics-reporting-enabled": "false",
                 # Your minimal resources (good choice with 2 executors)
                 "spark.executor.instances": "2",
                 "spark.executor.cores": "4",

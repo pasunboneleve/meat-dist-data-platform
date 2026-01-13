@@ -1,6 +1,6 @@
 ## Architect settings
-architect: true
-model: xai/grok-4-1-fast-reasoning
+architect: false
+model: xai/grok-code-fast-1
 editor-model: gemini/gemini-2.5-flash
 weak-model: gemini/gemini-2.5-flash-lite
 

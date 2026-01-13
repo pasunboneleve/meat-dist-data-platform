@@ -52,8 +52,14 @@ def main():
         & (dayofmonth("slaughter_date") == target_date.day)
     )
 
+    # Read indicator table
+    indicator_df = spark.read.parquet(
+        f"gs://{bronze_bucket}/indicator/indicator.parquet"
+    )
+
     # Cache for multiple uses
     df.cache()
+    indicator_df.cache()
 
     # DV2 Entities (simplified, add SCD/eff dates as needed)
     # Hub_Carcass
@@ -90,7 +96,7 @@ def main():
     """)
 
     # Hub_Indicator (new)
-    hub_indicator = df.select(
+    hub_indicator = indicator_df.select(
         col("indicator_id").alias("indicator_id"),
         lit(load_dts).alias("load_dts"),
         lit("BRONZE").alias("rec_src"),
@@ -109,13 +115,13 @@ def main():
     carcass_hk = hash_key(col("carcass_id"))
     sat_carcass = df.select(
         carcass_hk.alias("carcass_hk"),
-        col("weight_kg"),
-        col("grade"),
-        col("price_per_kg"),
+        col("hscw_kg"),
+        col("animal_class"),
+        col("price_aud_per_kg"),
         col("marbling_score"),
-        col("indicator_des"),  # Include indicator details
-        col("species_id"),
-        col("indicator_units"),
+        col("quality_score"),
+        col("fat_depth_mm"),
+        col("total_price_aud"),
         col("slaughter_date").cast("date").alias("slaughter_date"),
         lit(load_dts).alias("load_dts"),
         lit("BRONZE").alias("rec_src"),
@@ -156,6 +162,7 @@ def main():
     # Similar MERGE for link_carcass_indicator
 
     df.unpersist()
+    indicator_df.unpersist()
     spark.stop()
 
 

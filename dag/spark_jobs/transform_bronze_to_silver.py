@@ -158,24 +158,6 @@ def main():
         WHEN NOT MATCHED THEN INSERT *
     """)
 
-    # Link_Carcass_Indicator
-    indicator_hk = hash_key(col("indicator_id"))
-    link_carcass_indicator = df.select(
-        carcass_hk.alias("carcass_hk"),
-        indicator_hk.alias("indicator_hk"),
-        lit(load_dts).alias("load_dts"),
-    ).distinct()
-    link_carcass_indicator.createOrReplaceTempView("source_link_carcass_indicator")
-    spark.sql("""
-        CREATE TABLE IF NOT EXISTS link_carcass_indicator USING iceberg AS SELECT * FROM source_link_carcass_indicator LIMIT 0
-    """)
-    spark.sql("""
-        MERGE INTO link_carcass_indicator t
-        USING source_link_carcass_indicator s
-        ON t.carcass_hk = s.carcass_hk AND t.indicator_hk = s.indicator_hk
-        WHEN NOT MATCHED THEN INSERT *
-    """)
-
     df.unpersist()
     indicator_df.unpersist()
     spark.stop()

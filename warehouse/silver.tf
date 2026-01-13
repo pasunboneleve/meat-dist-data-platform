@@ -4,11 +4,11 @@ resource "google_bigquery_table" "hub_carcass" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "hub_carcass"
 
-  external_data_configuration {
-    autodetect   = true
+  biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_carcass/"
+    file_format   = "PARQUET"
     source_format = "ICEBERG"
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_carcass/metadata/"]
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
@@ -19,8 +19,8 @@ resource "google_bigquery_table" "hub_plant" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "hub_plant"
 
-  external_data_configuration {
-    autodetect   = true
+  biglake_configuration {
+    autodetect    = true
     connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_plant/metadata/"]
@@ -34,8 +34,8 @@ resource "google_bigquery_table" "hub_indicator" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "hub_indicator"
 
-  external_data_configuration {
-    autodetect   = true
+  biglake_configuration {
+    autodetect    = true
     connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_indicator/metadata/"]
@@ -49,8 +49,8 @@ resource "google_bigquery_table" "sat_carcass_detail" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "sat_carcass_detail"
 
-  external_data_configuration {
-    autodetect   = true
+  biglake_configuration {
+    autodetect    = true
     connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/sat_carcass_detail/metadata/"]
@@ -64,8 +64,8 @@ resource "google_bigquery_table" "link_carcass_plant" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "link_carcass_plant"
 
-  external_data_configuration {
-    autodetect   = true
+  biglake_configuration {
+    autodetect    = true
     connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_plant/metadata/"]
@@ -79,8 +79,8 @@ resource "google_bigquery_table" "link_carcass_indicator" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "link_carcass_indicator"
 
-  external_data_configuration {
-    autodetect   = true
+  biglake_configuration {
+    autodetect    = true
     connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_indicator/metadata/"]

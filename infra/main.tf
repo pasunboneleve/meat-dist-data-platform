@@ -1,18 +1,19 @@
 locals {
   # Roles the deploy SA needs at the project level
   sa_roles = [
-    "roles/storage.admin",
-    "roles/serviceusage.serviceUsageAdmin",
-    "roles/resourcemanager.projectIamAdmin", # Allows the SA to grant IAM roles
-    "roles/iam.serviceAccountAdmin",
-    "roles/iam.serviceAccountUser",
-    "roles/biglake.admin",
-    "roles/run.admin",
-    "roles/dataplex.admin",
-    "roles/bigquery.admin",
     "roles/artifactregistry.admin",
+    "roles/biglake.admin",
+    "roles/bigquery.admin",
     "roles/cloudscheduler.admin",
     "roles/composer.admin",
+    "roles/dataplex.admin",
+    "roles/iam.roleViewer",
+    "roles/iam.serviceAccountAdmin",
+    "roles/iam.serviceAccountUser",
+    "roles/resourcemanager.projectIamAdmin", # Allows the SA to grant IAM roles
+    "roles/run.admin",
+    "roles/serviceusage.serviceUsageAdmin",
+    "roles/storage.admin",
   ]
 
   # Required APIs for the deployment pipeline

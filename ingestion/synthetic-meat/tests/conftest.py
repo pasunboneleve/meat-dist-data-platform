@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -15,7 +15,7 @@ def _create_fixture(path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
 
     # API might not have data for "today", so we'll fetch up to yesterday.
-    to_date = datetime.today() - timedelta(days=1)
+    to_date = date.today() - timedelta(days=1)
     # Fetch data from the last 90 days for a decent sample size.
     from_date = to_date - timedelta(days=90)
 

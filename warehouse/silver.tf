@@ -6,7 +6,7 @@ resource "google_bigquery_table" "hub_carcass" {
 
   external_data_configuration {
     autodetect   = true
-    connection_id = google_bigquery_connection.biglake.connection_id
+    connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_carcass/metadata/"]
   }
@@ -21,7 +21,7 @@ resource "google_bigquery_table" "hub_plant" {
 
   external_data_configuration {
     autodetect   = true
-    connection_id = google_bigquery_connection.biglake.connection_id
+    connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_plant/metadata/"]
   }
@@ -36,7 +36,7 @@ resource "google_bigquery_table" "hub_indicator" {
 
   external_data_configuration {
     autodetect   = true
-    connection_id = google_bigquery_connection.biglake.connection_id
+    connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_indicator/metadata/"]
   }
@@ -51,7 +51,7 @@ resource "google_bigquery_table" "sat_carcass_detail" {
 
   external_data_configuration {
     autodetect   = true
-    connection_id = google_bigquery_connection.biglake.connection_id
+    connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/sat_carcass_detail/metadata/"]
   }
@@ -66,7 +66,7 @@ resource "google_bigquery_table" "link_carcass_plant" {
 
   external_data_configuration {
     autodetect   = true
-    connection_id = google_bigquery_connection.biglake.connection_id
+    connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_plant/metadata/"]
   }
@@ -81,7 +81,7 @@ resource "google_bigquery_table" "link_carcass_indicator" {
 
   external_data_configuration {
     autodetect   = true
-    connection_id = google_bigquery_connection.biglake.connection_id
+    connection_id = google_bigquery_connection.biglake.id
     source_format = "ICEBERG"
     source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_indicator/metadata/"]
   }

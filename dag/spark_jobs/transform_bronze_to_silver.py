@@ -23,7 +23,8 @@ def hash_key(*cols) -> Column:
         key_str = "".join([str(v) for v in col_values if v is not None])
         return hashlib.sha256(key_str.encode()).hexdigest()
 
-    return udf(_hash, StringType())  # type: ignore
+    udf_func = udf(_hash, StringType())
+    return udf_func(*cols)
 
 
 def main():

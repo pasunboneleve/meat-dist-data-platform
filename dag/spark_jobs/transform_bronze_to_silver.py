@@ -19,7 +19,7 @@ class DagConfigError(Exception):
 def hash_key(*cols) -> Column:
     """Generate HK as hex(SHA256 of concatenated cols)."""
 
-    def _hash(col_values):
+    def _hash(*col_values):
         key_str = "".join([str(v) for v in col_values if v is not None])
         return hashlib.sha256(key_str.encode()).hexdigest()
 

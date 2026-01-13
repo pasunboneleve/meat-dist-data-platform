@@ -106,7 +106,7 @@ def main():
     """)
 
     # Sat_Carcass_Detail (hash diff for SCD2)
-    carcass_hk = hash_key(col("carcass_id"), lit(load_dts))
+    carcass_hk = hash_key(col("carcass_id"))
     sat_carcass = df.select(
         carcass_hk.alias("carcass_hk"),
         col("weight_kg"),
@@ -133,7 +133,7 @@ def main():
     """)
 
     # Link_Carcass_Process (plant)
-    plant_hk = hash_key(col("plant_id"), lit(load_dts))
+    plant_hk = hash_key(col("plant_id"))
     link_carcass_plant = df.select(
         carcass_hk.alias("carcass_hk"),
         plant_hk.alias("plant_hk"),
@@ -152,7 +152,7 @@ def main():
     """)
 
     # Optional: Link to indicator if multi
-    indicator_hk = hash_key(col("indicator_id"), lit(load_dts))
+    indicator_hk = hash_key(col("indicator_id"))
     # Similar MERGE for link_carcass_indicator
 
     df.unpersist()

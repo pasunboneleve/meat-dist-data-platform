@@ -8,7 +8,7 @@ resource "google_bigquery_table" "hub_carcass" {
     connection_id = google_bigquery_connection.biglake.id
     storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_carcass/"
     file_format   = "PARQUET"
-    source_format = "ICEBERG"
+    table_format  = "ICEBERG"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
@@ -20,10 +20,10 @@ resource "google_bigquery_table" "hub_plant" {
   table_id   = "hub_plant"
 
   biglake_configuration {
-    autodetect    = true
     connection_id = google_bigquery_connection.biglake.id
-    source_format = "ICEBERG"
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_plant/metadata/"]
+    table_format  = "ICEBERG"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_plant/metadata/"
+    file_format   = "PARQUET"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
@@ -35,10 +35,10 @@ resource "google_bigquery_table" "hub_indicator" {
   table_id   = "hub_indicator"
 
   biglake_configuration {
-    autodetect    = true
     connection_id = google_bigquery_connection.biglake.id
-    source_format = "ICEBERG"
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_indicator/metadata/"]
+    table_format  = "ICEBERG"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_indicator/metadata/"
+    file_format   = "PARQUET"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
@@ -50,10 +50,10 @@ resource "google_bigquery_table" "sat_carcass_detail" {
   table_id   = "sat_carcass_detail"
 
   biglake_configuration {
-    autodetect    = true
     connection_id = google_bigquery_connection.biglake.id
-    source_format = "ICEBERG"
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/sat_carcass_detail/metadata/"]
+    table_format  = "ICEBERG"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/sat_carcass_detail/metadata/"
+    file_format   = "PARQUET"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
@@ -65,10 +65,10 @@ resource "google_bigquery_table" "link_carcass_plant" {
   table_id   = "link_carcass_plant"
 
   biglake_configuration {
-    autodetect    = true
     connection_id = google_bigquery_connection.biglake.id
-    source_format = "ICEBERG"
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_plant/metadata/"]
+    table_format  = "ICEBERG"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_plant/metadata/"
+    file_format   = "PARQUET"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
@@ -80,10 +80,10 @@ resource "google_bigquery_table" "link_carcass_indicator" {
   table_id   = "link_carcass_indicator"
 
   biglake_configuration {
-    autodetect    = true
     connection_id = google_bigquery_connection.biglake.id
-    source_format = "ICEBERG"
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_indicator/metadata/"]
+    table_format  = "ICEBERG"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_indicator/metadata/"
+    file_format   = "PARQUET"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]

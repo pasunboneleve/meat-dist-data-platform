@@ -9,11 +9,6 @@ variable "project_number" {
   type        = string
 }
 
-variable "region" {
-  description = "Default region for GCP resources"
-  type        = string
-}
-
 variable "app_engine_region" {
   description = "Region for App Engine and Cloud Scheduler (must support App Engine)"
   type        = string

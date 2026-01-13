@@ -118,7 +118,7 @@ resource "google_storage_bucket_iam_member" "biglake_sa_bronze_reader" {
 
 resource "google_storage_bucket_iam_member" "biglake_sa_silver_reader" {
   bucket = google_storage_bucket.silver_bucket.name
-  role   = "roles/storage.objectViewer"
+  role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_bigquery_connection.biglake.cloud_resource[0].service_account_id}"
 
   depends_on = [time_sleep.wait_for_biglake_sa]

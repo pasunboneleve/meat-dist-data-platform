@@ -1,31 +1,17 @@
 # External tables for Iceberg tables in BigQuery
 resource "google_bigquery_table" "hub_carcass" {
-  project    = var.project_id
-  dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
-  table_id   = "hub_carcass"
+  project             = var.project_id
+  dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
+  table_id            = "hub_carcass"
+  deletion_protection = false
 
-  schema = <<EOF
-[
-    {
-      "name": "carcass_id",
-      "type": "STRING"
-    },
-    {
-      "name": "load_dts",
-      "type": "STRING"
-    },
-    {
-      "name": "rec_src",
-      "type": "STRING"
-    }
-  ]
-EOF
-
-  biglake_configuration {
-    connection_id = google_bigquery_connection.biglake.id
-    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_carcass/"
-    file_format   = "PARQUET"
-    table_format  = "ICEBERG"
+  external_data_configuration {
+    autodetect            = true
+    ignore_unknown_values = true
+    max_bad_records       = 0
+    connection_id         = google_bigquery_connection.biglake.id
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_carcass/metadata/v6.metadata.json"]
+    source_format         = "ICEBERG"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket, google_storage_bucket_iam_member.biglake_sa_silver_reader]
@@ -37,28 +23,13 @@ resource "google_bigquery_table" "hub_plant" {
   table_id            = "hub_plant"
   deletion_protection = false
 
-  schema = <<EOF
-[
-    {
-      "name": "plant_id",
-      "type": "STRING"
-    },
-    {
-      "name": "load_dts",
-      "type": "STRING"
-    },
-    {
-      "name": "rec_src",
-      "type": "STRING"
-    }
-  ]
-EOF
-
-  biglake_configuration {
-    connection_id = google_bigquery_connection.biglake.id
-    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_plant/"
-    file_format   = "PARQUET"
-    table_format  = "ICEBERG"
+  external_data_configuration {
+    autodetect            = true
+    ignore_unknown_values = true
+    max_bad_records       = 0
+    connection_id         = google_bigquery_connection.biglake.id
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_plant/metadata/v6.metadata.json"]
+    source_format         = "ICEBERG"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket, google_storage_bucket_iam_member.biglake_sa_silver_reader]
@@ -70,28 +41,13 @@ resource "google_bigquery_table" "hub_indicator" {
   table_id            = "hub_indicator"
   deletion_protection = false
 
-  schema = <<EOF
-[
-    {
-      "name": "indicator_id",
-      "type": "INT64"
-    },
-    {
-      "name": "load_dts",
-      "type": "STRING"
-    },
-    {
-      "name": "rec_src",
-      "type": "STRING"
-    }
-  ]
-EOF
-
-  biglake_configuration {
-    connection_id = google_bigquery_connection.biglake.id
-    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_indicator/"
-    file_format   = "PARQUET"
-    table_format  = "ICEBERG"
+  external_data_configuration {
+    autodetect            = true
+    ignore_unknown_values = true
+    max_bad_records       = 0
+    connection_id         = google_bigquery_connection.biglake.id
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_indicator/metadata/v6.metadata.json"]
+    source_format         = "ICEBERG"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket, google_storage_bucket_iam_member.biglake_sa_silver_reader]
@@ -103,60 +59,13 @@ resource "google_bigquery_table" "sat_carcass_detail" {
   table_id            = "sat_carcass_detail"
   deletion_protection = false
 
-  schema = <<EOF
-[
-    {
-      "name": "carcass_hk",
-      "type": "STRING"
-    },
-    {
-      "name": "hscw_kg",
-      "type": "FLOAT64"
-    },
-    {
-      "name": "animal_class",
-      "type": "STRING"
-    },
-    {
-      "name": "price_aud_per_kg",
-      "type": "FLOAT64"
-    },
-    {
-      "name": "marbling_score",
-      "type": "INT64"
-    },
-    {
-      "name": "quality_score",
-      "type": "INT64"
-    },
-    {
-      "name": "fat_depth_mm",
-      "type": "INT64"
-    },
-    {
-      "name": "total_price_aud",
-      "type": "FLOAT64"
-    },
-    {
-      "name": "slaughter_date",
-      "type": "DATE"
-    },
-    {
-      "name": "load_dts",
-      "type": "STRING"
-    },
-    {
-      "name": "rec_src",
-      "type": "STRING"
-    }
-  ]
-EOF
-
-  biglake_configuration {
-    connection_id = google_bigquery_connection.biglake.id
-    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/sat_carcass_detail/"
-    file_format   = "PARQUET"
-    table_format  = "ICEBERG"
+  external_data_configuration {
+    autodetect            = true
+    ignore_unknown_values = true
+    max_bad_records       = 0
+    connection_id         = google_bigquery_connection.biglake.id
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/sat_carcass_detail/metadata/v6.metadata.json"]
+    source_format         = "ICEBERG"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket, google_storage_bucket_iam_member.biglake_sa_silver_reader]
@@ -168,32 +77,13 @@ resource "google_bigquery_table" "link_carcass_plant" {
   table_id            = "link_carcass_plant"
   deletion_protection = false
 
-  schema = <<EOF
-[
-    {
-      "name": "carcass_hk",
-      "type": "STRING"
-    },
-    {
-      "name": "plant_hk",
-      "type": "STRING"
-    },
-    {
-      "name": "load_dts",
-      "type": "STRING"
-    },
-    {
-      "name": "process_date",
-      "type": "DATE"
-    }
-  ]
-EOF
-
-  biglake_configuration {
-    connection_id = google_bigquery_connection.biglake.id
-    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_plant/"
-    file_format   = "PARQUET"
-    table_format  = "ICEBERG"
+  external_data_configuration {
+    autodetect            = true
+    ignore_unknown_values = true
+    max_bad_records       = 0
+    connection_id         = google_bigquery_connection.biglake.id
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_plant/metadata/v6.metadata.json"]
+    source_format         = "ICEBERG"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket, google_storage_bucket_iam_member.biglake_sa_silver_reader]
@@ -205,28 +95,13 @@ resource "google_bigquery_table" "link_carcass_indicator" {
   table_id            = "link_carcass_indicator"
   deletion_protection = false
 
-  schema = <<EOF
-[
-    {
-      "name": "carcass_hk",
-      "type": "STRING"
-    },
-    {
-      "name": "indicator_hk",
-      "type": "STRING"
-    },
-    {
-      "name": "load_dts",
-      "type": "STRING"
-    }
-  ]
-EOF
-
-  biglake_configuration {
-    connection_id = google_bigquery_connection.biglake.id
-    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_indicator/"
-    file_format   = "PARQUET"
-    table_format  = "ICEBERG"
+  external_data_configuration {
+    autodetect            = true
+    ignore_unknown_values = true
+    max_bad_records       = 0
+    connection_id         = google_bigquery_connection.biglake.id
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_indicator/metadata/v2.metadata.json"]
+    source_format         = "ICEBERG"
   }
 
   depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]

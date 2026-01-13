@@ -4,20 +4,22 @@ resource "google_bigquery_table" "hub_carcass" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "hub_carcass"
 
-  schema {
-    column {
-      name = "carcass_id"
-      type = "STRING"
+  schema = <<EOF
+[
+    {
+      "name": "carcass_id",
+      "type": "STRING"
+    },
+    {
+      "name": "load_dts",
+      "type": "STRING"
+    },
+    {
+      "name": "rec_src",
+      "type": "STRING"
     }
-    column {
-      name = "load_dts"
-      type = "STRING"
-    }
-    column {
-      name = "rec_src"
-      type = "STRING"
-    }
-  }
+  ]
+EOF
 
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
@@ -34,20 +36,22 @@ resource "google_bigquery_table" "hub_plant" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "hub_plant"
 
-  schema {
-    column {
-      name = "plant_id"
-      type = "STRING"
+  schema = <<EOF
+[
+    {
+      "name": "plant_id",
+      "type": "STRING"
+    },
+    {
+      "name": "load_dts",
+      "type": "STRING"
+    },
+    {
+      "name": "rec_src",
+      "type": "STRING"
     }
-    column {
-      name = "load_dts"
-      type = "STRING"
-    }
-    column {
-      name = "rec_src"
-      type = "STRING"
-    }
-  }
+  ]
+EOF
 
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
@@ -64,20 +68,22 @@ resource "google_bigquery_table" "hub_indicator" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "hub_indicator"
 
-  schema {
-    column {
-      name = "indicator_id"
-      type = "INT64"
+  schema = <<EOF
+[
+    {
+      "name": "indicator_id",
+      "type": "INT64"
+    },
+    {
+      "name": "load_dts",
+      "type": "STRING"
+    },
+    {
+      "name": "rec_src",
+      "type": "STRING"
     }
-    column {
-      name = "load_dts"
-      type = "STRING"
-    }
-    column {
-      name = "rec_src"
-      type = "STRING"
-    }
-  }
+  ]
+EOF
 
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
@@ -94,52 +100,54 @@ resource "google_bigquery_table" "sat_carcass_detail" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "sat_carcass_detail"
 
-  schema {
-    column {
-      name = "carcass_hk"
-      type = "STRING"
+  schema = <<EOF
+[
+    {
+      "name": "carcass_hk",
+      "type": "STRING"
+    },
+    {
+      "name": "hscw_kg",
+      "type": "FLOAT64"
+    },
+    {
+      "name": "animal_class",
+      "type": "STRING"
+    },
+    {
+      "name": "price_aud_per_kg",
+      "type": "FLOAT64"
+    },
+    {
+      "name": "marbling_score",
+      "type": "INT64"
+    },
+    {
+      "name": "quality_score",
+      "type": "INT64"
+    },
+    {
+      "name": "fat_depth_mm",
+      "type": "INT64"
+    },
+    {
+      "name": "total_price_aud",
+      "type": "FLOAT64"
+    },
+    {
+      "name": "slaughter_date",
+      "type": "DATE"
+    },
+    {
+      "name": "load_dts",
+      "type": "STRING"
+    },
+    {
+      "name": "rec_src",
+      "type": "STRING"
     }
-    column {
-      name = "hscw_kg"
-      type = "FLOAT64"
-    }
-    column {
-      name = "animal_class"
-      type = "STRING"
-    }
-    column {
-      name = "price_aud_per_kg"
-      type = "FLOAT64"
-    }
-    column {
-      name = "marbling_score"
-      type = "INT64"
-    }
-    column {
-      name = "quality_score"
-      type = "INT64"
-    }
-    column {
-      name = "fat_depth_mm"
-      type = "INT64"
-    }
-    column {
-      name = "total_price_aud"
-      type = "FLOAT64"
-    }
-    column {
-      name = "slaughter_date"
-      type = "DATE"
-    }
-    column {
-      name = "load_dts"
-      type = "STRING"
-    }
-    column {
-      name = "rec_src"
-      type = "STRING"
-    }
-  }
+  ]
+EOF
 
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
@@ -156,24 +164,26 @@ resource "google_bigquery_table" "link_carcass_plant" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "link_carcass_plant"
 
-  schema {
-    column {
-      name = "carcass_hk"
-      type = "STRING"
+  schema = <<EOF
+[
+    {
+      "name": "carcass_hk",
+      "type": "STRING"
+    },
+    {
+      "name": "plant_hk",
+      "type": "STRING"
+    },
+    {
+      "name": "load_dts",
+      "type": "STRING"
+    },
+    {
+      "name": "process_date",
+      "type": "DATE"
     }
-    column {
-      name = "plant_hk"
-      type = "STRING"
-    }
-    column {
-      name = "load_dts"
-      type = "STRING"
-    }
-    column {
-      name = "process_date"
-      type = "DATE"
-    }
-  }
+  ]
+EOF
 
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
@@ -190,20 +200,22 @@ resource "google_bigquery_table" "link_carcass_indicator" {
   dataset_id = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id   = "link_carcass_indicator"
 
-  schema {
-    column {
-      name = "carcass_hk"
-      type = "STRING"
+  schema = <<EOF
+[
+    {
+      "name": "carcass_hk",
+      "type": "STRING"
+    },
+    {
+      "name": "indicator_hk",
+      "type": "STRING"
+    },
+    {
+      "name": "load_dts",
+      "type": "STRING"
     }
-    column {
-      name = "indicator_hk"
-      type = "STRING"
-    }
-    column {
-      name = "load_dts"
-      type = "STRING"
-    }
-  }
+  ]
+EOF
 
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id

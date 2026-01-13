@@ -145,7 +145,7 @@ def main():
         carcass_hk.alias("carcass_hk"),
         plant_hk.alias("plant_hk"),
         lit(load_dts).alias("load_dts"),
-        col("process_date").cast("date").alias("process_date"),
+        col("slaughter_date").cast("date").alias("process_date"),
     ).distinct()
     link_carcass_plant.createOrReplaceTempView("source_link_carcass_plant")
     spark.sql("""

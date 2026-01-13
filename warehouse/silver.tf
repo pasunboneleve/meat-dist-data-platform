@@ -28,7 +28,7 @@ EOF
     table_format  = "ICEBERG"
   }
 
-  depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
+  depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket, google_storage_bucket_iam_member.biglake_sa_silver_reader]
 }
 
 resource "google_bigquery_table" "hub_plant" {
@@ -60,7 +60,7 @@ EOF
     table_format  = "ICEBERG"
   }
 
-  depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
+  depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket, google_storage_bucket_iam_member.biglake_sa_silver_reader]
 }
 
 resource "google_bigquery_table" "hub_indicator" {
@@ -92,7 +92,7 @@ EOF
     table_format  = "ICEBERG"
   }
 
-  depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
+  depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket, google_storage_bucket_iam_member.biglake_sa_silver_reader]
 }
 
 resource "google_bigquery_table" "sat_carcass_detail" {
@@ -156,7 +156,7 @@ EOF
     table_format  = "ICEBERG"
   }
 
-  depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
+  depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket, google_storage_bucket_iam_member.biglake_sa_silver_reader]
 }
 
 resource "google_bigquery_table" "link_carcass_plant" {
@@ -192,7 +192,7 @@ EOF
     table_format  = "ICEBERG"
   }
 
-  depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket]
+  depends_on = [google_bigquery_connection.biglake, google_storage_bucket.silver_bucket, google_storage_bucket_iam_member.biglake_sa_silver_reader]
 }
 
 resource "google_bigquery_table" "link_carcass_indicator" {

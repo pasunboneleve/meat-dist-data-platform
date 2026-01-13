@@ -19,6 +19,7 @@ map-tokens: 1024
 # Since Grok-4-1 has a 2M context window, you can afford a larger history
 max-chat-history-tokens: 32768
 cache-prompts: true
+detect-urls: false
 
 # --- Automation & Testing ---
 # Replace 'pytest' or 'npm test' with your specific test command

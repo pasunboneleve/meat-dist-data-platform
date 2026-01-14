@@ -10,7 +10,7 @@ resource "google_bigquery_table" "hub_carcass" {
     ignore_unknown_values = true
     max_bad_records       = 0
     connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_carcass/metadata/v6.metadata.json"]
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_carcass/metadata/v9.metadata.json"]
     source_format         = "ICEBERG"
   }
 
@@ -28,7 +28,7 @@ resource "google_bigquery_table" "hub_plant" {
     ignore_unknown_values = true
     max_bad_records       = 0
     connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_plant/metadata/v6.metadata.json"]
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_plant/metadata/v9.metadata.json"]
     source_format         = "ICEBERG"
   }
 
@@ -46,7 +46,7 @@ resource "google_bigquery_table" "hub_indicator" {
     ignore_unknown_values = true
     max_bad_records       = 0
     connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_indicator/metadata/v6.metadata.json"]
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/hub_indicator/metadata/v9.metadata.json"]
     source_format         = "ICEBERG"
   }
 
@@ -64,7 +64,7 @@ resource "google_bigquery_table" "sat_carcass_detail" {
     ignore_unknown_values = true
     max_bad_records       = 0
     connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/sat_carcass_detail/metadata/v6.metadata.json"]
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/sat_carcass_detail/metadata/v9.metadata.json"]
     source_format         = "ICEBERG"
   }
 
@@ -82,7 +82,7 @@ resource "google_bigquery_table" "link_carcass_plant" {
     ignore_unknown_values = true
     max_bad_records       = 0
     connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_plant/metadata/v6.metadata.json"]
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_plant/metadata/v9.metadata.json"]
     source_format         = "ICEBERG"
   }
 
@@ -100,7 +100,7 @@ resource "google_bigquery_table" "link_carcass_indicator" {
     ignore_unknown_values = true
     max_bad_records       = 0
     connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_indicator/metadata/v2.metadata.json"]
+    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/default/link_carcass_indicator/metadata/v5.metadata.json"]
     source_format         = "ICEBERG"
   }
 

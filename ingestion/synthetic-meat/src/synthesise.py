@@ -1,60 +1,53 @@
 import logging
 import os
 import random
-import sys
 import uuid
 from concurrent import futures
 from datetime import UTC, date, datetime, timedelta
+from logging import Logger
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, List
 
 import functions_framework
 import gcsfs
+import google.cloud.logging
 import polars as pl
 import pyarrow.parquet as pq
 import requests
-import structlog
 import tomllib
 from faker import Faker
-from typing_extensions import Optional
+from google.cloud.logging.handlers import (CloudLoggingHandler,
+                                           StructuredLogHandler)
 
 
-def add_gcp_log(_, method_name, event_dict):
+def project_name() -> str:
     """
-    Make logs compatible with Google Logs Explorer standard for filtering.
+    Get project name from pyproject.toml.
     """
-    event_dict["severity"] = method_name or "DEFAULT"
     pyproject_path = Path("pyproject.toml")
     with pyproject_path.open("rb") as toml:
         project = tomllib.load(toml)
     if "project" in project and "name" in project["project"]:
-        event_dict["logName"] = project["project"]["name"]
-    return event_dict
+        return project["project"]["name"]
+    return "synthetic-meat"
 
 
-def init_logging():
+def init_logging() -> Logger:
+    client = google.cloud.logging.Client()
+    cloud_handler = CloudLoggingHandler(client, name=project_name())
+    structured_handler = StructuredLogHandler()
     log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
     try:
         log_level = getattr(logging, log_level_str)
     except AttributeError:
         log_level = logging.INFO
 
-    structlog.configure(
-        processors=[
-            structlog.processors.add_log_level,
-            add_gcp_log,
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
-            structlog.processors.TimeStamper(fmt="iso", utc=True),
-            structlog.processors.JSONRenderer(sort_keys=True),
-        ],
-        wrapper_class=structlog.make_filtering_bound_logger(log_level),
-        context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(sys.stdout),
-        cache_logger_on_first_use=True,
-    )
+    root = logging.getLogger()
+    root.setLevel(log_level)
+    root.addHandler(structured_handler)
+    root.addHandler(cloud_handler)
 
-    return structlog.getLogger()
+    return root
 
 
 logger = init_logging()
@@ -66,12 +59,15 @@ MLA_API_URL = "https://api-mlastatistics.mla.com.au"
 # --- Helper Functions ---
 
 
-def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
+def fetch_data(endpoint: str, params: dict[str, Any]) -> pl.DataFrame:
     """
     Fetches data from the MLA Statistics API.
     """
 
-    logger.info("Requesting data from MLA API", endpoint=endpoint, params=params)
+    logger.info(
+        "Requesting data from MLA API",
+        extra={"json_fields": dict(endpoint=endpoint, params=params)},
+    )
     try:
         response = requests.get(f"{MLA_API_URL}{endpoint}", params=params)
         response.raise_for_status()
@@ -80,7 +76,8 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
 
         if "total number rows" in data:
             logger.info(
-                "API returned number of rows", total_rows=data["total number rows"]
+                "API returned number of rows",
+                extra={"json_fields": dict(total_rows=data["total number rows"])},
             )
 
         df = pl.DataFrame(data["data"])
@@ -88,7 +85,10 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
         if df.is_empty():
             logger.debug("fetched data empty")
         else:
-            logger.debug("fetched data", shape=df.shape, columns=df.columns)
+            logger.debug(
+                "fetched data",
+                extra={"json_fields": dict(shape=df.shape, columns=df.columns)},
+            )
         return df
 
     except requests.exceptions.HTTPError as http_err:
@@ -96,10 +96,16 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
         if response.status_code >= 500:
             logger.error(
                 "MLA API server error",
-                status_code=response.status_code,
-                endpoint=endpoint,
-                params=params,
-                response_body=response.text,
+                extra={
+                    "http_request": dict(
+                        requestMethod=response.request.method,
+                        requestURL=response.request.url,
+                        status=response.status_code,
+                        responseBody=response.text,
+                        params=params,
+                        endpoint=endpoint,
+                    )
+                },
             )
             try:
                 error_json = response.json()
@@ -112,16 +118,22 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
         else:
             logger.warning(
                 "MLA API client error",
-                status_code=response.status_code,
-                endpoint=endpoint,
-                error=str(http_err),
+                extra={
+                    "http_request": dict(
+                        requestMethod=response.request.method,
+                        requestURL=response.request.url,
+                        status=response.status_code,
+                        responseBody=response.text,
+                        params=params,
+                        endpoint=endpoint,
+                    )
+                },
             )
             return pl.DataFrame()
     except requests.exceptions.RequestException as e:
         logger.warning(
             "MLA API request error",
-            endpoint=endpoint,
-            error=str(e),
+            extra={"json_fields": dict(params=params, endpoint=endpoint, error=str(e))},
         )
         return pl.DataFrame()
 
@@ -145,14 +157,17 @@ def fetch_base_data(params) -> pl.DataFrame:
         df = df.rename({"calendar_date": "report_date"})
     # Add indicator_id from params for linking
     df = df.with_columns(pl.lit(params["indicatorID"]).alias("indicator_id"))
-    logger.debug("base data loaded", shape=df.shape)
+    logger.debug("base data loaded", extra={"json_fields": dict(shape=df.shape)})
     return df
 
 
 def load_base_data(file_path: Path) -> pl.DataFrame:
     """Loads and preprocesses the base market data from a JSON fixture file."""
     if not file_path.exists():
-        logger.warning("Fixture file not found", file_path=str(file_path))
+        logger.warning(
+            "Fixture file not found",
+            extra={"json_fields": dict(file_path=str(file_path))},
+        )
         return pl.DataFrame()
 
     try:
@@ -174,7 +189,9 @@ def load_base_data(file_path: Path) -> pl.DataFrame:
 
         return df
     except Exception as e:
-        logger.error("Error reading fixture JSON", error=str(e))
+        logger.error(
+            "Error reading fixture JSON", extra={"json_fields": dict(error=str(e))}
+        )
         return pl.DataFrame()
 
 
@@ -188,7 +205,9 @@ def generate_synthetic_carcasses(
     fake = Faker("en_AU")
 
     # Try to derive parameters from the entry in base_df for the target_date
-    logger.debug("base_df for generation", shape=base_df.shape)
+    logger.debug(
+        "base_df for generation", extra={"json_fields": dict(shape=base_df.shape)}
+    )
     if base_df.shape[0] > 1:
         base_df = base_df.head(1)
 
@@ -209,8 +228,7 @@ def generate_synthetic_carcasses(
     if num_records == 0:
         logger.info(
             "Head count was 0, generating no records",
-            target_date=target_date,
-            head_count=head_count,
+            extra={"json_fields": dict(target_date=target_date, head_count=head_count)},
         )
         return pl.DataFrame()
 
@@ -252,15 +270,17 @@ def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
         raise ValueError("GCS bucket name is not configured via BRONZE_BUCKET env var.")
 
     if df.is_empty():
-        logger.info("DataFrame empty, skipping unpartitioned write", table=name)
+        logger.info(
+            "DataFrame empty, skipping unpartitioned write",
+            extra={"json_fields": dict(table=name)},
+        )
         return
 
     gcs_base_path = f"{bucket_name}/{name}/{name}.parquet"
 
     logger.info(
         "Writing unpartitioned records to GCS",
-        record_count=len(df),
-        gcs_path=gcs_base_path,
+        extra={"json_fields": dict(record_count=len(df), gcs_path=gcs_base_path)},
     )
     # Convert Polars DF to PyArrow Table
     table = df.to_arrow()
@@ -274,7 +294,9 @@ def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
         where=gcs_base_path,
         filesystem=fs,
     )
-    logger.info("Write unpartitioned to GCS successful", table=name)
+    logger.info(
+        "Write unpartitioned to GCS successful", extra={"json_fields": dict(table=name)}
+    )
 
 
 def write_to_gcs(
@@ -289,7 +311,8 @@ def write_to_gcs(
 
     if df.is_empty():
         logger.info(
-            "DataFrame empty, skipping partitioned write", target_date=target_date
+            "DataFrame empty, skipping partitioned write",
+            extra={"json_fields": dict(target_date=target_date)},
         )
         return
 
@@ -304,9 +327,13 @@ def write_to_gcs(
 
     logger.info(
         "Writing partitioned records to GCS",
-        record_count=len(df_with_partitions),
-        base_path=gcs_base_path,
-        partition_cols=partition_cols,
+        extra={
+            "json_fields": dict(
+                record_count=len(df_with_partitions),
+                base_path=gcs_base_path,
+                partition_cols=partition_cols,
+            )
+        },
     )
 
     # Convert Polars DF to PyArrow Table
@@ -334,14 +361,20 @@ def synthesise_and_write(base_data: pl.DataFrame, from_date: date) -> None:
 
     batch_plant_id = f"P{random.randint(1, 5):02d}"
 
-    logger.debug("synthesising carcasses", base_shape=base_data.shape)
+    logger.debug(
+        "synthesising carcasses",
+        extra={"json_fields": dict(base_shape=base_data.shape)},
+    )
     synthetic_data = generate_synthetic_carcasses(base_data, from_date)
     # Overwrite plant_id with the one for this batch
     synthetic_data = synthetic_data.with_columns(
         pl.lit(batch_plant_id).alias("plant_id")
     )
 
-    logger.debug("writing synthetic data to GCS", synthetic_shape=synthetic_data.shape)
+    logger.debug(
+        "writing synthetic data to GCS",
+        extra={"json_fields": dict(synthetic_shape=synthetic_data.shape)},
+    )
     write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
 
 
@@ -349,7 +382,7 @@ def worker_init():
     init_logging()
 
 
-def workflow(params: Dict[str, Any]) -> Optional[str]:
+def workflow(params: dict[str, Any]) -> str | None:
     """
     Single download and write workflow, to be parallelised.
     """
@@ -362,10 +395,14 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
         ):
             logger.info(
                 "Skipping workflow: invalid base_data",
-                params=params,
-                height=base_data.height,
-                width=base_data.width,
-                columns=list(base_data.columns),
+                extra={
+                    "json_fields": dict(
+                        params=params,
+                        height=base_data.height,
+                        width=base_data.width,
+                        columns=list(base_data.columns),
+                    )
+                },
             )
             return None
 
@@ -375,7 +412,10 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
         return f"Data generation and upload complete for {params}"
     except Exception as e:
         # Log exceptions from within the worker process
-        logger.error("Error in workflow", params=params, error=str(e), exc_info=True)
+        logger.error(
+            "Error in workflow",
+            extra={"json_fields": dict(params=params, error=str(e), exc_info=True)},
+        )
         return None
 
 
@@ -441,7 +481,9 @@ def generate_and_upload(request):
         with futures.ProcessPoolExecutor(initializer=worker_init) as pool:
             results = filter(lambda x: bool(x), pool.map(workflow, params))
             for result in results:
-                logger.info("workflow result", message=result)
+                logger.info(
+                    "workflow result", extra={"json_fields": dict(message=result)}
+                )
         return ("Data generation and upload complete.", 200)
 
     except Exception as e:

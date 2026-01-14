@@ -24,7 +24,7 @@ def add_gcp_log(_, method_name, event_dict):
     Make logs compatible with Google Logs Explorer standard for filtering.
     """
     event_dict["severity"] = method_name or "DEFAULT"
-    pyproject_path = Path("../pyproject.toml")
+    pyproject_path = Path("pyproject.toml")
     with pyproject_path.open("rb") as toml:
         project = tomllib.load(toml)
     if "project" in project and "name" in project["project"]:

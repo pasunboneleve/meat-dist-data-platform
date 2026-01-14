@@ -47,7 +47,7 @@ def main():
     bronze_path = f"gs://{bronze_bucket}/carcasses/"
     bronze_path += f"year={target_date.year}/month={target_date.month}/day={target_date.day}/*.parquet"
 
-    df = spark.read.parquet(bronze_path).filter(
+    carcass_df = spark.read.parquet(bronze_path).filter(
         (year("slaughter_date") == target_date.year)
         & (month("slaughter_date") == target_date.month)
         & (dayofmonth("slaughter_date") == target_date.day)
@@ -59,7 +59,7 @@ def main():
     )
 
     # Cache for multiple uses
-    df.cache()
+    carcass_df.cache()
     indicator_df.cache()
 
     # Read saleyard table
@@ -70,7 +70,7 @@ def main():
 
     # DV2 Entities (simplified, add SCD/eff dates as needed)
     # Hub_Carcass
-    hub_carcass = df.select(
+    hub_carcass = carcass_df.select(
         col("carcass_id").alias("carcass_id"),
         lit(load_dts).alias("load_dts"),
         lit("BRONZE").alias("rec_src"),
@@ -87,7 +87,7 @@ def main():
     """)
 
     # Hub_Plant
-    hub_plant = df.select(
+    hub_plant = carcass_df.select(
         col("plant_id").alias("plant_id"),
         lit(load_dts).alias("load_dts"),
         lit("BRONZE").alias("rec_src"),
@@ -136,7 +136,7 @@ def main():
 
     # Sat_Carcass_Detail (hash diff for SCD2)
     carcass_hk = hash_key(col("carcass_id"))
-    sat_carcass = df.select(
+    sat_carcass = carcass_df.select(
         carcass_hk.alias("carcass_hk"),
         col("hscw_kg"),
         col("animal_class"),
@@ -184,7 +184,7 @@ def main():
 
     # Link_Carcass_Process (plant)
     plant_hk = hash_key(col("plant_id"))
-    link_carcass_plant = df.select(
+    link_carcass_plant = carcass_df.select(
         carcass_hk.alias("carcass_hk"),
         plant_hk.alias("plant_hk"),
         lit(load_dts).alias("load_dts"),
@@ -203,7 +203,7 @@ def main():
 
     # Link_Carcass_Indicator
     indicator_hk = hash_key(col("indicator_id"))
-    link_carcass_indicator = df.select(
+    link_carcass_indicator = carcass_df.select(
         carcass_hk.alias("carcass_hk"),
         indicator_hk.alias("indicator_hk"),
         lit(load_dts).alias("load_dts"),
@@ -221,7 +221,7 @@ def main():
 
     # Link_Carcass_Saleyard
     saleyard_hk = hash_key(col("saleyard_id"))
-    link_carcass_saleyard = df.select(
+    link_carcass_saleyard = carcass_df.select(
         carcass_hk.alias("carcass_hk"),
         saleyard_hk.alias("saleyard_hk"),
         lit(load_dts).alias("load_dts"),
@@ -237,7 +237,7 @@ def main():
         WHEN NOT MATCHED THEN INSERT *
     """)
 
-    df.unpersist()
+    carcass_df.unpersist()
     indicator_df.unpersist()
     saleyard_df.unpersist()
     spark.stop()

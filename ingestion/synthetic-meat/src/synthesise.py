@@ -15,9 +15,12 @@ import polars as pl
 import pyarrow.parquet as pq
 import requests
 import tomllib
+from dotenv import load_dotenv
 from faker import Faker
 from google.cloud.logging.handlers import (CloudLoggingHandler,
                                            StructuredLogHandler)
+
+load_dotenv()
 
 
 def project_name() -> str:
@@ -34,8 +37,11 @@ def project_name() -> str:
 
 def init_logging() -> Logger:
     client = google.cloud.logging.Client()
-    cloud_handler = CloudLoggingHandler(client, name=project_name())
-    structured_handler = StructuredLogHandler()
+    if os.getenv("ENV") == "LOCAL":
+        handler = StructuredLogHandler()
+    else:
+        handler = CloudLoggingHandler(client, name=project_name())
+
     log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
     try:
         log_level = getattr(logging, log_level_str)
@@ -44,8 +50,7 @@ def init_logging() -> Logger:
 
     root = logging.getLogger()
     root.setLevel(log_level)
-    root.addHandler(structured_handler)
-    root.addHandler(cloud_handler)
+    root.addHandler(handler)
 
     return root
 

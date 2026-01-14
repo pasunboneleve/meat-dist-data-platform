@@ -9,3 +9,6 @@ __pycache__/
 # Pytest
 .pytest_cache/
 .coverage
+
+# Do commit dotenv, just don't add to Docker
+!.env

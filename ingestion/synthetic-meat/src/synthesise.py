@@ -85,8 +85,36 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
             logger.debug("fetched data", shape=df.shape, columns=df.columns)
         return df
 
+    except requests.exceptions.HTTPError as http_err:
+        response = http_err.response
+        if response.status_code >= 500:
+            logger.error(
+                "MLA API server error",
+                status_code=response.status_code,
+                endpoint=endpoint,
+                params=params,
+                response_body=response.text,
+            )
+            try:
+                error_json = response.json()
+                error_msg = error_json.get("Message", str(error_json))
+            except ValueError:
+                error_msg = response.text[:1000]  # truncate if not json
+            raise RuntimeError(f"MLA API {response.status_code}: {error_msg}") from http_err
+        else:
+            logger.warning(
+                "MLA API client error",
+                status_code=response.status_code,
+                endpoint=endpoint,
+                error=str(http_err),
+            )
+            return pl.DataFrame()
     except requests.exceptions.RequestException as e:
-        logger.warning("Error fetching base data from API", error=str(e))
+        logger.warning(
+            "MLA API request error",
+            endpoint=endpoint,
+            error=str(e),
+        )
         return pl.DataFrame()
 
 

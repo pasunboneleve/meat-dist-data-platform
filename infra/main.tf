@@ -45,14 +45,6 @@ resource "google_project_service" "apis" {
   disable_on_destroy         = false
 }
 
-# App Engine application is required for Cloud Scheduler
-resource "google_app_engine_application" "app" {
-  project     = var.project_id
-  location_id = var.app_engine_region
-
-  depends_on = [google_project_service.apis]
-}
-
 # Docker repository for ingestion service images
 resource "google_artifact_registry_repository" "images" {
   project       = var.project_id

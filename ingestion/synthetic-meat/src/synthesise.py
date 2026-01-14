@@ -14,15 +14,21 @@ import polars as pl
 import pyarrow.parquet as pq
 import requests
 import structlog
+import tomllib
 from faker import Faker
 from typing_extensions import Optional
 
 
-def add_gcp_severity(_, method_name, event_dict):
+def add_gcp_log(_, method_name, event_dict):
     """
     Make logs compatible with Google Logs Explorer standard for filtering.
     """
     event_dict["severity"] = method_name or "DEFAULT"
+    pyproject_path = Path("../pyproject.toml")
+    with pyproject_path.open("rb") as toml:
+        project = tomllib.load(toml)
+    if "project" in project and "name" in project["project"]:
+        event_dict["logName"] = project["project"]["name"]
     return event_dict
 
 
@@ -36,7 +42,7 @@ def init_logging():
     structlog.configure(
         processors=[
             structlog.processors.add_log_level,
-            add_gcp_severity,
+            add_gcp_log,
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
@@ -100,7 +106,9 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
                 error_msg = error_json.get("Message", str(error_json))
             except ValueError:
                 error_msg = response.text[:1000]  # truncate if not json
-            raise RuntimeError(f"MLA API {response.status_code}: {error_msg}") from http_err
+            raise RuntimeError(
+                f"MLA API {response.status_code}: {error_msg}"
+            ) from http_err
         else:
             logger.warning(
                 "MLA API client error",
@@ -345,7 +353,11 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
     """
     try:
         base_data = fetch_base_data(params)
-        if base_data.is_empty() or base_data.width == 0 or "report_date" not in base_data.columns:
+        if (
+            base_data.is_empty()
+            or base_data.width == 0
+            or "report_date" not in base_data.columns
+        ):
             logger.info(
                 "Skipping workflow: invalid base_data",
                 params=params,

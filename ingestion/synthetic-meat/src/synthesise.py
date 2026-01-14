@@ -38,7 +38,19 @@ def project_name() -> str:
 def init_logging() -> Logger:
     client = google.cloud.logging.Client()
     if os.getenv("ENV") == "LOCAL":
-        handler = StructuredLogHandler()
+        import structlog
+
+        structlog.configure(processors=[structlog.dev.ConsoleRenderer()])
+        formatter = structlog.stdlib.ProcessorFormatter(
+            processor=structlog.dev.ConsoleRenderer(colors=True),
+            foreign_pre_chain=[
+                structlog.stdlib.add_logger_name,
+                structlog.stdlib.add_log_level,
+                structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
+            ],
+        )
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
     else:
         handler = CloudLoggingHandler(client, name=project_name())
 

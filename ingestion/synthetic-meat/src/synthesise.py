@@ -17,8 +17,7 @@ import requests
 import tomllib
 from dotenv import load_dotenv
 from faker import Faker
-from google.cloud.logging.handlers import (CloudLoggingHandler,
-                                           StructuredLogHandler)
+from google.cloud.logging.handlers import CloudLoggingHandler
 
 load_dotenv()
 
@@ -40,14 +39,16 @@ def init_logging() -> Logger:
     if os.getenv("ENV") == "LOCAL":
         import structlog
 
-        structlog.configure(processors=[structlog.dev.ConsoleRenderer()])
+        processors = [
+            structlog.stdlib.ExtraAdder(),
+            # Add level (shows [info], [error], etc.)
+            structlog.stdlib.add_log_level,
+            # Timestamp
+            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
+        ]
         formatter = structlog.stdlib.ProcessorFormatter(
             processor=structlog.dev.ConsoleRenderer(colors=True),
-            foreign_pre_chain=[
-                structlog.stdlib.add_logger_name,
-                structlog.stdlib.add_log_level,
-                structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
-            ],
+            foreign_pre_chain=processors,
         )
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
@@ -83,7 +84,7 @@ def fetch_data(endpoint: str, params: dict[str, Any]) -> pl.DataFrame:
 
     logger.info(
         "Requesting data from MLA API",
-        extra={"json_fields": dict(endpoint=endpoint, params=params)},
+        extra=dict(endpoint=endpoint, params=params),
     )
     try:
         response = requests.get(f"{MLA_API_URL}{endpoint}", params=params)
@@ -94,7 +95,7 @@ def fetch_data(endpoint: str, params: dict[str, Any]) -> pl.DataFrame:
         if "total number rows" in data:
             logger.info(
                 f"API returned {data['total number rows']} rows.",
-                extra={"json_fields": dict(total_rows=data["total number rows"])},
+                extra=dict(total_rows=data["total number rows"]),
             )
 
         df = pl.DataFrame(data["data"])
@@ -104,7 +105,7 @@ def fetch_data(endpoint: str, params: dict[str, Any]) -> pl.DataFrame:
         else:
             logger.debug(
                 "fetched data",
-                extra={"json_fields": dict(shape=df.shape, columns=df.columns)},
+                extra=dict(shape=df.shape, columns=df.columns),
             )
         return df
 
@@ -150,7 +151,7 @@ def fetch_data(endpoint: str, params: dict[str, Any]) -> pl.DataFrame:
     except requests.exceptions.RequestException as e:
         logger.warning(
             "MLA API request error",
-            extra={"json_fields": dict(params=params, endpoint=endpoint, error=str(e))},
+            extra=dict(params=params, endpoint=endpoint, error=str(e)),
         )
         return pl.DataFrame()
 
@@ -174,7 +175,7 @@ def fetch_base_data(params) -> pl.DataFrame:
         df = df.rename({"calendar_date": "report_date"})
     # Add indicator_id from params for linking
     df = df.with_columns(pl.lit(params["indicatorID"]).alias("indicator_id"))
-    logger.debug("base data loaded", extra={"json_fields": dict(shape=df.shape)})
+    logger.debug("base data loaded", extra=dict(shape=df.shape))
     return df
 
 
@@ -183,7 +184,7 @@ def load_base_data(file_path: Path) -> pl.DataFrame:
     if not file_path.exists():
         logger.warning(
             "Fixture file not found",
-            extra={"json_fields": dict(file_path=str(file_path))},
+            extra=dict(file_path=str(file_path)),
         )
         return pl.DataFrame()
 
@@ -206,9 +207,7 @@ def load_base_data(file_path: Path) -> pl.DataFrame:
 
         return df
     except Exception as e:
-        logger.error(
-            "Error reading fixture JSON", extra={"json_fields": dict(error=str(e))}
-        )
+        logger.error("Error reading fixture JSON", extra=dict(error=str(e)))
         return pl.DataFrame()
 
 
@@ -222,9 +221,7 @@ def generate_synthetic_carcasses(
     fake = Faker("en_AU")
 
     # Try to derive parameters from the entry in base_df for the target_date
-    logger.debug(
-        "base_df for generation", extra={"json_fields": dict(shape=base_df.shape)}
-    )
+    logger.debug("base_df for generation", extra=dict(shape=base_df.shape))
     if base_df.shape[0] > 1:
         base_df = base_df.head(1)
 
@@ -245,7 +242,7 @@ def generate_synthetic_carcasses(
     if num_records == 0:
         logger.info(
             "Head count was 0, generating no records",
-            extra={"json_fields": dict(target_date=target_date, head_count=head_count)},
+            extra=dict(target_date=target_date, head_count=head_count),
         )
         return pl.DataFrame()
 
@@ -289,7 +286,7 @@ def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
     if df.is_empty():
         logger.info(
             "DataFrame empty, skipping unpartitioned write",
-            extra={"json_fields": dict(table=name)},
+            extra=dict(table=name),
         )
         return
 
@@ -297,7 +294,7 @@ def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
 
     logger.info(
         "Writing unpartitioned records to GCS",
-        extra={"json_fields": dict(record_count=len(df), gcs_path=gcs_base_path)},
+        extra=dict(record_count=len(df), gcs_path=gcs_base_path),
     )
     # Convert Polars DF to PyArrow Table
     table = df.to_arrow()
@@ -311,9 +308,7 @@ def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
         where=gcs_base_path,
         filesystem=fs,
     )
-    logger.info(
-        "Write unpartitioned to GCS successful", extra={"json_fields": dict(table=name)}
-    )
+    logger.info("Write unpartitioned to GCS successful", extra=dict(table=name))
 
 
 def write_to_gcs(
@@ -329,7 +324,7 @@ def write_to_gcs(
     if df.is_empty():
         logger.info(
             "DataFrame empty, skipping partitioned write",
-            extra={"json_fields": dict(target_date=target_date)},
+            extra=dict(target_date=target_date),
         )
         return
 
@@ -380,7 +375,7 @@ def synthesise_and_write(base_data: pl.DataFrame, from_date: date) -> None:
 
     logger.debug(
         "synthesising carcasses",
-        extra={"json_fields": dict(base_shape=base_data.shape)},
+        extra=dict(base_shape=base_data.shape),
     )
     synthetic_data = generate_synthetic_carcasses(base_data, from_date)
     # Overwrite plant_id with the one for this batch
@@ -390,7 +385,7 @@ def synthesise_and_write(base_data: pl.DataFrame, from_date: date) -> None:
 
     logger.debug(
         "writing synthetic data to GCS",
-        extra={"json_fields": dict(synthetic_shape=synthetic_data.shape)},
+        extra=dict(synthetic_shape=synthetic_data.shape),
     )
     write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
 
@@ -431,7 +426,7 @@ def workflow(params: dict[str, Any]) -> str | None:
         # Log exceptions from within the worker process
         logger.error(
             "Error in workflow",
-            extra={"json_fields": dict(params=params, error=str(e), exc_info=True)},
+            extra=dict(params=params, error=str(e), exc_info=True),
         )
         return None
 
@@ -498,9 +493,7 @@ def generate_and_upload(request):
         with futures.ProcessPoolExecutor(initializer=worker_init) as pool:
             results = filter(lambda x: bool(x), pool.map(workflow, params))
             for result in results:
-                logger.info(
-                    "workflow result", extra={"json_fields": dict(message=result)}
-                )
+                logger.info("workflow result", extra=dict(message=result))
         return ("Data generation and upload complete.", 200)
 
     except Exception as e:

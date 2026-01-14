@@ -1453,7 +1453,6 @@ dependencies = [
     { name = "polars" },
     { name = "pyarrow" },
     { name = "requests" },
-    { name = "rich" },
     { name = "structlog" },
 ]
 
@@ -1474,7 +1473,6 @@ requires-dist = [
     { name = "polars", specifier = ">=0.20.0" },
     { name = "pyarrow", specifier = ">=16.0.0" },
     { name = "requests", specifier = ">=2.30.0" },
-    { name = "rich", specifier = ">=14.2.0" },
     { name = "structlog", specifier = ">=25.5.0" },
 ]
 

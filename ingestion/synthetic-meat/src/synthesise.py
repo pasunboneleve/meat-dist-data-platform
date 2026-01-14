@@ -345,7 +345,14 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
     """
     try:
         base_data = fetch_base_data(params)
-        if base_data.is_empty():
+        if base_data.is_empty() or base_data.width == 0 or "report_date" not in base_data.columns:
+            logger.info(
+                "Skipping workflow: invalid base_data",
+                params=params,
+                height=base_data.height,
+                width=base_data.width,
+                columns=list(base_data.columns),
+            )
             return None
 
         for report_date, report in base_data.group_by("report_date"):

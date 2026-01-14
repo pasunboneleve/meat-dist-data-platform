@@ -2,7 +2,6 @@ import logging
 import os
 import random
 import uuid
-from concurrent import futures
 from datetime import UTC, date, datetime, timedelta
 from logging import Logger
 from pathlib import Path
@@ -391,10 +390,6 @@ def synthesise_and_write(base_data: pl.DataFrame, from_date: date) -> None:
     write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
 
 
-def worker_init():
-    init_logging()
-
-
 def workflow(params: dict[str, Any]) -> str | None:
     """
     Single download and write workflow, to be parallelised.
@@ -487,9 +482,9 @@ def generate_and_upload(request):
             for indicator in list(range(4))
         ]
 
-        with futures.ProcessPoolExecutor(initializer=worker_init) as pool:
-            results = filter(lambda x: bool(x), pool.map(workflow, params))
-            for result in results:
+        for param in params:
+            result = workflow(param)
+            if result:
                 logger.info("workflow result", extra=dict(message=result))
         return ("Data generation and upload complete.", 200)
 

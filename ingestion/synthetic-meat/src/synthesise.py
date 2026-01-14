@@ -81,7 +81,7 @@ def fetch_data(endpoint: str, params: dict[str, Any]) -> pl.DataFrame:
 
         if "total number rows" in data:
             logger.info(
-                "API returned number of rows",
+                f"API returned {data['total number rows']} rows.",
                 extra={"json_fields": dict(total_rows=data["total number rows"])},
             )
 

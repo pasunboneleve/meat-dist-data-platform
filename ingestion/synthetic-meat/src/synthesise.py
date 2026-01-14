@@ -203,6 +203,7 @@ def generate_synthetic_carcasses(
     price_std_dev = 0.75
 
     categories = base_df["category"].unique().to_list()
+    saleyard_id = base_df.get_column("saleyard_id").item()
     indicator_id = base_df.get_column("indicator_id").item()
 
     if num_records == 0:
@@ -233,6 +234,7 @@ def generate_synthetic_carcasses(
         "quality_score": [random.randint(1, 100) for _ in range(num_records)],
         "marbling_score": [random.randint(1, 9) for _ in range(num_records)],
         "fat_depth_mm": [random.randint(3, 22) for _ in range(num_records)],
+        "saleyard_id": [saleyard_id] * num_records,
     }
 
     synthetic_df = pl.DataFrame(data)

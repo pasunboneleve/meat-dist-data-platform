@@ -62,6 +62,12 @@ def main():
     df.cache()
     indicator_df.cache()
 
+    # Read saleyard table
+    saleyard_df = spark.read.parquet(
+        f"gs://{bronze_bucket}/saleyard/saleyard.parquet"
+    )
+    saleyard_df.cache()
+
     # DV2 Entities (simplified, add SCD/eff dates as needed)
     # Hub_Carcass
     hub_carcass = df.select(
@@ -112,6 +118,22 @@ def main():
         WHEN NOT MATCHED THEN INSERT *
     """)
 
+    # Hub_Saleyard
+    hub_saleyard = saleyard_df.select(
+        col("saleyard_id").alias("saleyard_id"),
+        lit(load_dts).alias("load_dts"),
+        lit("BRONZE").alias("rec_src"),
+    ).distinct()
+    hub_saleyard.createOrReplaceTempView("source_hub_saleyard")
+    spark.sql("""
+        CREATE TABLE IF NOT EXISTS hub_saleyard USING iceberg AS SELECT * FROM source_hub_saleyard LIMIT 0
+    """)
+    spark.sql("""
+        MERGE INTO hub_saleyard t
+        USING source_hub_saleyard s ON t.saleyard_id = s.saleyard_id
+        WHEN NOT MATCHED THEN INSERT *
+    """)
+
     # Sat_Carcass_Detail (hash diff for SCD2)
     carcass_hk = hash_key(col("carcass_id"))
     sat_carcass = df.select(
@@ -135,6 +157,27 @@ def main():
         MERGE INTO sat_carcass_detail t
         USING source_sat_carcass s
         ON t.carcass_hk = s.carcass_hk
+        WHEN NOT MATCHED THEN INSERT *
+        -- Add SCD logic: WHEN MATCHED AND hash_diff THEN update eff_to, insert new
+    """)
+
+    # Sat_Saleyard_Detail (hash diff for SCD2)
+    sat_saleyard = saleyard_df.select(
+        hash_key(col("saleyard_id")).alias("saleyard_hk"),
+        col("saleyard_desc"),
+        col("state_id"),
+        col("nrmr_desc"),
+        lit(load_dts).alias("load_dts"),
+        lit("BRONZE").alias("rec_src"),
+    )
+    sat_saleyard.createOrReplaceTempView("source_sat_saleyard")
+    spark.sql("""
+        CREATE TABLE IF NOT EXISTS sat_saleyard_detail USING iceberg AS SELECT * FROM source_sat_saleyard LIMIT 0
+    """)
+    spark.sql("""
+        MERGE INTO sat_saleyard_detail t
+        USING source_sat_saleyard s
+        ON t.saleyard_hk = s.saleyard_hk
         WHEN NOT MATCHED THEN INSERT *
         -- Add SCD logic: WHEN MATCHED AND hash_diff THEN update eff_to, insert new
     """)
@@ -176,8 +219,27 @@ def main():
         WHEN NOT MATCHED THEN INSERT *
     """)
 
+    # Link_Carcass_Saleyard
+    saleyard_hk = hash_key(col("saleyard_id"))
+    link_carcass_saleyard = df.select(
+        carcass_hk.alias("carcass_hk"),
+        saleyard_hk.alias("saleyard_hk"),
+        lit(load_dts).alias("load_dts"),
+    ).distinct()
+    link_carcass_saleyard.createOrReplaceTempView("source_link_carcass_saleyard")
+    spark.sql("""
+        CREATE TABLE IF NOT EXISTS link_carcass_saleyard USING iceberg AS SELECT * FROM source_link_carcass_saleyard LIMIT 0
+    """)
+    spark.sql("""
+        MERGE INTO link_carcass_saleyard t
+        USING source_link_carcass_saleyard s
+        ON t.carcass_hk = s.carcass_hk AND t.saleyard_hk = s.saleyard_hk
+        WHEN NOT MATCHED THEN INSERT *
+    """)
+
     df.unpersist()
     indicator_df.unpersist()
+    saleyard_df.unpersist()
     spark.stop()
 
 

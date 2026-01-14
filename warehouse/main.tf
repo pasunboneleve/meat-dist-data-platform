@@ -292,7 +292,7 @@ resource "google_composer_environment" "meat_composer" {
         max_count  = 6
       }
       triggerer {
-        cpu       = 0.5
+        cpu       = 1
         memory_gb = 2.0
         count     = 1
       }

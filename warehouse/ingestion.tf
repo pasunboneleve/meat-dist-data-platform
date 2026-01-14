@@ -16,6 +16,11 @@ resource "google_cloud_run_v2_service" "ingestor" {
     service_account = google_service_account.ingestion_sa.email
     containers {
       image = var.image_uri
+      resources {
+        limits = {
+          memory = "1Gi"
+        }
+      }
       env {
         name  = "BRONZE_BUCKET"
         value = google_storage_bucket.bronze_bucket.name

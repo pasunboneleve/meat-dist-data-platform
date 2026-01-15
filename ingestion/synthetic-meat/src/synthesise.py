@@ -74,7 +74,7 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
 
         if "total number rows" in data:
             logger.info(
-                f"API returned {data['total number rows']} rows.",
+                f"API returned {data['total number rows'] or 0} rows.",
                 extra=dict(total_rows=data["total number rows"]),
             )
 

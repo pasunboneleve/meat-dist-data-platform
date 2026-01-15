@@ -65,7 +65,7 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
     Fetches data from the MLA Statistics API.
     """
 
-    logger.info("Requesting data from MLA API", endpoint=endpoint, params=params)
+    logger.info(f"Requesting data from {endpoint}", extra=dict(params=params))
     try:
         response = requests.get(f"{MLA_API_URL}{endpoint}", params=params)
         response.raise_for_status()
@@ -81,13 +81,16 @@ def fetch_data(endpoint: str, params: Dict[str, Any]) -> pl.DataFrame:
         df = pl.DataFrame(data["data"])
         # Preprocessing from the original load_base_data function
         if df.is_empty():
-            logger.debug("fetched data empty")
+            logger.debug("fetched empty")
         else:
-            logger.debug("fetched data", shape=df.shape, columns=df.columns)
+            logger.debug(
+                f"fetched {len(df)} rows",
+                extra=dict(shape=df.shape, columns=df.columns),
+            )
         return df
 
     except requests.exceptions.RequestException as e:
-        logger.warning("Error fetching base data from API", error=str(e))
+        logger.warning("Error fetching base data from API", extra=str(e))
         return pl.DataFrame()
 
 
@@ -118,7 +121,7 @@ def fetch_base_data(params) -> pl.DataFrame:
 def load_base_data(file_path: Path) -> pl.DataFrame:
     """Loads and preprocesses the base market data from a JSON fixture file."""
     if not file_path.exists():
-        logger.warning("Fixture file not found", file_path=str(file_path))
+        logger.warning(f"Fixture file not found in {str(file_path)}")
         return pl.DataFrame()
 
     try:
@@ -135,12 +138,12 @@ def load_base_data(file_path: Path) -> pl.DataFrame:
         if "calendar_date" in df.columns:
             df = df.rename({"calendar_date": "report_date"})
         else:
-            logger.warning("calendar_date column not found in fixture")
+            logger.warning("calendar_date column not found in base_data.")
             return pl.DataFrame()
 
         return df
-    except Exception as e:
-        logger.error("Error reading fixture JSON", error=str(e))
+    except Exception:
+        logger.exception("Error reading fixture JSON")
         return pl.DataFrame()
 
 
@@ -154,7 +157,7 @@ def generate_synthetic_carcasses(
     fake = Faker("en_AU")
 
     # Try to derive parameters from the entry in base_df for the target_date
-    logger.debug("base_df for generation", shape=base_df.shape)
+    logger.debug("base_df for generation", extra=dict(shape=base_df.shape))
     if base_df.shape[0] > 1:
         base_df = base_df.head(1)
 
@@ -174,8 +177,10 @@ def generate_synthetic_carcasses(
     if num_records == 0:
         logger.info(
             "Head count was 0, generating no records",
-            target_date=target_date,
-            head_count=head_count,
+            extra=dict(
+                target_date=target_date,
+                head_count=head_count,
+            ),
         )
         return pl.DataFrame()
 
@@ -216,15 +221,14 @@ def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
         raise ValueError("GCS bucket name is not configured via BRONZE_BUCKET env var.")
 
     if df.is_empty():
-        logger.info("DataFrame empty, skipping unpartitioned write", table=name)
+        logger.info(f"DataFrame empty, skipping unpartitioned write to table {name}")
         return
 
     gcs_base_path = f"{bucket_name}/{name}/{name}.parquet"
 
     logger.info(
-        "Writing unpartitioned records to GCS",
-        record_count=len(df),
-        gcs_path=gcs_base_path,
+        f"Writing unpartitioned records to GCS, {len(df)} rows.",
+        extra=dict(record_count=len(df), gcs_path=gcs_base_path),
     )
     # Convert Polars DF to PyArrow Table
     table = df.to_arrow()
@@ -238,7 +242,7 @@ def write_unpartitioned_to_gcs(df: pl.DataFrame, bucket_name: str, name: str):
         where=gcs_base_path,
         filesystem=fs,
     )
-    logger.info("Write unpartitioned to GCS successful", table=name)
+    logger.info("Write unpartitioned to GCS successful", extra=dict(table=name))
 
 
 def write_to_gcs(
@@ -253,7 +257,8 @@ def write_to_gcs(
 
     if df.is_empty():
         logger.info(
-            "DataFrame empty, skipping partitioned write", target_date=target_date
+            "DataFrame empty, skipping partitioned write",
+            extra=dict(target_date=target_date),
         )
         return
 
@@ -268,9 +273,11 @@ def write_to_gcs(
 
     logger.info(
         "Writing partitioned records to GCS",
-        record_count=len(df_with_partitions),
-        base_path=gcs_base_path,
-        partition_cols=partition_cols,
+        extra=dict(
+            record_count=len(df_with_partitions),
+            base_path=gcs_base_path,
+            partition_cols=partition_cols,
+        ),
     )
 
     # Convert Polars DF to PyArrow Table
@@ -298,14 +305,17 @@ def synthesise_and_write(base_data: pl.DataFrame, from_date: date) -> None:
 
     batch_plant_id = f"P{random.randint(1, 5):02d}"
 
-    logger.debug("synthesising carcasses", base_shape=base_data.shape)
+    logger.debug("synthesising carcasses", extra=dict(base_shape=base_data.shape))
     synthetic_data = generate_synthetic_carcasses(base_data, from_date)
     # Overwrite plant_id with the one for this batch
     synthetic_data = synthetic_data.with_columns(
         pl.lit(batch_plant_id).alias("plant_id")
     )
 
-    logger.debug("writing synthetic data to GCS", synthetic_shape=synthetic_data.shape)
+    logger.debug(
+        "writing synthetic data to GCS",
+        extra=dict(synthetic_shape=synthetic_data.shape),
+    )
     write_to_gcs(synthetic_data, BUCKET_NAME, from_date)
 
 
@@ -335,9 +345,9 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
             from_date = datetime.fromisoformat(report_date[0]).date()
             synthesise_and_write(report, from_date)
         return f"Data generation and upload complete for {params}"
-    except Exception as e:
+    except Exception:
         # Log exceptions from within the worker process
-        logger.error("Error in workflow", params=params, error=str(e), exc_info=True)
+        logger.exception("Error in workflow", extra=dict(params=params))
         return None
 
 
@@ -406,7 +416,7 @@ def generate_and_upload(request):
         with futures.ProcessPoolExecutor(initializer=worker_init) as pool:
             results = filter(lambda x: bool(x), pool.map(workflow, params))
             for result in results:
-                logger.info("workflow result", message=result)
+                logger.info("workflow result", extra=result)
         return ("Data generation and upload complete.", 200)
 
     except Exception as e:

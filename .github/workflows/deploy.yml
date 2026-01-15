@@ -53,6 +53,7 @@ jobs:
         audience: 'sts.googleapis.com'
 
     - name: Get current image URI from Cloud Run
+      if: !inputs.build_ingestion || steps.changes.outputs.ingestion == 'false'
       id: get-image
       run: |
         IMAGE_URI=$(gcloud run services describe synthetic-meat-ingestor --region ${{ env.GCP_APP_ENGINE_REGION }} --format 'value(IMAGE)')

@@ -9,6 +9,12 @@ on:
       - '.github/workflows/deploy.yml'
       - 'ingestion/synthetic-meat/**'
   workflow_dispatch:
+    inputs:
+      build_ingestion:
+        description: 'Should we build the ingestion app?'
+        required: true
+        type: boolean
+        default: false
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -55,10 +61,10 @@ jobs:
 
     - name: Configure Docker
       run: gcloud auth configure-docker ${{ env.GCP_APP_ENGINE_REGION }}-docker.pkg.dev
-      if: steps.changes.outputs.ingestion == 'true' || steps.get-image.outputs.image_uri == ''
+      if: inputs.build_ingestion || steps.changes.outputs.ingestion == 'true' || steps.get-image.outputs.image_uri == ''
 
     - name: Build and Push Docker Image
-      if: steps.changes.outputs.ingestion == 'true' || steps.get-image.outputs.image_uri == ''
+      if: inputs.build_ingestion || steps.changes.outputs.ingestion == 'true' || steps.get-image.outputs.image_uri == ''
       id: build-image
       run: |
         IMAGE_URI="${{ env.GCP_APP_ENGINE_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ env.IMAGE_NAME }}"

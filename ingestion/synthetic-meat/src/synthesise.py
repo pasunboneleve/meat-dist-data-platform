@@ -111,7 +111,7 @@ def fetch_data(endpoint: str, params: dict[str, Any]) -> pl.DataFrame:
     except requests.exceptions.HTTPError as http_err:
         response = http_err.response
         if response.status_code >= 500:
-            logger.error(
+            logger.exception(
                 "MLA API server error",
                 extra={
                     "http_request": dict(
@@ -124,14 +124,6 @@ def fetch_data(endpoint: str, params: dict[str, Any]) -> pl.DataFrame:
                     )
                 },
             )
-            try:
-                error_json = response.json()
-                error_msg = error_json.get("Message", str(error_json))
-            except ValueError:
-                error_msg = response.text[:1000]  # truncate if not json
-            raise RuntimeError(
-                f"MLA API {response.status_code}: {error_msg}"
-            ) from http_err
         else:
             logger.warning(
                 "MLA API client error",
@@ -146,7 +138,7 @@ def fetch_data(endpoint: str, params: dict[str, Any]) -> pl.DataFrame:
                     )
                 },
             )
-            return pl.DataFrame()
+        return pl.DataFrame()
     except requests.exceptions.RequestException as e:
         logger.warning(
             "MLA API request error",
@@ -206,8 +198,8 @@ def load_base_data(file_path: Path) -> pl.DataFrame:
             return pl.DataFrame()
 
         return df
-    except Exception as e:
-        logger.error("Error reading fixture JSON", extra=dict(error=str(e)))
+    except Exception:
+        logger.exception("Error reading fixture JSON")
         return pl.DataFrame()
 
 
@@ -412,10 +404,7 @@ def workflow(params: dict[str, Any]) -> str | None:
         return f"Data generation and upload complete for {params}"
     except Exception as e:
         # Log exceptions from within the worker process
-        logger.error(
-            "Error in workflow",
-            extra=dict(params=params, error=str(e), exc_info=True),
-        )
+        logger.exception("Error in workflow", extra=dict(params=params))
         return None
 
 

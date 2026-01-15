@@ -21,7 +21,6 @@ synthetic-meat = "src.synthesise:generate_and_upload"
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
-    "rich>=14.2.0",
 ]
 
 [tool.pytest.ini_options]

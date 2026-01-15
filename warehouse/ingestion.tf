@@ -44,7 +44,7 @@ resource "google_cloud_run_v2_service_iam_member" "dataproc_serverless_invoker" 
   location = google_cloud_run_v2_service.ingestor.location
   name     = google_cloud_run_v2_service.ingestor.name
   role     = "roles/run.invoker"
-  member   = "serviceAccount:dataproc-serverless@meatislife.iam.gserviceaccount.com"
+  member   = "serviceAccount:${google_service_account.dataproc_sa.email}"
 }
 
 resource "google_project_iam_member" "cloud_run_log_writer" {

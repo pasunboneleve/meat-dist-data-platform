@@ -1,7 +1,6 @@
 import logging
 import os
 import random
-import sys
 import uuid
 from concurrent import futures
 from datetime import UTC, date, datetime, timedelta
@@ -18,37 +17,42 @@ from faker import Faker
 from typing_extensions import Optional
 
 
-def add_gcp_severity(_, method_name, event_dict):
-    """
-    Make logs compatible with Google Logs Explorer standard for filtering.
-    """
-    event_dict["severity"] = method_name or "DEFAULT"
-    return event_dict
-
-
 def init_logging():
     log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
     try:
         log_level = getattr(logging, log_level_str)
     except AttributeError:
         log_level = logging.INFO
+    if os.environ.get("K_REVISION"):
+        import google.cloud.logging
+        from google.cloud.logging.handlers import CloudLoggingHandler
+
+        client = google.cloud.logging.Client()
+
+        handler = CloudLoggingHandler(client=client, name="synthetic-meat")
+        indent = None
+    else:
+        handler = logging.StreamHandler()
+        indent = 2
 
     structlog.configure(
         processors=[
-            structlog.processors.add_log_level,
-            add_gcp_severity,
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
-            structlog.processors.JSONRenderer(sort_keys=True),
+            structlog.processors.JSONRenderer(indent=indent, sort_keys=True),
         ],
-        wrapper_class=structlog.make_filtering_bound_logger(log_level),
-        context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(sys.stdout),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
 
-    return structlog.getLogger()
+    root = logging.getLogger()
+    root.addHandler(handler)
+    root.setLevel(log_level)
+    logger = structlog.getLogger()
+    return logger
 
 
 logger = init_logging()

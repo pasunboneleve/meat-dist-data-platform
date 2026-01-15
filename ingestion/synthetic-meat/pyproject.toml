@@ -12,6 +12,7 @@ dependencies = [
     "functions-framework>=3.0.0",
     "requests>=2.30.0",
     "structlog>=25.5.0",
+    "google-cloud-logging>=3.13.0",
 ]
 
 [project.scripts]
@@ -20,6 +21,7 @@ synthetic-meat = "src.synthesise:generate_and_upload"
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
+    "rich>=14.2.0",
 ]
 
 [tool.pytest.ini_options]

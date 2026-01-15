@@ -108,8 +108,9 @@ def fetch_base_data(params) -> pl.DataFrame:
     if "calendar_date" in df.columns:
         df = df.rename({"calendar_date": "report_date"})
     # Add indicator_id from params for linking
-    df = df.with_columns(pl.lit(params["indicatorID"]).alias("indicator_id"))
-    logger.debug("base data loaded", shape=df.shape)
+    if len(df):
+        df = df.with_columns(pl.lit(params["indicatorID"]).alias("indicator_id"))
+    logger.debug("base data loaded", extra=dict(shape=df.shape))
     return df
 
 
@@ -318,6 +319,15 @@ def workflow(params: Dict[str, Any]) -> Optional[str]:
     try:
         base_data = fetch_base_data(params)
         if base_data.is_empty():
+            logger.info(
+                f"Skipping workflow: invalid base_data in {params['saleyardID']}",
+                extra=dict(
+                    params=params,
+                    height=base_data.height,
+                    width=base_data.width,
+                    columns=list(base_data.columns),
+                ),
+            )
             return None
 
         for report_date, report in base_data.group_by("report_date"):

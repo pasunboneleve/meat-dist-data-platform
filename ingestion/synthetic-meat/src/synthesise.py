@@ -466,6 +466,10 @@ def generate_and_upload(request):
         # Fetch live data from the MLA API.
         saleyards = fetch_saleyard()
 
+        if saleyards.is_empty():
+            logger.warning("No saleyards data available from API, ingestion cancelled.")
+            return ("No saleyards data available.", 204)
+
         params = [
             {
                 "indicatorID": indicator,

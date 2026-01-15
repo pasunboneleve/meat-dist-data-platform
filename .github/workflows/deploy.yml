@@ -14,7 +14,6 @@ on:
         description: 'Should we build the ingestion app?'
         required: true
         type: boolean
-        default: false
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -31,6 +30,13 @@ jobs:
       id-token: 'write'
 
     steps:
+
+    - name: Echo
+      id: echo
+      run: |
+        echo inputs.build_ingestion: ${{ inputs.build_ingestion }}
+        echo steps.changes.outputs.ingestion: ${{ steps.changes.outputs.ingestion }}
+
     - name: Checkout
       uses: actions/checkout@v3
       with:
@@ -53,7 +59,7 @@ jobs:
         audience: 'sts.googleapis.com'
 
     - name: Get current image URI from Cloud Run
-      if: !inputs.build_ingestion || steps.changes.outputs.ingestion == 'false'
+      if: steps.changes.outputs.ingestion == '' || inputs.build_ingestion == ''
       id: get-image
       run: |
         IMAGE_URI=$(gcloud run services describe synthetic-meat-ingestor --region ${{ env.GCP_APP_ENGINE_REGION }} --format 'value(IMAGE)')

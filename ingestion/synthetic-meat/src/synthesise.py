@@ -485,7 +485,7 @@ def generate_and_upload(request):
         for param in params:
             result = workflow(param)
             if result:
-                logger.info("workflow result", extra=dict(message=result))
+                logger.info("workflow result", extra=dict(result=result))
         return ("Data generation and upload complete.", 200)
 
     except Exception as e:

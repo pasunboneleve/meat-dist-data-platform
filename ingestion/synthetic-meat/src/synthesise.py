@@ -41,6 +41,7 @@ def init_logging():
             structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
+            structlog.processors.dict_tracebacks,
             structlog.processors.JSONRenderer(indent=indent, sort_keys=True),
         ],
         wrapper_class=structlog.stdlib.BoundLogger,

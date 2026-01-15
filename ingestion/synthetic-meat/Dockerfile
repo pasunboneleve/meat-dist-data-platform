@@ -39,6 +39,7 @@ USER nonroot
 # Use `/app` as the working directory
 WORKDIR /app
 
+ENV ENV=DOCKER
 # Set the entry point for the container using functions-framework.
 # The target function is specified by its full import path.
 # No --source flag is needed because the package is installed in the environment.

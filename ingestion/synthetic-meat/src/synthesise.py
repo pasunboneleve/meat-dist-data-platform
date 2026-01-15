@@ -14,11 +14,8 @@ import polars as pl
 import pyarrow.parquet as pq
 import requests
 import tomllib
-from dotenv import load_dotenv
 from faker import Faker
 from google.cloud.logging.handlers import CloudLoggingHandler
-
-load_dotenv()
 
 
 def project_name() -> str:
@@ -26,16 +23,20 @@ def project_name() -> str:
     Get project name from pyproject.toml.
     """
     pyproject_path = Path("pyproject.toml")
-    with pyproject_path.open("rb") as toml:
-        project = tomllib.load(toml)
-    if "project" in project and "name" in project["project"]:
-        return project["project"]["name"]
+    if pyproject_path.is_file():
+        with pyproject_path.open("rb") as toml:
+            project = tomllib.load(toml)
+        if "project" in project and "name" in project["project"]:
+            return project["project"]["name"]
+
     return "synthetic-meat"
 
 
 def init_logging() -> Logger:
     client = google.cloud.logging.Client()
-    if os.getenv("ENV") == "LOCAL":
+    if os.getenv("ENV") == "DOCKER":
+        handler = CloudLoggingHandler(client, name=project_name())
+    else:
         import structlog
 
         processors = [
@@ -51,8 +52,6 @@ def init_logging() -> Logger:
         )
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
-    else:
-        handler = CloudLoggingHandler(client, name=project_name())
 
     log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
     try:

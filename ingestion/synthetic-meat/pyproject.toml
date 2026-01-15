@@ -12,7 +12,6 @@ dependencies = [
     "functions-framework>=3.0.0",
     "requests>=2.30.0",
     "google-cloud-logging>=3.13.0",
-    "dotenv>=0.9.9",
     "structlog>=25.5.0",
 ]
 

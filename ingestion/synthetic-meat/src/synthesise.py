@@ -339,13 +339,11 @@ def write_to_gcs(
 
     logger.info(
         "Writing partitioned records to GCS",
-        extra={
-            "json_fields": dict(
-                record_count=len(df_with_partitions),
-                base_path=gcs_base_path,
-                partition_cols=partition_cols,
-            )
-        },
+        extra=dict(
+            record_count=len(df_with_partitions),
+            base_path=gcs_base_path,
+            partition_cols=partition_cols,
+        ),
     )
 
     # Convert Polars DF to PyArrow Table
@@ -398,15 +396,13 @@ def workflow(params: dict[str, Any]) -> str | None:
         base_data = fetch_base_data(params)
         if base_data.is_empty():
             logger.info(
-                f"Skipping workflow: invalid base_data in {params['saleyardId']}",
-                extra={
-                    "json_fields": dict(
-                        params=params,
-                        height=base_data.height,
-                        width=base_data.width,
-                        columns=list(base_data.columns),
-                    )
-                },
+                f"Skipping workflow: invalid base_data in {params['saleyardID']}",
+                extra=dict(
+                    params=params,
+                    height=base_data.height,
+                    width=base_data.width,
+                    columns=list(base_data.columns),
+                ),
             )
             return None
 

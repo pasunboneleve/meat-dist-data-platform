@@ -7,8 +7,6 @@ from airflow import DAG
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
 from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.providers.standard.operators.trigger_dagrun import \
-    TriggerDagRunOperator
 from airflow.sdk import task
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
@@ -98,14 +96,6 @@ wait_bronze = GCSObjectsWithPrefixExistenceSensor(
     dag=dag,
 )
 
-# Task 4: Trigger Silver transform DAG
-trigger_transform = TriggerDagRunOperator(
-    task_id="trigger_bronze_to_silver",
-    trigger_dag_id="bronze_to_silver_dv2",
-    wait_for_completion=True,
-    dag=dag,
-)
-
 end = EmptyOperator(task_id="end", dag=dag)
 
-config >> trigger_ingestion >> wait_bronze >> trigger_transform >> end
+config >> trigger_ingestion >> wait_bronze >> end

@@ -1,4 +1,3 @@
-import hashlib
 import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
@@ -9,6 +8,7 @@ from airflow.providers.google.cloud.operators.dataproc import \
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
 from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
 from airflow.sdk import DAG, task
 
 default_args = {
@@ -42,14 +42,18 @@ def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
 
 config = get_config()
 
-# Task 1: Verify new Bronze files for yesterday
-verify_bronze = GCSObjectsWithPrefixExistenceSensor(
-    task_id="verify_new_bronze",
-    bucket=os.environ["BRONZE_BUCKET"],
-    prefix="{{ ti.xcom_pull(task_ids='get_config')['target_prefix'] }}",
-    google_cloud_conn_id="google_cloud_default",
-    timeout=300,  # Short for testing (5min)
-    poke_interval=60,  # Poke every 1min
+start = EmptyOperator(task_id="start", dag=dag)
+
+wait_for_ingestion = ExternalTaskSensor(
+    task_id="wait_for_ingestion",
+    external_dag_id="daily_synthetic_ingestion",
+    external_task_id="end",
+    allowed_states=["success"],
+    failed_states=["failed", "skipped"],
+    execution_date_fn=lambda dt: dt,
+    timeout=7200,  # 2 hours
+    poke_interval=600,  # 10 mins
+    mode="reschedule",
     dag=dag,
 )
 
@@ -119,4 +123,4 @@ verify_silver = GCSObjectsWithPrefixExistenceSensor(
 
 end = EmptyOperator(task_id="end", dag=dag)
 
-config >> verify_bronze >> spark_transform >> verify_silver >> end
+config >> start >> wait_for_ingestion >> spark_transform >> verify_silver >> end

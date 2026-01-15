@@ -41,3 +41,11 @@ resource "google_cloud_run_v2_service_iam_member" "dataproc_serverless_invoker" 
   role     = "roles/run.invoker"
   member   = "serviceAccount:dataproc-serverless@meatislife.iam.gserviceaccount.com"
 }
+
+resource "google_project_iam_member" "cloud_run_log_writer" {
+  project = var.project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.ingestion_sa.email}"
+
+  depends_on = [google_service_account.ingestion_sa]
+}

@@ -3,16 +3,13 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
 import requests
-from airflow import DAG
-from airflow.models.dataset import Dataset
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
-from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.sdk import task
+from airflow.sdk import Asset, asset, dag
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
 
-bronze_carcasses_dataset = Dataset(f"gcs://{os.environ.get('BRONZE_BUCKET')}/carcasses")
+bronze_carcasses_dataset = Asset(f"gcs://{os.environ.get('BRONZE_BUCKET')}/carcasses")
 
 default_args = {
     "owner": "data-eng",
@@ -20,7 +17,8 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
-dag = DAG(
+
+@dag(
     dag_id="daily_synthetic_ingestion",
     default_args=default_args,
     description="Daily trigger for synthetic meat ingestion to Bronze GCS",
@@ -29,28 +27,23 @@ dag = DAG(
     catchup=False,
     tags=["ingestion", "bronze"],
 )
+def daily_synthetic_ingestion_dag():
+    @asset
+    def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
+        """Load config from Airflow Variables."""
+        logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore
+        target_date_str = logical_date.isoformat()
+        prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day}/"
+        return {
+            "from_date_str": target_date_str,
+            "to_date_str": target_date_str,
+            "target_prefix": prefix,
+        }
 
+    @asset
+    def trigger_synthetic_meat_ingestion(config: Dict[str, str]) -> None:
+        url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
 
-@task(dag=dag)
-def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
-    """Load config from Airflow Variables."""
-    logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore
-    target_date_str = logical_date.isoformat()
-    prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day}/"
-    return {
-        "from_date_str": target_date_str,
-        "to_date_str": target_date_str,
-        "target_prefix": prefix,
-    }
-
-
-config = get_config()
-
-
-@task(dag=dag)
-def trigger_synthetic_meat_ingestion(**context: Dict[str, Any]) -> None:
-    config = context["ti"].xcom_pull(task_ids="get_config")  # type: ignore
-    url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
     payload = {
         "from_date": config["from_date_str"],
         "to_date": config["to_date_str"],
@@ -85,21 +78,22 @@ def trigger_synthetic_meat_ingestion(**context: Dict[str, Any]) -> None:
     except Exception as e:
         raise Exception(f"Failed to trigger ingestor: {e}") from e
 
+    # Task 3: GCS sensor using the bucket from XCom
+    @asset(outlets=[bronze_carcasses_dataset])
+    def wait_for_bronze_data(trigger_synthetic_meat_ingestion: None):
+        """Waits for the bronze data to land after the ingestion trigger."""
+        return GCSObjectsWithPrefixExistenceSensor(
+            task_id="wait_for_bronze_data_sensor",
+            bucket=os.environ["BRONZE_BUCKET"],
+            prefix="{{ task_instance.xcom_pull(task_ids='get_config', key='return_value')['target_prefix'] }}",
+            google_cloud_conn_id="google_cloud_default",
+            timeout=7200,
+            poke_interval=600,
+        )
 
-trigger_ingestion = trigger_synthetic_meat_ingestion()
+    config = get_config()
+    triggered = trigger_synthetic_meat_ingestion(config)
+    wait_for_bronze_data(triggered)
 
-# Task 3: GCS sensor using the bucket from XCom
-wait_bronze = GCSObjectsWithPrefixExistenceSensor(
-    task_id="wait_for_bronze_data",
-    bucket=os.environ["BRONZE_BUCKET"],
-    prefix="{{ ti.xcom_pull(task_ids='get_config')['target_prefix'] }}",
-    google_cloud_conn_id="google_cloud_default",
-    timeout=7200,
-    poke_interval=600,
-    dag=dag,
-    outlets=[bronze_carcasses_dataset],
-)
 
-end = EmptyOperator(task_id="end", dag=dag)
-
-config >> trigger_ingestion >> wait_bronze >> end
+daily_synthetic_ingestion_dag()

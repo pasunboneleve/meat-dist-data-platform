@@ -2,8 +2,7 @@ import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
-from airflow.datasets import Dataset
-from airflow.decorators import asset, dag
+from airflow.datasets import Dataset, asset, dag
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
 from airflow.providers.google.cloud.sensors.gcs import \
@@ -16,7 +15,9 @@ default_args = {
 }
 
 bronze_carcasses_dataset = Dataset(f"gcs://{os.environ.get('BRONZE_BUCKET')}/carcasses")
-silver_dv2_dataset = Dataset(f"gcs://{os.environ.get('SILVER_BUCKET')}/iceberg_warehouse")
+silver_dv2_dataset = Dataset(
+    f"gcs://{os.environ.get('SILVER_BUCKET')}/iceberg_warehouse"
+)
 
 
 @dag(
@@ -100,7 +101,6 @@ def bronze_to_silver_dv2_dag():
             timeout=300,
             poke_interval=30,
         )
-
 
 
 bronze_to_silver_dv2_dag()

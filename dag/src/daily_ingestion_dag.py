@@ -3,8 +3,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
 import requests
-from airflow.datasets import Dataset
-from airflow.decorators import asset, dag
+from airflow.datasets import Dataset, asset, dag
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
 from google.auth.transport.requests import Request
@@ -91,7 +90,6 @@ def daily_synthetic_ingestion_dag():
             timeout=7200,
             poke_interval=600,
         )
-
 
 
 daily_synthetic_ingestion_dag()

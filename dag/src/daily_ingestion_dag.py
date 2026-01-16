@@ -86,7 +86,7 @@ def daily_synthetic_ingestion():
         mode="reschedule",
     )
     def wait_for_bronze_data(config: dict) -> PokeReturnValue:
-        hook = GCSHook(google_cloud_conn_id="google_cloud_default")
+        hook = GCSHook(gcp_conn_id="google_cloud_default")
 
         # Poke logic: check if prefix has objects
         objects = hook.list(

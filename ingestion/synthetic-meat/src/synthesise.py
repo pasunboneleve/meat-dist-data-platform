@@ -178,6 +178,7 @@ def generate_synthetic_carcasses(
 
     categories = base_df["category"].unique().to_list()
     indicator_id = base_df.get_column("indicator_id").item()
+    saleyard_id = base_df.get_column("saleyard_id").item()
 
     if num_records == 0:
         logger.info(
@@ -199,6 +200,7 @@ def generate_synthetic_carcasses(
         "plant_id": [f"P{random.randint(1, 5):02d}" for _ in range(num_records)],
         "animal_class": [random.choice(categories) for _ in range(num_records)],
         "indicator_id": [indicator_id] * num_records,
+        "saleyard_id": [saleyard_id] * num_records,
         "hscw_kg": [
             round(random.normalvariate(320, 40), 2) for _ in range(num_records)
         ],

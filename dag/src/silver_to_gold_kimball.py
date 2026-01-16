@@ -3,10 +3,10 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
 from airflow import DAG
+from airflow.models.dataset import Dataset
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
 from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
 from airflow.sdk import task
 
 default_args = {
@@ -15,11 +15,16 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
+silver_dv2_dataset = Dataset(f"gcs://{os.environ.get('SILVER_BUCKET')}/iceberg_warehouse")
+gold_kimball_dataset = Dataset(
+    f"gcs://{os.environ.get('GOLD_BUCKET')}/fact_carcass_transactions"
+)
+
 dag = DAG(
     dag_id="silver_to_gold_kimball",
     default_args=default_args,
     description="Silver Iceberg to Gold Kimball transform via Dataproc Serverless Spark",
-    schedule="@daily",
+    schedule=[silver_dv2_dataset],
     start_date=datetime(2024, 1, 1, tzinfo=UTC),
     catchup=False,
     tags=["transform", "gold", "dataproc", "iceberg", "kimball"],
@@ -39,19 +44,6 @@ def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
 config = get_config()
 
 start = EmptyOperator(task_id="start", dag=dag)
-
-wait_for_silver = ExternalTaskSensor(
-    task_id="wait_for_silver_transform",
-    external_dag_id="bronze_to_silver_dv2",
-    external_task_id="end",
-    allowed_states=["success"],
-    failed_states=["failed", "skipped"],
-    execution_date_fn=lambda dt: dt,
-    timeout=7200,  # 2 hours
-    poke_interval=600,  # 10 mins
-    mode="reschedule",
-    dag=dag,
-)
 
 # Task for Spark transform
 spark_transform_gold = DataprocCreateBatchOperator(
@@ -86,8 +78,9 @@ spark_transform_gold = DataprocCreateBatchOperator(
         },
     },
     gcp_conn_id="google_cloud_default",
+    outlets=[gold_kimball_dataset],
 )
 
 end = EmptyOperator(task_id="end", dag=dag)
 
-config >> start >> wait_for_silver >> spark_transform_gold >> end
+config >> start >> spark_transform_gold >> end

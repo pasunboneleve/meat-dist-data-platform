@@ -3,13 +3,13 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
 from airflow import DAG
+from airflow.models.dataset import Dataset
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
 from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
-from airflow.sdk import DAG, task
+from airflow.sdk import task
 
 default_args = {
     "owner": "data-eng",
@@ -17,11 +17,15 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
+bronze_carcasses_dataset = Dataset(f"gcs://{os.environ.get('BRONZE_BUCKET')}/carcasses")
+silver_dv2_dataset = Dataset(f"gcs://{os.environ.get('SILVER_BUCKET')}/iceberg_warehouse")
+
+
 dag = DAG(
     dag_id="bronze_to_silver_dv2",
     default_args=default_args,
     description="Bronze Parquet to Silver DV2 Iceberg transform via Dataproc Serverless Spark",
-    schedule="@daily",
+    schedule=[bronze_carcasses_dataset],
     start_date=datetime(2024, 1, 1, tzinfo=UTC),
     catchup=False,
     tags=["transform", "silver", "dataproc", "iceberg"],
@@ -43,19 +47,6 @@ def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
 config = get_config()
 
 start = EmptyOperator(task_id="start", dag=dag)
-
-wait_for_ingestion = ExternalTaskSensor(
-    task_id="wait_for_ingestion",
-    external_dag_id="daily_synthetic_ingestion",
-    external_task_id="end",
-    allowed_states=["success"],
-    failed_states=["failed", "skipped"],
-    execution_date_fn=lambda dt: dt,
-    timeout=7200,  # 2 hours
-    poke_interval=600,  # 10 mins
-    mode="reschedule",
-    dag=dag,
-)
 
 # Task 2: Spark transform
 spark_transform = DataprocCreateBatchOperator(
@@ -119,8 +110,9 @@ verify_silver = GCSObjectsWithPrefixExistenceSensor(
     timeout=300,
     poke_interval=30,
     dag=dag,
+    outlets=[silver_dv2_dataset],
 )
 
 end = EmptyOperator(task_id="end", dag=dag)
 
-config >> start >> wait_for_ingestion >> spark_transform >> verify_silver >> end
+config >> start >> spark_transform >> verify_silver >> end

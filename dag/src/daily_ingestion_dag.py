@@ -4,12 +4,15 @@ from typing import Any, Dict
 
 import requests
 from airflow import DAG
+from airflow.models.dataset import Dataset
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import task
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
+
+bronze_carcasses_dataset = Dataset(f"gcs://{os.environ.get('BRONZE_BUCKET')}/carcasses")
 
 default_args = {
     "owner": "data-eng",
@@ -94,6 +97,7 @@ wait_bronze = GCSObjectsWithPrefixExistenceSensor(
     timeout=7200,
     poke_interval=600,
     dag=dag,
+    outlets=[bronze_carcasses_dataset],
 )
 
 end = EmptyOperator(task_id="end", dag=dag)

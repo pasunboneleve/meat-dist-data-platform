@@ -2,11 +2,11 @@ import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
-from airflow.datasets import Dataset, asset, dag
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
+from airflow.sdk import Asset, dag, task
 
 default_args = {
     "owner": "data-eng",
@@ -14,41 +14,59 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
-bronze_carcasses_dataset = Dataset(f"gcs://{os.environ.get('BRONZE_BUCKET')}/carcasses")
-silver_dv2_dataset = Dataset(
-    f"gcs://{os.environ.get('SILVER_BUCKET')}/iceberg_warehouse"
+# Define assets (use uri=...; name=... is optional but helpful in UI)
+BRONZE_BUCKET = os.environ.get("BRONZE_BUCKET")
+SILVER_BUCKET = os.environ.get("SILVER_BUCKET")
+
+bronze_carcasses_asset = Asset(
+    uri=f"gcs://{BRONZE_BUCKET}/carcasses",
+    name="bronze_carcasses_partitioned",
+    extra={"layer": "bronze"},
+)
+
+silver_dv2_asset = Asset(
+    uri=f"gcs://{SILVER_BUCKET}/iceberg_warehouse",
+    name="silver_dv2_iceberg",
+    extra={"layer": "silver", "format": "iceberg"},
 )
 
 
 @dag(
     dag_id="bronze_to_silver_dv2",
     default_args=default_args,
-    description="Bronze Parquet to Silver DV2 Iceberg transform via Dataproc Serverless Spark",
-    schedule=[bronze_carcasses_dataset],
+    description="Bronze Parquet → Silver DV2 Iceberg via Dataproc Serverless Spark",
+    schedule=[bronze_carcasses_asset],  # triggers when bronze asset is updated
     start_date=datetime(2024, 1, 1, tzinfo=UTC),
     catchup=False,
     tags=["transform", "silver", "dataproc", "iceberg"],
+    max_active_runs=1,
 )
-def bronze_to_silver_dv2_dag():
-    @asset
+def bronze_to_silver_dv2():
+    @task
     def get_config(**context: Dict[str, Any]) -> Dict[str, str]:
-        """Load config from Airflow Variables."""
-        logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore
+        logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore[arg-type]
         target_date_str = logical_date.isoformat()
-        prefix = f"carcasses/year={logical_date.year}/month={logical_date.month}/day={logical_date.day}/"
+        prefix = (
+            f"carcasses/year={logical_date.year}/"
+            f"month={logical_date.month:02d}/"  # zero-pad for consistency
+            f"day={logical_date.day:02d}/"
+        )
         return {
             "target_date_str": target_date_str,
             "target_prefix": prefix,
         }
 
-    @asset
-    def spark_transform(config: Dict[str, Any]):
-        """Submits the Bronze to Silver Spark job."""
+    @task
+    def submit_spark_transform(config: Dict[str, str]):
+        # Return the operator instance (TaskFlow will .execute() it)
         return DataprocCreateBatchOperator(
             task_id="transform_dv2_iceberg",
-            project_id=f"{os.environ['GCP_PROJECT_ID']}",
-            region=f"{os.environ['DATAPROC_REGION']}",
-            batch_id="bronze-to-silver-dv2-{{ ds_nodash }}-{{ ts_nodash | replace('T', '') | replace('+', '-') | lower }}-{{ ti.try_number }}",
+            project_id=os.environ["GCP_PROJECT_ID"],
+            region=os.environ["DATAPROC_REGION"],
+            batch_id=(
+                "bronze-to-silver-dv2-{{ ds_nodash }}-{{ ts_nodash | replace('T', '') "
+                "| replace('+', '-') | lower }}-{{ ti.try_number }}"
+            ),
             batch={
                 "pyspark_batch": {
                     "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",
@@ -62,7 +80,7 @@ def bronze_to_silver_dv2_dag():
                         "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                         "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
                         "spark.sql.catalog.spark_catalog.type": "hadoop",
-                        "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
+                        "spark.sql.catalog.spark_catalog.warehouse": f"gs://{SILVER_BUCKET}/iceberg_warehouse/",
                         "spark.executor.instances": "2",
                         "spark.executor.cores": "4",
                         "spark.executor.memory": "4g",
@@ -72,12 +90,14 @@ def bronze_to_silver_dv2_dag():
                         "spark.sql.execution_date": "{{ ds }}",
                         "spark.sql.bronze_bucket": os.environ["BRONZE_BUCKET"],
                         "spark.sql.silver_bucket": os.environ["SILVER_BUCKET"],
-                        "spark.sql.target_date_str": "{{ task_instance.xcom_pull(task_ids='get_config', key='return_value')['target_date_str'] }}",
+                        "spark.sql.target_date_str": config[
+                            "target_date_str"
+                        ],  # ← from upstream
                     },
                 },
                 "environment_config": {
                     "execution_config": {
-                        "service_account": f"{os.environ['DATAPROC_BATCH_SERVICE_ACCOUNT']}",
+                        "service_account": os.environ["DATAPROC_BATCH_SERVICE_ACCOUNT"],
                     }
                 },
                 "labels": {
@@ -90,17 +110,40 @@ def bronze_to_silver_dv2_dag():
             gcp_conn_id="google_cloud_default",
         )
 
-    @asset(outlets=[silver_dv2_dataset])
-    def verify_silver(spark_transform: None):
-        """Checks for the creation of Silver Iceberg table metadata."""
-        return GCSObjectsWithPrefixExistenceSensor(
+    @task.sensor
+    def verify_silver(config: Dict[str, str]):
+        from airflow.sdk import \
+            get_current_context  # safe import inside task if needed
+
+        sensor = GCSObjectsWithPrefixExistenceSensor(
             task_id="verify_silver_tables",
-            bucket=os.environ["SILVER_BUCKET"],
-            prefix="iceberg_warehouse/default/hub_carcass/metadata/",
+            bucket=SILVER_BUCKET,  # type: ignore[arg-type]
+            prefix="iceberg_warehouse/default/hub_carcass/metadata/",  # adjust if dynamic
             google_cloud_conn_id="google_cloud_default",
             timeout=300,
             poke_interval=30,
+            mode="reschedule",  # free worker while polling
+            # deferrable=True,  # enable if your Airflow supports deferrable operators
         )
 
+        context = get_current_context()
+        sensor.execute(context=context)
 
-bronze_to_silver_dv2_dag()
+        return config  # optional pass-through
+
+    # Chain + produce silver asset on final success
+    config = get_config()
+    spark_job = submit_spark_transform(config)  # type: ignore[arg-type]
+    waited = verify_silver(spark_job)  # type: ignore[arg-type]
+
+    @task(outlets=[silver_dv2_asset])
+    def mark_silver_produced(config: Dict[str, str]):
+        print(
+            f"Silver DV2 Iceberg asset produced for date: {config['target_date_str']}"
+        )
+        # Optional: add lightweight checks, notifications, etc.
+
+    mark_silver_produced(waited)  # type: ignore[arg-type]
+
+
+bronze_to_silver_dv2()

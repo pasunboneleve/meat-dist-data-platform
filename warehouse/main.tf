@@ -210,7 +210,7 @@ resource "google_dataplex_asset" "silver_asset" {
   name          = "silver-storage"
   display_name  = "Silver GCS Bucket"
   discovery_spec {
-    enabled = true
+    enabled          = true
     exclude_patterns = ["iceberg_warehouse/*/metadata/**"]
   }
   resource_spec {
@@ -267,7 +267,11 @@ resource "google_composer_environment" "meat_composer" {
         GOLD_BUCKET                    = google_storage_bucket.gold_bucket.name
         DEPS_BUCKET                    = google_storage_bucket.deps_bucket.name
         CATALOG_NAME                   = google_biglake_catalog.meat_iceberg.name
-
+      }
+      airflow_config_overrides = {
+        "scheduler-min_file_process_interval" = "30" # default is higher (often ~120–300 in practice)
+        "scheduler-dag_dir_list_interval"     = "30" # how often to look for new files
+        "scheduler-parsing_processes"         = "2"  # or 4 if you give DAG processor more CPU
       }
     }
 
@@ -295,6 +299,12 @@ resource "google_composer_environment" "meat_composer" {
         cpu       = 0.5
         memory_gb = 2.0
         count     = 1
+      }
+      dag_processor {
+        cpu        = 0.5 # or 1.0 if budget allows
+        memory_gb  = 2
+        storage_gb = 1
+        count      = 1 # usually 1 is enough for personal use
       }
     }
 

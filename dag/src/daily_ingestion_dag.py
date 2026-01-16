@@ -7,6 +7,7 @@ from airflow.sdk import Context, PokeReturnValue, dag, task
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
 
+from asset_utils import emit_asset_with_metadata
 from assets import bronze_carcasses_asset
 
 # Env vars – set these in Airflow UI (Admin > Variables) or container env
@@ -46,7 +47,7 @@ def daily_synthetic_ingestion():
             f"day={logical_date.day:02d}/"
         )
         return {
-            "from_date_str": target_date_str,
+            "target_date_str": target_date_str,
             "to_date_str": target_date_str,
             "target_prefix": prefix,
         }
@@ -56,7 +57,7 @@ def daily_synthetic_ingestion():
         url = SYNTHETIC_MEAT_URL.strip().rstrip("/")  # type: ignore[arg-type]
 
         payload = {
-            "from_date": config["from_date_str"],
+            "from_date": config["target_date_str"],
             "to_date": config["to_date_str"],
         }
         print(f"Triggering ingestion for {payload}")
@@ -103,31 +104,18 @@ def daily_synthetic_ingestion():
         return PokeReturnValue(is_done=False)
 
     @task(outlets=[bronze_carcasses_asset])
-    def mark_asset_produced(config: dict, **context):
-        from airflow.sdk import Asset
+    def mark_asset_produced(config: dict[str, str], **context):
+        print(f"Bronze asset produced for date: {config['target_date_str']}")
 
-        print(f"Bronze asset produced for prefix: {config['target_prefix']}")
-
-        outlet_events = context.get("outlet_events")
-        if outlet_events is None:
-            print("outlet_events not available in context — skipping dynamic metadata")
-            return config  # or whatever
-
-        dated_asset = Asset(
-            uri=bronze_carcasses_asset.uri,
+        emit_asset_with_metadata(
+            context=context,
+            asset=bronze_carcasses_asset,
             extra={
-                "target_date_str": config.get("target_date_str"),
-                "partition_prefix": config.get("target_prefix"),
-                # Use .get() to avoid KeyError if config keys are missing
+                "target_date_str": config["target_date_str"],
+                "target_prefix": config.get("target_prefix"),
             },
+            log_prefix="Emitted silver_dv2_asset",
         )
-
-        if bronze_carcasses_asset in outlet_events:
-            outlet_events[bronze_carcasses_asset].add(dated_asset)
-        else:
-            print("bronze_carcasses_asset not in outlet_events — metadata skipped")
-
-        return config
 
     # Chain tasks – TaskFlow passes config via XCom automatically
 

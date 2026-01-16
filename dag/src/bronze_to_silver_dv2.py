@@ -1,5 +1,5 @@
 import os
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Dict
 
 from airflow.providers.google.cloud.operators.dataproc import \
@@ -8,6 +8,7 @@ from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
 from airflow.sdk import dag, get_current_context, task
 
+from asset_utils import emit_asset_with_metadata
 from assets import bronze_carcasses_asset, silver_dv2_asset
 from config_utils import get_target_config
 
@@ -113,18 +114,27 @@ def bronze_to_silver_dv2():
 
         return config
 
-    # Chain
-    config = get_config()
-    spark_job = submit_spark_transform(config)  # type: ignore[arg-type]
-    waited = verify_silver(spark_job)  # type: ignore[arg-type]
-
     @task(outlets=[silver_dv2_asset])
-    def mark_silver_produced(config: Dict[str, str], **context):
+    def mark_asset_produced(config: Dict[str, str], **context):
         print(
             f"Silver DV2 Iceberg asset produced for date: {config['target_date_str']}"
         )
 
-    mark_silver_produced(waited)  # type: ignore[arg-type]
+        emit_asset_with_metadata(
+            context=context,
+            asset=silver_dv2_asset,
+            extra={
+                "target_date_str": config["target_date_str"],
+                "target_prefix": config.get("target_prefix"),
+            },
+            log_prefix="Emitted silver_dv2_asset",
+        )
+
+    # Chain
+    config = get_config()
+    spark_job = submit_spark_transform(config)  # type: ignore[arg-type]
+    waited = verify_silver(spark_job)  # type: ignore[arg-type]
+    mark_asset_produced(waited)  # type: ignore[arg-type]
 
 
 bronze_to_silver_dv2()

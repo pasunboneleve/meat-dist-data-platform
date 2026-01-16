@@ -271,7 +271,6 @@ resource "google_composer_environment" "meat_composer" {
       airflow_config_overrides = {
         "scheduler-min_file_process_interval" = "30" # default is higher (often ~120–300 in practice)
         "scheduler-dag_dir_list_interval"     = "30" # how often to look for new files
-        "scheduler-parsing_processes"         = "2"  # or 4 if you give DAG processor more CPU
       }
     }
 

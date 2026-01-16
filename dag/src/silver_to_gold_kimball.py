@@ -72,6 +72,9 @@ def silver_to_gold_kimball():
                         "service_account": os.environ["DATAPROC_BATCH_SERVICE_ACCOUNT"],
                     }
                 },
+                "labels": {
+                    "layer": "silver-to-gold",
+                },
             },
             gcp_conn_id="google_cloud_default",
         )

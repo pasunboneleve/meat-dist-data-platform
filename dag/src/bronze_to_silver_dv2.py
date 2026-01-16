@@ -88,10 +88,7 @@ def bronze_to_silver_dv2():
                     }
                 },
                 "labels": {
-                    "dag_id": "bronze-to-silver-dv2",
-                    "date": "{{ ds_nodash }}",
-                    "run_id_hash": "{{ ts_nodash | replace('T', '') | replace('+', '-') | lower }}",
-                    "try_number": "{{ ti.try_number }}",
+                    "layer": "bronze-to-silver",
                 },
             },
             gcp_conn_id="google_cloud_default",

@@ -4,29 +4,15 @@ from typing import Dict
 
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
-from airflow.sdk import Asset, dag, task
+from airflow.sdk import dag, task
+
+from assets import gold_kimball_asset, silver_dv2_asset
 
 default_args = {
     "owner": "data-eng",
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
-
-# Define assets
-SILVER_BUCKET = os.environ.get("SILVER_BUCKET")
-GOLD_BUCKET = os.environ.get("GOLD_BUCKET")
-
-silver_dv2_asset = Asset(
-    uri=f"gcs://{SILVER_BUCKET}/iceberg_warehouse",
-    name="silver_dv2_iceberg",
-    extra={"layer": "silver", "format": "iceberg"},
-)
-
-gold_kimball_asset = Asset(
-    uri=f"gcs://{GOLD_BUCKET}/fact_carcass_transactions",
-    name="gold_kimball_fact_carcass_transactions",
-    extra={"layer": "gold", "model": "kimball"},
-)
 
 
 @dag(
@@ -72,7 +58,7 @@ def silver_to_gold_kimball():
                         "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                         "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
                         "spark.sql.catalog.spark_catalog.type": "hadoop",
-                        "spark.sql.catalog.spark_catalog.warehouse": f"gs://{SILVER_BUCKET}/iceberg_warehouse/",
+                        "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
                         "spark.sql.execution_date": "{{ ds }}",
                         "spark.sql.gold_bucket": os.environ["GOLD_BUCKET"],
                         "spark.sql.silver_bucket": os.environ["SILVER_BUCKET"],

@@ -6,29 +6,15 @@ from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
-from airflow.sdk import Asset, dag, task
+from airflow.sdk import dag, task
+
+from assets import bronze_carcasses_asset, silver_dv2_asset
 
 default_args = {
     "owner": "data-eng",
     "retries": 0,
     "retry_delay": timedelta(minutes=5),
 }
-
-# Define assets (use uri=...; name=... is optional but helpful in UI)
-BRONZE_BUCKET = os.environ.get("BRONZE_BUCKET")
-SILVER_BUCKET = os.environ.get("SILVER_BUCKET")
-
-bronze_carcasses_asset = Asset(
-    uri=f"gcs://{BRONZE_BUCKET}/carcasses",
-    name="bronze_carcasses_partitioned",
-    extra={"layer": "bronze"},
-)
-
-silver_dv2_asset = Asset(
-    uri=f"gcs://{SILVER_BUCKET}/iceberg_warehouse",
-    name="silver_dv2_iceberg",
-    extra={"layer": "silver", "format": "iceberg"},
-)
 
 
 @dag(
@@ -80,7 +66,7 @@ def bronze_to_silver_dv2():
                         "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                         "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
                         "spark.sql.catalog.spark_catalog.type": "hadoop",
-                        "spark.sql.catalog.spark_catalog.warehouse": f"gs://{SILVER_BUCKET}/iceberg_warehouse/",
+                        "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
                         "spark.executor.instances": "2",
                         "spark.executor.cores": "4",
                         "spark.executor.memory": "4g",

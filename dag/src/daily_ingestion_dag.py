@@ -4,10 +4,11 @@ from datetime import UTC, date, datetime, timedelta
 import requests
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
-from airflow.sdk import dag  # Airflow 3+ preferred imports
-from airflow.sdk import Asset, Context, get_current_context, task
+from airflow.sdk import Context, dag, get_current_context, task
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
+
+from assets import bronze_carcasses_asset
 
 # Env vars – set these in Airflow UI (Admin > Variables) or container env
 BRONZE_BUCKET = os.environ.get("BRONZE_BUCKET")
@@ -17,13 +18,6 @@ if not all([BRONZE_BUCKET, SYNTHETIC_MEAT_URL]):
     raise ValueError(
         "Missing required env vars: BRONZE_BUCKET and/or SYNTHETIC_MEAT_URL"
     )
-
-# The asset downstream DAGs can depend on
-bronze_carcasses_asset = Asset(
-    uri=f"gcs://{BRONZE_BUCKET}/carcasses",
-    name="bronze_carcasses_daily",  # friendly name in UI
-    extra={"layer": "bronze", "type": "synthetic_meat_ingestion"},
-)
 
 default_args = {
     "owner": "data-eng",

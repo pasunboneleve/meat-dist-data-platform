@@ -269,9 +269,9 @@ def write_to_gcs(
 
     # Add date parts as columns for partitioning
     df_with_partitions = df.with_columns(
-        pl.lit(target_date.year).alias("year"),
-        pl.lit(target_date.month).alias("month"),
-        pl.lit(target_date.day).alias("day"),
+        pl.lit(str(target_date.year)).alias("year"),
+        pl.lit(f"{target_date.month:02d}").alias("month"),
+        pl.lit(f"{target_date.day:02d}").alias("day"),
     )
 
     gcs_base_path = f"{bucket_name}/carcasses"

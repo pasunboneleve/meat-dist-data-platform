@@ -34,8 +34,8 @@ def bronze_to_silver_dv2():
         target_date_str = logical_date.isoformat()
         prefix = (
             f"carcasses/year={logical_date.year}/"
-            f"month={logical_date.month:02d}/"  # zero-pad for consistency
-            f"day={logical_date.day:02d}/"
+            f"month={logical_date.month}/"
+            f"day={logical_date.day}/"
         )
         return {
             "target_date_str": target_date_str,

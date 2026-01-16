@@ -10,7 +10,7 @@ from airflow.sdk import dag, get_current_context, task
 
 from asset_utils import emit_asset_with_metadata
 from assets import bronze_carcasses_asset, silver_dv2_asset
-from config_utils import get_target_config
+from config_utils import generate_dataproc_batch_id, get_target_config
 
 default_args = {
     "owner": "data-eng",
@@ -48,14 +48,14 @@ def bronze_to_silver_dv2():
 
     @task
     def submit_spark_transform(config: Dict[str, str]):
+        batch_id = generate_dataproc_batch_id(
+            prefix="bronze-to-silver-dv2",
+        )
         operator = DataprocCreateBatchOperator(
             task_id="transform_dv2_iceberg",
             project_id=os.environ["GCP_PROJECT_ID"],
             region=os.environ["DATAPROC_REGION"],
-            batch_id=(
-                "bronze-to-silver-dv2-{{ ds_nodash }}-{{ ts_nodash | replace('T', '') "
-                "| replace('+', '-') | lower }}-{{ ti.try_number }}"
-            ),
+            batch_id=batch_id,
             batch={
                 "pyspark_batch": {
                     "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",

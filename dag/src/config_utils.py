@@ -1,15 +1,14 @@
-from datetime import date, timedelta
-from typing import Dict
+from datetime import UTC, date, datetime, timedelta
 
-from airflow.sdk import Asset
+from airflow.sdk import Asset, Context, get_current_context
 
 
 def get_target_config(
-    context: Dict,
+    context: dict,
     upstream_asset: Asset,
     date_offset_days: int = 1,
     metadata_key: str = "target_date_str",
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Reusable function to resolve target_date_str and prefix.
 
@@ -89,3 +88,57 @@ def get_target_config(
         "target_date_str": target_date_str,
         "target_prefix": prefix,
     }
+
+
+def generate_dataproc_batch_id(
+    prefix: str = "bronze-to-silver-dv2",
+    context: Context | None = None,
+    max_length: int = 63,
+) -> str:
+    """
+    Generates a valid Dataproc batch_id that conforms to:
+    - Pattern: [a-z0-9][a-z0-9\\-]{2,61}[a-z0-9]
+    - Only lowercase letters, numbers, and dashes
+    - Starts and ends with letter or number
+    - Length: up to 63 characters (Dataproc limit)
+
+    Uses runtime context values (ds_nodash, ts_nodash, try_number).
+
+    Args:
+        prefix: Optional custom prefix (default: "bronze-to-silver-dv2")
+        context: Airflow context dict (if None, fetches via get_current_context)
+        max_length: Maximum allowed length (default 63)
+
+    Returns:
+        A valid, lowercase batch_id string
+    """
+    if context is None:
+        context = get_current_context()
+
+    # Extract rendered macro values
+    ds_nodash = context.get("ds_nodash", datetime.now(UTC).strftime("%Y%m%d"))
+    ts_nodash = context.get("ts_nodash", datetime.now(UTC).strftime("%Y%m%d%H%M%S"))
+    ts_clean = ts_nodash.replace("T", "").replace("+", "-").lower()
+    try_number = context["ti"].try_number if "ti" in context else 1
+
+    # Build base ID
+    batch_id = f"{prefix}-{ds_nodash}-{ts_clean}-try{try_number}"
+
+    # Ensure lowercase (already should be, but enforce)
+    batch_id = batch_id.lower()
+
+    # Truncate if too long (keep suffix for uniqueness)
+    if len(batch_id) > max_length:
+        suffix = f"-try{try_number}"
+        available = max_length - len(suffix)
+        batch_id = batch_id[:available] + suffix
+
+    # Final validation (should always pass, but defensive)
+    if not batch_id[0].isalnum() or not batch_id[-1].isalnum():
+        raise ValueError(
+            f"Generated batch_id does not start/end with alphanumeric: {batch_id}"
+        )
+
+    print(f"Generated Dataproc batch_id: {batch_id} (length: {len(batch_id)})")
+
+    return batch_id

@@ -7,7 +7,7 @@ from airflow.providers.google.cloud.operators.dataproc import \
 from airflow.sdk import dag, get_current_context, task
 
 from assets import gold_kimball_asset, silver_dv2_asset
-from config_utils import get_target_config
+from config_utils import generate_dataproc_batch_id, get_target_config
 
 default_args = {
     "owner": "data-eng",
@@ -39,14 +39,14 @@ def silver_to_gold_kimball():
     @task
     def submit_spark_transform_gold(config: Dict[str, str]):
         """Submits the Silver to Gold Spark batch job."""
+        batch_id = generate_dataproc_batch_id(
+            prefix="silver-to-gold",
+        )
         operator = DataprocCreateBatchOperator(
             task_id="transform_kimball_gold",
             project_id=os.environ["GCP_PROJECT_ID"],
             region=os.environ["DATAPROC_REGION"],
-            batch_id=(
-                "silver-to-gold-{{ ds_nodash }}-{{ ts_nodash | replace('T', '') "
-                "| replace('+', '-') | lower }}-{{ ti.try_number }}"
-            ),
+            batch_id=batch_id,
             batch={
                 "pyspark_batch": {
                     "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_silver_to_gold.py",

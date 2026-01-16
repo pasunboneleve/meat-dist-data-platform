@@ -48,7 +48,7 @@ def bronze_to_silver_dv2():
 
     @task
     def submit_spark_transform(config: Dict[str, str]):
-        return DataprocCreateBatchOperator(
+        operator = DataprocCreateBatchOperator(
             task_id="transform_dv2_iceberg",
             project_id=os.environ["GCP_PROJECT_ID"],
             region=os.environ["DATAPROC_REGION"],
@@ -96,6 +96,7 @@ def bronze_to_silver_dv2():
             },
             gcp_conn_id="google_cloud_default",
         )
+        return operator
 
     @task.sensor
     def verify_silver(config: Dict[str, str]):

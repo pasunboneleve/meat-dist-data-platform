@@ -39,7 +39,7 @@ def silver_to_gold_kimball():
     @task
     def submit_spark_transform_gold(config: Dict[str, str]):
         """Submits the Silver to Gold Spark batch job."""
-        return DataprocCreateBatchOperator(
+        operator = DataprocCreateBatchOperator(
             task_id="transform_kimball_gold",
             project_id=os.environ["GCP_PROJECT_ID"],
             region=os.environ["DATAPROC_REGION"],
@@ -75,6 +75,7 @@ def silver_to_gold_kimball():
             },
             gcp_conn_id="google_cloud_default",
         )
+        return operator
 
     # Chain tasks
     config = get_config()

@@ -4,12 +4,22 @@
 # Filters to target_date partition only (passed via spark.conf)
 
 import hashlib
+import logging
+import sys
 from datetime import date, datetime
 
 from pyspark.sql import SparkSession
 from pyspark.sql.column import Column
 from pyspark.sql.functions import col, dayofmonth, lit, month, udf, year
 from pyspark.sql.types import StringType
+
+# --- CONFIGURATION ---
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger(__name__)
 
 
 class DagConfigError(Exception):
@@ -34,213 +44,242 @@ def main():
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
         .getOrCreate()
     )
+    try:
+        logger.info("Starting Bronze-to-Silver transformation.")
+        # Get params from Spark conf (passed via Airflow templating)
+        bronze_bucket = spark.conf.get("spark.sql.bronze_bucket")
+        silver_bucket = spark.conf.get("spark.sql.silver_bucket")
+        target_date_str = spark.conf.get("spark.sql.target_date_str")  # e.g., "2024-12-27"
+        if not target_date_str:
+            raise DagConfigError("target_date_str missing.")
+        target_date = date.fromisoformat(target_date_str)
+        load_dts = datetime.now().isoformat()
+        logger.info(
+            "Loaded configuration",
+            extra={
+                "bronze_bucket": bronze_bucket,
+                "silver_bucket": silver_bucket,
+                "target_date": target_date_str,
+            },
+        )
 
-    # Get params from Spark conf (passed via Airflow templating)
-    bronze_bucket = spark.conf.get("spark.sql.bronze_bucket")
-    silver_bucket = spark.conf.get("spark.sql.silver_bucket")
-    target_date_str = spark.conf.get("spark.sql.target_date_str")  # e.g., "2024-12-27"
-    if not target_date_str:
-        raise DagConfigError("target_date_str missing.")
-    target_date = date.fromisoformat(target_date_str)
-    load_dts = datetime.now().isoformat()
+        bronze_path = f"gs://{bronze_bucket}/carcasses/"
+        bronze_path += f"year={target_date.year}/month={target_date.month}/day={target_date.day}/*.parquet"
 
-    bronze_path = f"gs://{bronze_bucket}/carcasses/"
-    bronze_path += f"year={target_date.year}/month={target_date.month}/day={target_date.day}/*.parquet"
+        logger.info(f"Reading source Parquet data from {bronze_path}")
+        carcass_df = spark.read.parquet(bronze_path).filter(
+            (year("slaughter_date") == target_date.year)
+            & (month("slaughter_date") == target_date.month)
+            & (dayofmonth("slaughter_date") == target_date.day)
+        )
 
-    carcass_df = spark.read.parquet(bronze_path).filter(
-        (year("slaughter_date") == target_date.year)
-        & (month("slaughter_date") == target_date.month)
-        & (dayofmonth("slaughter_date") == target_date.day)
-    )
+        # Read indicator table
+        logger.info("Reading indicator data.")
+        indicator_df = spark.read.parquet(
+            f"gs://{bronze_bucket}/indicator/indicator.parquet"
+        )
 
-    # Read indicator table
-    indicator_df = spark.read.parquet(
-        f"gs://{bronze_bucket}/indicator/indicator.parquet"
-    )
+        # Cache for multiple uses
+        carcass_df.cache()
+        indicator_df.cache()
 
-    # Cache for multiple uses
-    carcass_df.cache()
-    indicator_df.cache()
+        # Read saleyard table
+        logger.info("Reading saleyard data.")
+        saleyard_df = spark.read.parquet(
+            f"gs://{bronze_bucket}/saleyard/saleyard.parquet"
+        )
+        saleyard_df.cache()
 
-    # Read saleyard table
-    saleyard_df = spark.read.parquet(
-        f"gs://{bronze_bucket}/saleyard/saleyard.parquet"
-    )
-    saleyard_df.cache()
+        # DV2 Entities (simplified, add SCD/eff dates as needed)
+        # Hub_Carcass
+        logger.info("Creating and merging Hub_Carcass.")
+        hub_carcass = carcass_df.select(
+            col("carcass_id").alias("carcass_id"),
+            lit(load_dts).alias("load_dts"),
+            lit("BRONZE").alias("rec_src"),
+        ).distinct()
+        hub_carcass.createOrReplaceTempView("source_hub_carcass")
+        spark.sql("""
+            CREATE TABLE IF NOT EXISTS hub_carcass USING iceberg AS SELECT * FROM source_hub_carcass LIMIT 0
+        """)
+        spark.sql("""
+            MERGE INTO hub_carcass t
+            USING source_hub_carcass s
+            ON t.carcass_id = s.carcass_id
+            WHEN NOT MATCHED THEN INSERT *
+        """)
 
-    # DV2 Entities (simplified, add SCD/eff dates as needed)
-    # Hub_Carcass
-    hub_carcass = carcass_df.select(
-        col("carcass_id").alias("carcass_id"),
-        lit(load_dts).alias("load_dts"),
-        lit("BRONZE").alias("rec_src"),
-    ).distinct()
-    hub_carcass.createOrReplaceTempView("source_hub_carcass")
-    spark.sql("""
-        CREATE TABLE IF NOT EXISTS hub_carcass USING iceberg AS SELECT * FROM source_hub_carcass LIMIT 0
-    """)
-    spark.sql("""
-        MERGE INTO hub_carcass t
-        USING source_hub_carcass s
-        ON t.carcass_id = s.carcass_id
-        WHEN NOT MATCHED THEN INSERT *
-    """)
+        # Hub_Plant
+        logger.info("Creating and merging Hub_Plant.")
+        hub_plant = carcass_df.select(
+            col("plant_id").alias("plant_id"),
+            lit(load_dts).alias("load_dts"),
+            lit("BRONZE").alias("rec_src"),
+        ).distinct()
+        hub_plant.createOrReplaceTempView("source_hub_plant")
+        spark.sql("""
+            CREATE TABLE IF NOT EXISTS hub_plant USING iceberg AS SELECT * FROM source_hub_plant LIMIT 0
+        """)
+        spark.sql("""
+            MERGE INTO hub_plant t
+            USING source_hub_plant s ON t.plant_id = s.plant_id
+            WHEN NOT MATCHED THEN INSERT *
+        """)
 
-    # Hub_Plant
-    hub_plant = carcass_df.select(
-        col("plant_id").alias("plant_id"),
-        lit(load_dts).alias("load_dts"),
-        lit("BRONZE").alias("rec_src"),
-    ).distinct()
-    hub_plant.createOrReplaceTempView("source_hub_plant")
-    spark.sql("""
-        CREATE TABLE IF NOT EXISTS hub_plant USING iceberg AS SELECT * FROM source_hub_plant LIMIT 0
-    """)
-    spark.sql("""
-        MERGE INTO hub_plant t
-        USING source_hub_plant s ON t.plant_id = s.plant_id
-        WHEN NOT MATCHED THEN INSERT *
-    """)
+        # Hub_Indicator (new)
+        logger.info("Creating and merging Hub_Indicator.")
+        hub_indicator = indicator_df.select(
+            col("indicator_id").alias("indicator_id"),
+            lit(load_dts).alias("load_dts"),
+            lit("BRONZE").alias("rec_src"),
+        ).distinct()
+        hub_indicator.createOrReplaceTempView("source_hub_indicator")
+        spark.sql("""
+            CREATE TABLE IF NOT EXISTS hub_indicator USING iceberg AS SELECT * FROM source_hub_indicator LIMIT 0
+        """)
+        spark.sql("""
+            MERGE INTO hub_indicator t
+            USING source_hub_indicator s ON t.indicator_id = s.indicator_id
+            WHEN NOT MATCHED THEN INSERT *
+        """)
 
-    # Hub_Indicator (new)
-    hub_indicator = indicator_df.select(
-        col("indicator_id").alias("indicator_id"),
-        lit(load_dts).alias("load_dts"),
-        lit("BRONZE").alias("rec_src"),
-    ).distinct()
-    hub_indicator.createOrReplaceTempView("source_hub_indicator")
-    spark.sql("""
-        CREATE TABLE IF NOT EXISTS hub_indicator USING iceberg AS SELECT * FROM source_hub_indicator LIMIT 0
-    """)
-    spark.sql("""
-        MERGE INTO hub_indicator t
-        USING source_hub_indicator s ON t.indicator_id = s.indicator_id
-        WHEN NOT MATCHED THEN INSERT *
-    """)
+        # Hub_Saleyard
+        logger.info("Creating and merging Hub_Saleyard.")
+        hub_saleyard = saleyard_df.select(
+            col("saleyard_id").alias("saleyard_id"),
+            lit(load_dts).alias("load_dts"),
+            lit("BRONZE").alias("rec_src"),
+        ).distinct()
+        hub_saleyard.createOrReplaceTempView("source_hub_saleyard")
+        spark.sql("""
+            CREATE TABLE IF NOT EXISTS hub_saleyard USING iceberg AS SELECT * FROM source_hub_saleyard LIMIT 0
+        """)
+        spark.sql("""
+            MERGE INTO hub_saleyard t
+            USING source_hub_saleyard s ON t.saleyard_id = s.saleyard_id
+            WHEN NOT MATCHED THEN INSERT *
+        """)
 
-    # Hub_Saleyard
-    hub_saleyard = saleyard_df.select(
-        col("saleyard_id").alias("saleyard_id"),
-        lit(load_dts).alias("load_dts"),
-        lit("BRONZE").alias("rec_src"),
-    ).distinct()
-    hub_saleyard.createOrReplaceTempView("source_hub_saleyard")
-    spark.sql("""
-        CREATE TABLE IF NOT EXISTS hub_saleyard USING iceberg AS SELECT * FROM source_hub_saleyard LIMIT 0
-    """)
-    spark.sql("""
-        MERGE INTO hub_saleyard t
-        USING source_hub_saleyard s ON t.saleyard_id = s.saleyard_id
-        WHEN NOT MATCHED THEN INSERT *
-    """)
+        # Sat_Carcass_Detail (hash diff for SCD2)
+        logger.info("Creating and merging Sat_Carcass_Detail.")
+        carcass_hk = hash_key(col("carcass_id"))
+        sat_carcass = carcass_df.select(
+            carcass_hk.alias("carcass_hk"),
+            col("hscw_kg"),
+            col("animal_class"),
+            col("price_aud_per_kg"),
+            col("marbling_score"),
+            col("quality_score"),
+            col("fat_depth_mm"),
+            col("total_price_aud"),
+            col("slaughter_date").cast("date").alias("slaughter_date"),
+            lit(load_dts).alias("load_dts"),
+            lit("BRONZE").alias("rec_src"),
+        )
+        sat_carcass.createOrReplaceTempView("source_sat_carcass")
+        spark.sql("""
+            CREATE TABLE IF NOT EXISTS sat_carcass_detail USING iceberg AS SELECT * FROM source_sat_carcass LIMIT 0
+        """)
+        spark.sql("""
+            MERGE INTO sat_carcass_detail t
+            USING source_sat_carcass s
+            ON t.carcass_hk = s.carcass_hk
+            WHEN NOT MATCHED THEN INSERT *
+            -- Add SCD logic: WHEN MATCHED AND hash_diff THEN update eff_to, insert new
+        """)
 
-    # Sat_Carcass_Detail (hash diff for SCD2)
-    carcass_hk = hash_key(col("carcass_id"))
-    sat_carcass = carcass_df.select(
-        carcass_hk.alias("carcass_hk"),
-        col("hscw_kg"),
-        col("animal_class"),
-        col("price_aud_per_kg"),
-        col("marbling_score"),
-        col("quality_score"),
-        col("fat_depth_mm"),
-        col("total_price_aud"),
-        col("slaughter_date").cast("date").alias("slaughter_date"),
-        lit(load_dts).alias("load_dts"),
-        lit("BRONZE").alias("rec_src"),
-    )
-    sat_carcass.createOrReplaceTempView("source_sat_carcass")
-    spark.sql("""
-        CREATE TABLE IF NOT EXISTS sat_carcass_detail USING iceberg AS SELECT * FROM source_sat_carcass LIMIT 0
-    """)
-    spark.sql("""
-        MERGE INTO sat_carcass_detail t
-        USING source_sat_carcass s
-        ON t.carcass_hk = s.carcass_hk
-        WHEN NOT MATCHED THEN INSERT *
-        -- Add SCD logic: WHEN MATCHED AND hash_diff THEN update eff_to, insert new
-    """)
+        # Sat_Saleyard_Detail (hash diff for SCD2)
+        logger.info("Creating and merging Sat_Saleyard_Detail.")
+        sat_saleyard = saleyard_df.select(
+            hash_key(col("saleyard_id")).alias("saleyard_hk"),
+            col("saleyard_desc"),
+            col("state_id"),
+            col("nrmr_desc"),
+            lit(load_dts).alias("load_dts"),
+            lit("BRONZE").alias("rec_src"),
+        )
+        sat_saleyard.createOrReplaceTempView("source_sat_saleyard")
+        spark.sql("""
+            CREATE TABLE IF NOT EXISTS sat_saleyard_detail USING iceberg AS SELECT * FROM source_sat_saleyard LIMIT 0
+        """)
+        spark.sql("""
+            MERGE INTO sat_saleyard_detail t
+            USING source_sat_saleyard s
+            ON t.saleyard_hk = s.saleyard_hk
+            WHEN NOT MATCHED THEN INSERT *
+            -- Add SCD logic: WHEN MATCHED AND hash_diff THEN update eff_to, insert new
+        """)
 
-    # Sat_Saleyard_Detail (hash diff for SCD2)
-    sat_saleyard = saleyard_df.select(
-        hash_key(col("saleyard_id")).alias("saleyard_hk"),
-        col("saleyard_desc"),
-        col("state_id"),
-        col("nrmr_desc"),
-        lit(load_dts).alias("load_dts"),
-        lit("BRONZE").alias("rec_src"),
-    )
-    sat_saleyard.createOrReplaceTempView("source_sat_saleyard")
-    spark.sql("""
-        CREATE TABLE IF NOT EXISTS sat_saleyard_detail USING iceberg AS SELECT * FROM source_sat_saleyard LIMIT 0
-    """)
-    spark.sql("""
-        MERGE INTO sat_saleyard_detail t
-        USING source_sat_saleyard s
-        ON t.saleyard_hk = s.saleyard_hk
-        WHEN NOT MATCHED THEN INSERT *
-        -- Add SCD logic: WHEN MATCHED AND hash_diff THEN update eff_to, insert new
-    """)
+        # Link_Carcass_Process (plant)
+        logger.info("Creating and merging Link_Carcass_Process.")
+        plant_hk = hash_key(col("plant_id"))
+        link_carcass_plant = carcass_df.select(
+            carcass_hk.alias("carcass_hk"),
+            plant_hk.alias("plant_hk"),
+            lit(load_dts).alias("load_dts"),
+            col("slaughter_date").cast("date").alias("process_date"),
+        ).distinct()
+        link_carcass_plant.createOrReplaceTempView("source_link_carcass_plant")
+        spark.sql("""
+            CREATE TABLE IF NOT EXISTS link_carcass_plant USING iceberg AS SELECT * FROM source_link_carcass_plant LIMIT 0
+        """)
+        spark.sql("""
+            MERGE INTO link_carcass_plant t
+            USING source_link_carcass_plant s
+            ON t.carcass_hk = s.carcass_hk AND t.plant_hk = s.plant_hk
+            WHEN NOT MATCHED THEN INSERT *
+        """)
 
-    # Link_Carcass_Process (plant)
-    plant_hk = hash_key(col("plant_id"))
-    link_carcass_plant = carcass_df.select(
-        carcass_hk.alias("carcass_hk"),
-        plant_hk.alias("plant_hk"),
-        lit(load_dts).alias("load_dts"),
-        col("slaughter_date").cast("date").alias("process_date"),
-    ).distinct()
-    link_carcass_plant.createOrReplaceTempView("source_link_carcass_plant")
-    spark.sql("""
-        CREATE TABLE IF NOT EXISTS link_carcass_plant USING iceberg AS SELECT * FROM source_link_carcass_plant LIMIT 0
-    """)
-    spark.sql("""
-        MERGE INTO link_carcass_plant t
-        USING source_link_carcass_plant s
-        ON t.carcass_hk = s.carcass_hk AND t.plant_hk = s.plant_hk
-        WHEN NOT MATCHED THEN INSERT *
-    """)
+        # Link_Carcass_Indicator
+        logger.info("Creating and merging Link_Carcass_Indicator.")
+        indicator_hk = hash_key(col("indicator_id"))
+        link_carcass_indicator = carcass_df.select(
+            carcass_hk.alias("carcass_hk"),
+            indicator_hk.alias("indicator_hk"),
+            lit(load_dts).alias("load_dts"),
+        ).distinct()
+        link_carcass_indicator.createOrReplaceTempView("source_link_carcass_indicator")
+        spark.sql("""
+            CREATE TABLE IF NOT EXISTS link_carcass_indicator USING iceberg AS SELECT * FROM source_link_carcass_indicator LIMIT 0
+        """)
+        spark.sql("""
+            MERGE INTO link_carcass_indicator t
+            USING source_link_carcass_indicator s
+            ON t.carcass_hk = s.carcass_hk AND t.indicator_hk = s.indicator_hk
+            WHEN NOT MATCHED THEN INSERT *
+        """)
 
-    # Link_Carcass_Indicator
-    indicator_hk = hash_key(col("indicator_id"))
-    link_carcass_indicator = carcass_df.select(
-        carcass_hk.alias("carcass_hk"),
-        indicator_hk.alias("indicator_hk"),
-        lit(load_dts).alias("load_dts"),
-    ).distinct()
-    link_carcass_indicator.createOrReplaceTempView("source_link_carcass_indicator")
-    spark.sql("""
-        CREATE TABLE IF NOT EXISTS link_carcass_indicator USING iceberg AS SELECT * FROM source_link_carcass_indicator LIMIT 0
-    """)
-    spark.sql("""
-        MERGE INTO link_carcass_indicator t
-        USING source_link_carcass_indicator s
-        ON t.carcass_hk = s.carcass_hk AND t.indicator_hk = s.indicator_hk
-        WHEN NOT MATCHED THEN INSERT *
-    """)
+        # Link_Carcass_Saleyard
+        logger.info("Creating and merging Link_Carcass_Saleyard.")
+        saleyard_hk = hash_key(col("saleyard_id"))
+        link_carcass_saleyard = carcass_df.select(
+            carcass_hk.alias("carcass_hk"),
+            saleyard_hk.alias("saleyard_hk"),
+            lit(load_dts).alias("load_dts"),
+        ).distinct()
+        link_carcass_saleyard.createOrReplaceTempView("source_link_carcass_saleyard")
+        spark.sql("""
+            CREATE TABLE IF NOT EXISTS link_carcass_saleyard USING iceberg AS SELECT * FROM source_link_carcass_saleyard LIMIT 0
+        """)
+        spark.sql("""
+            MERGE INTO link_carcass_saleyard t
+            USING source_link_carcass_saleyard s
+            ON t.carcass_hk = s.carcass_hk AND t.saleyard_hk = s.saleyard_hk
+            WHEN NOT MATCHED THEN INSERT *
+        """)
 
-    # Link_Carcass_Saleyard
-    saleyard_hk = hash_key(col("saleyard_id"))
-    link_carcass_saleyard = carcass_df.select(
-        carcass_hk.alias("carcass_hk"),
-        saleyard_hk.alias("saleyard_hk"),
-        lit(load_dts).alias("load_dts"),
-    ).distinct()
-    link_carcass_saleyard.createOrReplaceTempView("source_link_carcass_saleyard")
-    spark.sql("""
-        CREATE TABLE IF NOT EXISTS link_carcass_saleyard USING iceberg AS SELECT * FROM source_link_carcass_saleyard LIMIT 0
-    """)
-    spark.sql("""
-        MERGE INTO link_carcass_saleyard t
-        USING source_link_carcass_saleyard s
-        ON t.carcass_hk = s.carcass_hk AND t.saleyard_hk = s.saleyard_hk
-        WHEN NOT MATCHED THEN INSERT *
-    """)
-
-    carcass_df.unpersist()
-    indicator_df.unpersist()
-    saleyard_df.unpersist()
-    spark.stop()
+        logger.info("Unpersisting cached dataframes.")
+        carcass_df.unpersist()
+        indicator_df.unpersist()
+        saleyard_df.unpersist()
+        logger.info("Bronze-to-Silver transformation completed successfully.")
+        spark.stop()
+    except DagConfigError as e:
+        logger.error(f"Configuration Error: {e}", exc_info=True)
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

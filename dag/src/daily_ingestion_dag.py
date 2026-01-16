@@ -3,13 +3,14 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
 import requests
+from airflow.datasets import Dataset
+from airflow.decorators import asset, dag
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
-from airflow.sdk import Asset, asset, dag
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
 
-bronze_carcasses_dataset = Asset(f"gcs://{os.environ.get('BRONZE_BUCKET')}/carcasses")
+bronze_carcasses_dataset = Dataset(f"gcs://{os.environ.get('BRONZE_BUCKET')}/carcasses")
 
 default_args = {
     "owner": "data-eng",
@@ -44,39 +45,39 @@ def daily_synthetic_ingestion_dag():
     def trigger_synthetic_meat_ingestion(config: Dict[str, str]) -> None:
         url = os.environ["SYNTHETIC_MEAT_URL"].strip().rstrip("/")
 
-    payload = {
-        "from_date": config["from_date_str"],
-        "to_date": config["to_date_str"],
-    }
-    print(f"Triggering ingestion with payload: {payload}")
-    response = None
-
-    try:
-        # Fetch ID token for the specific Cloud Run audience
-        id_token_token = id_token.fetch_id_token(Request(), audience=url)
-
-        headers = {
-            "Authorization": f"Bearer {id_token_token}",
-            "Content-Type": "application/json",
+        payload = {
+            "from_date": config["from_date_str"],
+            "to_date": config["to_date_str"],
         }
+        print(f"Triggering ingestion with payload: {payload}")
+        response = None
 
-        response = requests.post(url, json=payload, headers=headers, timeout=300)
-        response.raise_for_status()
+        try:
+            # Fetch ID token for the specific Cloud Run audience
+            id_token_token = id_token.fetch_id_token(Request(), audience=url)
 
-        print(f"Ingestion triggered successfully: {response.status_code}")
-        if response.content:
-            print(response.text)
+            headers = {
+                "Authorization": f"Bearer {id_token_token}",
+                "Content-Type": "application/json",
+            }
 
-    except requests.exceptions.HTTPError as e:
-        if response:
-            raise Exception(
-                f"Ingestion trigger failed "
-                f"with status {response.status_code}: {response.text}"
-            ) from e
-        else:
-            raise Exception(f"Ingestion failed with {e}")
-    except Exception as e:
-        raise Exception(f"Failed to trigger ingestor: {e}") from e
+            response = requests.post(url, json=payload, headers=headers, timeout=300)
+            response.raise_for_status()
+
+            print(f"Ingestion triggered successfully: {response.status_code}")
+            if response.content:
+                print(response.text)
+
+        except requests.exceptions.HTTPError as e:
+            if response:
+                raise Exception(
+                    f"Ingestion trigger failed "
+                    f"with status {response.status_code}: {response.text}"
+                ) from e
+            else:
+                raise Exception(f"Ingestion failed with {e}")
+        except Exception as e:
+            raise Exception(f"Failed to trigger ingestor: {e}") from e
 
     # Task 3: GCS sensor using the bucket from XCom
     @asset(outlets=[bronze_carcasses_dataset])
@@ -91,9 +92,6 @@ def daily_synthetic_ingestion_dag():
             poke_interval=600,
         )
 
-    config = get_config()
-    triggered = trigger_synthetic_meat_ingestion(config)
-    wait_for_bronze_data(triggered)
 
 
 daily_synthetic_ingestion_dag()

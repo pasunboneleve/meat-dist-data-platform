@@ -2,11 +2,12 @@ import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
+from airflow.datasets import Dataset
+from airflow.decorators import asset, dag
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
-from airflow.sdk import Asset, asset, dag
 
 default_args = {
     "owner": "data-eng",
@@ -14,8 +15,8 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
-bronze_carcasses_dataset = Asset(f"gcs://{os.environ.get('BRONZE_BUCKET')}/carcasses")
-silver_dv2_dataset = Asset(f"gcs://{os.environ.get('SILVER_BUCKET')}/iceberg_warehouse")
+bronze_carcasses_dataset = Dataset(f"gcs://{os.environ.get('BRONZE_BUCKET')}/carcasses")
+silver_dv2_dataset = Dataset(f"gcs://{os.environ.get('SILVER_BUCKET')}/iceberg_warehouse")
 
 
 @dag(
@@ -100,9 +101,6 @@ def bronze_to_silver_dv2_dag():
             poke_interval=30,
         )
 
-    config = get_config()
-    transformed = spark_transform(config)
-    verify_silver(transformed)
 
 
 bronze_to_silver_dv2_dag()

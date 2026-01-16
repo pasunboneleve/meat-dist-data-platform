@@ -2,9 +2,10 @@ import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Dict
 
+from airflow.datasets import Dataset
+from airflow.decorators import asset, dag
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
-from airflow.sdk import Asset, asset, dag
 
 default_args = {
     "owner": "data-eng",
@@ -12,8 +13,8 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
-silver_dv2_dataset = Asset(f"gcs://{os.environ.get('SILVER_BUCKET')}/iceberg_warehouse")
-gold_kimball_dataset = Asset(
+silver_dv2_dataset = Dataset(f"gcs://{os.environ.get('SILVER_BUCKET')}/iceberg_warehouse")
+gold_kimball_dataset = Dataset(
     f"gcs://{os.environ.get('GOLD_BUCKET')}/fact_carcass_transactions"
 )
 
@@ -74,8 +75,6 @@ def silver_to_gold_kimball_dag():
             gcp_conn_id="google_cloud_default",
         )
 
-    config = get_config()
-    spark_transform_gold(config)
 
 
 silver_to_gold_kimball_dag()

@@ -2,9 +2,8 @@ import os
 from datetime import UTC, date, datetime, timedelta
 
 import requests
-from airflow.providers.google.cloud.sensors.gcs import \
-    GCSObjectsWithPrefixExistenceSensor
-from airflow.sdk import Context, dag, get_current_context, task
+from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.sdk import Context, PokeReturnValue, dag, task
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
 
@@ -81,22 +80,27 @@ def daily_synthetic_ingestion():
         except Exception as e:
             raise RuntimeError(f"Ingestion trigger failed: {e}") from e
 
-    @task.sensor
-    def wait_for_bronze_data(config: dict):
-        sensor = GCSObjectsWithPrefixExistenceSensor(
-            task_id="wait_for_bronze_data_sensor",
-            bucket=BRONZE_BUCKET,  # type: ignore
+    @task.sensor(
+        poke_interval=600,
+        timeout=7200,
+        mode="reschedule",
+    )
+    def wait_for_bronze_data(config: dict) -> PokeReturnValue:
+        hook = GCSHook(google_cloud_conn_id="google_cloud_default")
+
+        # Poke logic: check if prefix has objects
+        objects = hook.list(
+            bucket_name=BRONZE_BUCKET,  # type: ignore[arg-type]
             prefix=config["target_prefix"],
-            google_cloud_conn_id="google_cloud_default",
-            timeout=7200,  # 2 hours
-            poke_interval=600,  # 10 min
-            mode="reschedule",  # free worker slot (recommended)
-            # deferrable=True,      # if deferrable mode enabled in your Airflow
+            max_results=1,
         )
-        context = get_current_context()
-        sensor.execute(context=context)
-        # Sensor succeeded → downstream can proceed
-        return config  # optional, for further chaining if needed
+        exists = bool(objects)
+
+        if exists:
+            # Success → push config as XCom value
+            return PokeReturnValue(is_done=True, xcom_value=config)
+
+        return PokeReturnValue(is_done=False)
 
     # Chain tasks – TaskFlow passes config via XCom automatically
 

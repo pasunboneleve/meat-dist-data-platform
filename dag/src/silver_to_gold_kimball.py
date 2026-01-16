@@ -4,7 +4,7 @@ from typing import Dict
 
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
-from airflow.sdk import dag, task
+from airflow.sdk import dag, get_current_context, task
 
 from assets import gold_kimball_asset, silver_dv2_asset
 from config_utils import get_target_config
@@ -75,7 +75,8 @@ def silver_to_gold_kimball():
             },
             gcp_conn_id="google_cloud_default",
         )
-        return operator
+        context = get_current_context()
+        return operator.execute(context=context)
 
     # Chain tasks
     config = get_config()

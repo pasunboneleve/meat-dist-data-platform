@@ -96,7 +96,8 @@ def bronze_to_silver_dv2():
             },
             gcp_conn_id="google_cloud_default",
         )
-        return operator
+        context = get_current_context()
+        return operator.execute(context=context)
 
     @task.sensor
     def verify_silver(config: Dict[str, str]):

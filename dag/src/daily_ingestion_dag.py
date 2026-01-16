@@ -102,18 +102,38 @@ def daily_synthetic_ingestion():
 
         return PokeReturnValue(is_done=False)
 
+    @task(outlets=[bronze_carcasses_asset])
+    def mark_asset_produced(config: dict, **context):
+        from airflow.sdk import Asset
+
+        print(f"Bronze asset produced for prefix: {config['target_prefix']}")
+
+        outlet_events = context.get("outlet_events")
+        if outlet_events is None:
+            print("outlet_events not available in context — skipping dynamic metadata")
+            return config  # or whatever
+
+        dated_asset = Asset(
+            uri=bronze_carcasses_asset.uri,
+            extra={
+                "target_date_str": config.get("target_date_str"),
+                "partition_prefix": config.get("target_prefix"),
+                # Use .get() to avoid KeyError if config keys are missing
+            },
+        )
+
+        if bronze_carcasses_asset in outlet_events:
+            outlet_events[bronze_carcasses_asset].add(dated_asset)
+        else:
+            print("bronze_carcasses_asset not in outlet_events — metadata skipped")
+
+        return config
+
     # Chain tasks – TaskFlow passes config via XCom automatically
 
     config = get_config()
     triggered = trigger_synthetic_meat_ingestion(config)  # type: ignore[arg-type]
     waited = wait_for_bronze_data(triggered)  # type: ignore[arg-type]
-
-    # Final dummy task to explicitly emit the asset event (or attach outlets directly to waited if preferred)
-    @task(outlets=[bronze_carcasses_asset])
-    def mark_asset_produced(config: dict):
-        print(f"Bronze asset produced for prefix: {config['target_prefix']}")
-        # Optional: add lightweight validation here if desired
-
     mark_asset_produced(waited)  # type: ignore[arg-type]
 
 

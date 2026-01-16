@@ -1,5 +1,5 @@
 import os
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Dict
 
 from airflow.providers.google.cloud.operators.dataproc import \
@@ -7,6 +7,7 @@ from airflow.providers.google.cloud.operators.dataproc import \
 from airflow.sdk import dag, task
 
 from assets import gold_kimball_asset, silver_dv2_asset
+from config_utils import get_target_config
 
 default_args = {
     "owner": "data-eng",
@@ -28,33 +29,12 @@ default_args = {
 def silver_to_gold_kimball():
     @task
     def get_config(**context) -> Dict[str, str]:
-        logical_date = context.get("logical_date")  # None in pure asset-triggered runs
-
-        if logical_date is not None:
-            # Manual trigger (you picked a logical date in UI) → use it
-            target_date = logical_date.date() - timedelta(days=1)
-        else:
-            # Asset-triggered run → fallback to approximate date from run creation time
-            dag_run = context["dag_run"]
-            fallback_ts = dag_run.queued_at or dag_run.created_at
-            target_date = (fallback_ts - timedelta(days=1)).date()
-
-            # Optional improvement: Try to get exact date from upstream asset event metadata
-            # (add this in your silver producer DAG for accuracy)
-            triggering_events = context.get("triggering_asset_events", {})
-            if silver_dv2_asset in triggering_events:
-                events = triggering_events[silver_dv2_asset]
-                if events:
-                    latest_event = events[-1]
-                    md_date = latest_event.metadata.get("target_date_str")
-                    if md_date:
-                        target_date = date.fromisoformat(md_date)
-
-        target_date_str = target_date.isoformat()
-
-        return {
-            "target_date_str": target_date_str,
-        }
+        return get_target_config(
+            context=context,
+            upstream_asset=silver_dv2_asset,
+            date_offset_days=0,  # example: same day for silver→gold
+            metadata_key="target_date_str",
+        )
 
     @task
     def submit_spark_transform_gold(config: Dict[str, str]):

@@ -9,6 +9,7 @@ from airflow.providers.google.cloud.sensors.gcs import \
 from airflow.sdk import dag, get_current_context, task
 
 from assets import bronze_carcasses_asset, silver_dv2_asset
+from config_utils import get_target_config
 
 default_args = {
     "owner": "data-eng",
@@ -37,53 +38,12 @@ if not all([BRONZE_BUCKET, SILVER_BUCKET]):
 def bronze_to_silver_dv2():
     @task
     def get_config(**context) -> Dict[str, str]:
-        # 1. Get triggering asset events
-        triggering_events = context.get("triggering_asset_events", {})
-
-        if bronze_carcasses_asset not in triggering_events:
-            raise ValueError(
-                "No triggering events found for bronze_carcasses_asset. "
-                "This DAG should only run when bronze asset is updated."
-            )
-
-        events = triggering_events[bronze_carcasses_asset]
-        if not events:
-            raise ValueError("Empty event list for bronze_carcasses_asset")
-
-        # Take the most recent event
-        latest_event = events[-1]
-
-        # 2. Extract metadata from extra
-        extra = latest_event.extra or {}
-        target_date_str = extra.get("target_date_str")
-
-        if not target_date_str:
-            raise ValueError(
-                "Upstream bronze asset event is missing 'target_date_str' in extra. "
-                "Check that daily_synthetic_ingestion is correctly emitting metadata."
-            )
-
-        try:
-            target_date = date.fromisoformat(target_date_str)
-        except ValueError as e:
-            raise ValueError(
-                f"Invalid date format in metadata 'target_date_str': {target_date_str}"
-            ) from e
-
-        # 3. Rebuild prefix from date (consistent with producer)
-        prefix = (
-            f"carcasses/year={target_date.year}/"
-            f"month={target_date.month:02d}/"
-            f"day={target_date.day:02d}/"
+        return get_target_config(
+            context=context,
+            upstream_asset=bronze_carcasses_asset,
+            date_offset_days=1,  # change if different DAG needs different offset
+            metadata_key="target_date_str",  # change if upstream uses different key
         )
-
-        print(f"Using upstream metadata date: {target_date_str}")
-        print(f"Rebuilt prefix: {prefix}")
-
-        return {
-            "target_date_str": target_date_str,
-            "target_prefix": prefix,
-        }
 
     @task
     def submit_spark_transform(config: Dict[str, str]):

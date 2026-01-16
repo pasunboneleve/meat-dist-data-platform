@@ -18,8 +18,8 @@ default_args = {
 @dag(
     dag_id="silver_to_gold_kimball",
     default_args=default_args,
-    description="Silver Iceberg → Gold Kimball transform via Dataproc Serverless Spark",
-    schedule=[silver_dv2_asset],  # triggers when silver asset is updated
+    description="Silver Iceberg → Gold Kimball (asset-triggered or manual)",
+    schedule=[silver_dv2_asset],  # ← only asset updates trigger automatically
     start_date=datetime(2024, 1, 1, tzinfo=UTC),
     catchup=False,
     tags=["transform", "gold", "dataproc", "iceberg", "kimball"],
@@ -28,8 +28,30 @@ default_args = {
 def silver_to_gold_kimball():
     @task
     def get_config(**context) -> Dict[str, str]:
-        logical_date: date = context["logical_date"].date() - timedelta(days=1)
-        target_date_str = logical_date.isoformat()
+        logical_date = context.get("logical_date")  # None in pure asset-triggered runs
+
+        if logical_date is not None:
+            # Manual trigger (you picked a logical date in UI) → use it
+            target_date = logical_date.date() - timedelta(days=1)
+        else:
+            # Asset-triggered run → fallback to approximate date from run creation time
+            dag_run = context["dag_run"]
+            fallback_ts = dag_run.queued_at or dag_run.created_at
+            target_date = (fallback_ts - timedelta(days=1)).date()
+
+            # Optional improvement: Try to get exact date from upstream asset event metadata
+            # (add this in your silver producer DAG for accuracy)
+            triggering_events = context.get("triggering_asset_events", {})
+            if silver_dv2_asset in triggering_events:
+                events = triggering_events[silver_dv2_asset]
+                if events:
+                    latest_event = events[-1]
+                    md_date = latest_event.metadata.get("target_date_str")
+                    if md_date:
+                        target_date = date.fromisoformat(md_date)
+
+        target_date_str = target_date.isoformat()
+
         return {
             "target_date_str": target_date_str,
         }
@@ -62,9 +84,7 @@ def silver_to_gold_kimball():
                         "spark.sql.execution_date": "{{ ds }}",
                         "spark.sql.gold_bucket": os.environ["GOLD_BUCKET"],
                         "spark.sql.silver_bucket": os.environ["SILVER_BUCKET"],
-                        "spark.sql.target_date_str": config[
-                            "target_date_str"
-                        ],  # ← resolved from XCom
+                        "spark.sql.target_date_str": config["target_date_str"],
                     },
                 },
                 "environment_config": {
@@ -84,7 +104,7 @@ def silver_to_gold_kimball():
     def mark_gold_produced(config: Dict[str, str]):
         """Marks the gold asset as produced after Spark job success."""
         print(f"Gold Kimball fact table produced for date: {config['target_date_str']}")
-        # Optional: lightweight post-checks, Slack/email notification, etc.
+        # Optional: lightweight post-checks, notifications, etc.
 
     mark_gold_produced(spark_job)  # type: ignore[arg-type]
 

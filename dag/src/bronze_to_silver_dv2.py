@@ -69,6 +69,7 @@ def bronze_to_silver_dv2():
                         "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
                         "spark.sql.catalog.spark_catalog.type": "hadoop",
                         "spark.sql.catalog.spark_catalog.warehouse": f"gs://{SILVER_BUCKET}/iceberg_warehouse/",
+                        "spark.sql.iceberg.merge-schema": "true",
                         "spark.executor.instances": "2", # Min required by Dataproc
                         "spark.executor.cores": "4", # Min required by Dataproc
                         "spark.executor.memory": "4g",

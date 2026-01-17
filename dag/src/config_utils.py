@@ -33,7 +33,13 @@ def get_target_config(
         if events:
             latest_event = events[-1]
             extra = latest_event.extra or {}
-            target_date_str = extra.get(metadata_key)
+            metadata = getattr(latest_event, "metadata", {}) or {}
+            target_date_str = (
+                extra.get("target_date_str")
+                or metadata.get("target_date_str")
+                or extra.get("target_date")  # possible typo variants
+                or metadata.get("target_date")
+            )
 
             if target_date_str:
                 try:
@@ -47,7 +53,8 @@ def get_target_config(
                     ) from e
             else:
                 raise ValueError(
-                    f"Upstream asset event missing '{metadata_key}' in extra. "
+                    f"Upstream event missing 'target_date_str' in extra or metadata. "
+                    f"Extra: {extra}, Metadata: {metadata}"
                     f"Check producer DAG is emitting metadata correctly."
                 )
         else:

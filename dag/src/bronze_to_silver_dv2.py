@@ -94,7 +94,8 @@ def bronze_to_silver_dv2():
             gcp_conn_id="google_cloud_default",
         )
         context = get_current_context()
-        return operator.execute(context=context)
+        operator.execute(context=context)
+        return config
 
     @task.sensor
     def verify_silver(config: Dict[str, str]):
@@ -113,7 +114,7 @@ def bronze_to_silver_dv2():
 
         return config
 
-    @task(outlets=[silver_dv2_asset])
+    @task
     def mark_asset_produced(config: Dict[str, str], **context):
         print(
             f"Silver DV2 Iceberg asset produced for date: {config['target_date_str']}"

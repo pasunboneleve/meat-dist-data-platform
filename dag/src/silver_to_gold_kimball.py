@@ -6,6 +6,7 @@ from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
 from airflow.sdk import dag, get_current_context, task
 
+from asset_utils import emit_asset_with_metadata
 from assets import gold_kimball_asset, silver_dv2_asset
 from config_utils import generate_dataproc_batch_id, get_target_config
 
@@ -79,16 +80,23 @@ def silver_to_gold_kimball():
             gcp_conn_id="google_cloud_default",
         )
         context = get_current_context()
-        return operator.execute(context=context)
+        operator.execute(context=context)
+        return config
 
     # Chain tasks
     config = get_config()
     spark_job = submit_spark_transform_gold(config)  # type: ignore[arg-type]
 
-    @task(outlets=[gold_kimball_asset])
-    def mark_gold_produced(config: Dict[str, str]):
+    @task
+    def mark_gold_produced(config: Dict[str, str], **context):
         """Marks the gold asset as produced after Spark job success."""
         print(f"Gold Kimball fact table produced for date: {config['target_date_str']}")
+        emit_asset_with_metadata(
+            context=context,
+            asset=gold_kimball_asset,
+            extra={"target_date_str": config["target_date_str"]},
+            log_prefix=f"Emitted {gold_kimball_asset.name}",
+        )
         # Optional: lightweight post-checks, notifications, etc.
 
     mark_gold_produced(spark_job)  # type: ignore[arg-type]

@@ -110,7 +110,7 @@ def daily_synthetic_ingestion():
 
         return PokeReturnValue(is_done=False)
 
-    @task(outlets=[bronze_carcasses_asset])
+    @task
     def mark_asset_produced(config: dict[str, str], **context):
         print(f"Bronze asset produced for date: {config['target_date_str']}")
 

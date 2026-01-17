@@ -42,7 +42,7 @@ def bronze_to_silver_dv2():
         return get_target_config(
             context=context,
             upstream_asset=bronze_carcasses_asset,
-            date_offset_days=1,  # change if different DAG needs different offset
+            date_offset_days=0,  # change if different DAG needs different offset
             metadata_key="target_date_str",  # change if upstream uses different key
         )
 

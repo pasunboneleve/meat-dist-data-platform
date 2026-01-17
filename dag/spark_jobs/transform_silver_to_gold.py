@@ -72,6 +72,9 @@ def main():
         link_carcass_saleyard_df = spark.read.table(
             "spark_catalog.default.link_carcass_saleyard"
         )
+        link_carcass_plant_df = spark.read.table(
+            "spark_catalog.default.link_carcass_plant"
+        )
 
         # 2. Filter Satellite for incremental processing based on load date
         logger.info(f"Filtering satellite data for load date: {target_date}")
@@ -97,8 +100,11 @@ def main():
             .join(hub_saleyard_df, "saleyard_hk", "left")
         )
 
-        # Join with plant info (assuming plant_id business key is on satellite)
-        carcass_denormalized = carcass_denormalized.join(hub_plant_df, "plant_id", "left")
+        # Join with plant info through the link table
+        carcass_denormalized = (
+            carcass_denormalized.join(link_carcass_plant_df, "carcass_hk", "left")
+            .join(hub_plant_df, "plant_hk", "left")
+        )
 
         # 4. Create the Gold Fact Table
         logger.info("Creating fact_carcass_transactions table...")

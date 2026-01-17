@@ -96,7 +96,8 @@ def main():
         # Hub_Carcass
         logger.info("Creating and merging Hub_Carcass.")
         hub_carcass = carcass_df.select(
-            col("carcass_id").alias("carcass_id"),
+            hash_key(col("carcass_id")).alias("carcass_hk"),
+            col("carcass_id"),
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
@@ -107,14 +108,15 @@ def main():
         spark.sql("""
             MERGE INTO hub_carcass t
             USING source_hub_carcass s
-            ON t.carcass_id = s.carcass_id
+            ON t.carcass_hk = s.carcass_hk
             WHEN NOT MATCHED THEN INSERT *
         """)
 
         # Hub_Plant
         logger.info("Creating and merging Hub_Plant.")
         hub_plant = carcass_df.select(
-            col("plant_id").alias("plant_id"),
+            hash_key(col("plant_id")).alias("plant_hk"),
+            col("plant_id"),
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
@@ -124,14 +126,15 @@ def main():
         """)
         spark.sql("""
             MERGE INTO hub_plant t
-            USING source_hub_plant s ON t.plant_id = s.plant_id
+            USING source_hub_plant s ON t.plant_hk = s.plant_hk
             WHEN NOT MATCHED THEN INSERT *
         """)
 
         # Hub_Indicator (new)
         logger.info("Creating and merging Hub_Indicator.")
         hub_indicator = indicator_df.select(
-            col("indicator_id").alias("indicator_id"),
+            hash_key(col("indicator_id")).alias("indicator_hk"),
+            col("indicator_id"),
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
@@ -141,14 +144,15 @@ def main():
         """)
         spark.sql("""
             MERGE INTO hub_indicator t
-            USING source_hub_indicator s ON t.indicator_id = s.indicator_id
+            USING source_hub_indicator s ON t.indicator_hk = s.indicator_hk
             WHEN NOT MATCHED THEN INSERT *
         """)
 
         # Hub_Saleyard
         logger.info("Creating and merging Hub_Saleyard.")
         hub_saleyard = saleyard_df.select(
-            col("saleyard_id").alias("saleyard_id"),
+            hash_key(col("saleyard_id")).alias("saleyard_hk"),
+            col("saleyard_id"),
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
@@ -158,7 +162,7 @@ def main():
         """)
         spark.sql("""
             MERGE INTO hub_saleyard t
-            USING source_hub_saleyard s ON t.saleyard_id = s.saleyard_id
+            USING source_hub_saleyard s ON t.saleyard_hk = s.saleyard_hk
             WHEN NOT MATCHED THEN INSERT *
         """)
 

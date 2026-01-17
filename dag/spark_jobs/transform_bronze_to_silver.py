@@ -49,7 +49,9 @@ def main():
         # Get params from Spark conf (passed via Airflow templating)
         bronze_bucket = spark.conf.get("spark.sql.bronze_bucket")
         silver_bucket = spark.conf.get("spark.sql.silver_bucket")
-        target_date_str = spark.conf.get("spark.sql.target_date_str")  # e.g., "2024-12-27"
+        target_date_str = spark.conf.get(
+            "spark.sql.target_date_str"
+        )  # e.g., "2024-12-27"
         if not target_date_str:
             raise DagConfigError("target_date_str missing.")
         target_date = date.fromisoformat(target_date_str)
@@ -64,7 +66,7 @@ def main():
         )
 
         bronze_path = f"gs://{bronze_bucket}/carcasses/"
-        bronze_path += f"year={target_date.year}/month={target_date.month}/day={target_date.day}/*.parquet"
+        bronze_path += f"year={target_date.year}/month={target_date.month:02d}/day={target_date.day:02d}/*.parquet"
 
         logger.info(f"Reading source Parquet data from {bronze_path}")
         carcass_df = spark.read.parquet(bronze_path).filter(

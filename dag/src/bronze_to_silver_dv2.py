@@ -4,9 +4,8 @@ from typing import Dict
 
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
-from airflow.providers.google.cloud.sensors.gcs import \
-    GCSObjectsWithPrefixExistenceSensor
-from airflow.sdk import dag, get_current_context, task
+from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.sdk import PokeReturnValue, dag, get_current_context, task
 from airflow.sdk.definitions.asset.metadata import Metadata
 
 from assets import bronze_carcasses_asset, silver_dv2_asset
@@ -97,22 +96,27 @@ def bronze_to_silver_dv2():
         operator.execute(context=context)
         return config
 
-    @task.sensor
-    def verify_silver(config: Dict[str, str]):
-        sensor = GCSObjectsWithPrefixExistenceSensor(
-            task_id="verify_silver_tables",
-            bucket=SILVER_BUCKET,  # type: ignore[arg-type]
-            prefix="iceberg_warehouse/default/hub_carcass/metadata/",
-            google_cloud_conn_id="google_cloud_default",
-            timeout=300,
-            poke_interval=30,
-            mode="reschedule",
+    @task.sensor(
+        poke_interval=30,
+        timeout=300,
+        mode="reschedule",
+    )
+    def verify_silver(config: Dict[str, str]) -> PokeReturnValue:
+        hook = GCSHook(gcp_conn_id="google_cloud_default")
+        prefix = "iceberg_warehouse/default/hub_carcass/metadata/"
+
+        objects = hook.list(
+            bucket_name=SILVER_BUCKET,  # type: ignore[arg-type]
+            prefix=prefix,
+            max_results=1,
         )
+        exists = bool(objects)
 
-        context = get_current_context()
-        sensor.execute(context=context)
+        if exists:
+            # Success → push config as XCom value
+            return PokeReturnValue(is_done=True, xcom_value=config)
 
-        return config
+        return PokeReturnValue(is_done=False)
 
     @task(outlets=[silver_dv2_asset])
     def mark_asset_produced(config: Dict[str, str]):

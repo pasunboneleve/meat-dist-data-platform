@@ -384,7 +384,7 @@ def generate_and_upload(request):
             target_date = datetime.fromisoformat(target_date_str).date()
 
             # prepare params
-            from_date = target_date  # Data is available one day late
+            from_date = target_date
             from_date_str = from_date.isoformat()
             to_date_str = target_date.isoformat()
 

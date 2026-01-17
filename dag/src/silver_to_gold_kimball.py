@@ -2,9 +2,10 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Dict
 
+from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
-from airflow.sdk import dag, get_current_context, task
+from airflow.sdk import PokeReturnValue, dag, get_current_context, task
 from airflow.sdk.definitions.asset.metadata import Metadata
 
 from assets import gold_kimball_asset, silver_dv2_asset
@@ -15,6 +16,11 @@ default_args = {
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
+
+
+GOLD_BUCKET = os.environ.get("GOLD_BUCKET")
+if not GOLD_BUCKET:
+    raise ValueError("Missing GOLD_BUCKET env var")
 
 
 @dag(
@@ -87,6 +93,32 @@ def silver_to_gold_kimball():
     config = get_config()
     spark_job = submit_spark_transform_gold(config)  # type: ignore[arg-type]
 
+    @task.sensor(
+        poke_interval=30,
+        timeout=300,
+        mode="reschedule",
+    )
+    def verify_gold(config: Dict[str, str]) -> PokeReturnValue:
+        target_date = datetime.fromisoformat(config["target_date_str"]).date()
+        prefix = (
+            f"fact_carcass_transactions/year={target_date.year}/"
+            f"month={target_date.month:02d}/day={target_date.day:02d}/"
+        )
+
+        hook = GCSHook(gcp_conn_id="google_cloud_default")
+        objects = hook.list(
+            bucket_name=GOLD_BUCKET,  # type: ignore[arg-type]
+            prefix=prefix,
+            max_results=1,
+        )
+        exists = bool(objects)
+
+        if exists:
+            # Success → push config as XCom value
+            return PokeReturnValue(is_done=True, xcom_value=config)
+
+        return PokeReturnValue(is_done=False)
+
     @task(outlets=[gold_kimball_asset])
     def mark_gold_produced(config: Dict[str, str]):
         """Marks the gold asset as produced after Spark job success."""
@@ -98,7 +130,8 @@ def silver_to_gold_kimball():
         )
         # Optional: lightweight post-checks, notifications, etc.
 
-    mark_gold_produced(spark_job)  # type: ignore[arg-type]
+    waited = verify_gold(spark_job)  # type: ignore[arg-type]
+    mark_gold_produced(waited)  # type: ignore[arg-type]
 
 
 silver_to_gold_kimball()

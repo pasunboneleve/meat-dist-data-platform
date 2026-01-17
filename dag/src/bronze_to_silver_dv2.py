@@ -70,7 +70,7 @@ def bronze_to_silver_dv2():
                         "spark.sql.catalog.spark_catalog.type": "hadoop",
                         "spark.sql.catalog.spark_catalog.warehouse": f"gs://{SILVER_BUCKET}/iceberg_warehouse/",
                         "spark.executor.instances": "2",
-                        "spark.executor.cores": "4",
+                        "spark.executor.cores": "2", # Reduced from 4 to fit quota
                         "spark.executor.memory": "4g",
                         "spark.driver.cores": "4",
                         "spark.driver.memory": "4g",

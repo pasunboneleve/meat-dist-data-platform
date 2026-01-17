@@ -68,6 +68,9 @@ def silver_to_gold_kimball():
                         "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
                         "spark.sql.catalog.spark_catalog.type": "hadoop",
                         "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
+                        "spark.executor.instances": "2",
+                        "spark.executor.cores": "2", # Explicitly set to fit quota
+                        "spark.driver.cores": "4", # Default is 4
                         "spark.sql.execution_date": "{{ ds }}",
                         "spark.sql.gold_bucket": os.environ["GOLD_BUCKET"],
                         "spark.sql.silver_bucket": os.environ["SILVER_BUCKET"],

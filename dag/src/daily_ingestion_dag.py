@@ -35,6 +35,7 @@ default_args = {
     catchup=False,
     tags=["ingestion", "bronze", "gcs"],
     max_active_runs=1,  # prevent overlapping runs if needed
+    params={"skip_ingestion_trigger": False},
 )
 def daily_synthetic_ingestion():
     @task
@@ -53,7 +54,13 @@ def daily_synthetic_ingestion():
         }
 
     @task
-    def trigger_synthetic_meat_ingestion(config: dict) -> dict:
+    def trigger_synthetic_meat_ingestion(config: dict, **context: Context) -> dict:
+        if context["params"].get("skip_ingestion_trigger"):
+            print(
+                "Skipping ingestion trigger based on DAG param 'skip_ingestion_trigger'."
+            )
+            return config
+
         url = SYNTHETIC_MEAT_URL.strip().rstrip("/")  # type: ignore[arg-type]
 
         payload = {

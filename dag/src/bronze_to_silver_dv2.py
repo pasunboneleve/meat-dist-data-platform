@@ -126,7 +126,7 @@ def bronze_to_silver_dv2():
                 "target_date_str": config["target_date_str"],
                 "target_prefix": config.get("target_prefix"),
             },
-            log_prefix="Emitted silver_dv2_asset",
+            log_prefix=f"Emitted {silver_dv2_asset.name}",
         )
 
     # Chain

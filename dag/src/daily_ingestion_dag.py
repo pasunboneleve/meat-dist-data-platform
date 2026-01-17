@@ -114,7 +114,7 @@ def daily_synthetic_ingestion():
                 "target_date_str": config["target_date_str"],
                 "target_prefix": config.get("target_prefix"),
             },
-            log_prefix="Emitted silver_dv2_asset",
+            log_prefix=f"Emitted {bronze_carcasses_asset.name}",
         )
 
     # Chain tasks – TaskFlow passes config via XCom automatically

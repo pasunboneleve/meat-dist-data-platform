@@ -32,6 +32,14 @@ def get_target_config(
         events = triggering_events[upstream_asset]
         if events:
             latest_event = events[-1]
+            print("DEBUG: Full latest_event:", latest_event.__dict__)
+            print("DEBUG: latest_event.extra:", latest_event.extra)
+            print(
+                "DEBUG: latest_event.metadata (fallback):",
+                getattr(latest_event, "metadata", None),
+            )
+            print("DEBUG: All event keys:", dir(latest_event))
+
             extra = latest_event.extra or {}
             metadata = getattr(latest_event, "metadata", {}) or {}
             target_date_str = (

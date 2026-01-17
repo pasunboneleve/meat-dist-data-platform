@@ -39,7 +39,7 @@ default_args = {
 def daily_synthetic_ingestion():
     @task
     def get_config(**context: Context) -> dict:
-        logical_date: date = context["logical_date"].date() - timedelta(days=1)  # type: ignore[arg-type]
+        logical_date: date = context["logical_date"].date()  # type: ignore[assignment]
         target_date_str = logical_date.isoformat()
         prefix = (
             f"carcasses/year={logical_date.year}/"

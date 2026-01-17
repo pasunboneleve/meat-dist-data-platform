@@ -5,8 +5,8 @@ from typing import Dict
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
 from airflow.sdk import dag, get_current_context, task
+from airflow.sdk.definitions.asset.metadata import Metadata
 
-from asset_utils import emit_asset_with_metadata
 from assets import gold_kimball_asset, silver_dv2_asset
 from config_utils import generate_dataproc_batch_id, get_target_config
 
@@ -87,15 +87,14 @@ def silver_to_gold_kimball():
     config = get_config()
     spark_job = submit_spark_transform_gold(config)  # type: ignore[arg-type]
 
-    @task
-    def mark_gold_produced(config: Dict[str, str], **context):
+    @task(outlets=[gold_kimball_asset])
+    def mark_gold_produced(config: Dict[str, str]):
         """Marks the gold asset as produced after Spark job success."""
+
         print(f"Gold Kimball fact table produced for date: {config['target_date_str']}")
-        emit_asset_with_metadata(
-            context=context,
+        yield Metadata(
             asset=gold_kimball_asset,
             extra={"target_date_str": config["target_date_str"]},
-            log_prefix=f"Emitted {gold_kimball_asset.name}",
         )
         # Optional: lightweight post-checks, notifications, etc.
 

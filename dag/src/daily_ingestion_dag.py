@@ -4,10 +4,10 @@ from datetime import UTC, date, datetime, timedelta
 import requests
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.sdk import Context, PokeReturnValue, dag, task
+from airflow.sdk.definitions.asset.metadata import Metadata
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
 
-from asset_utils import emit_asset_with_metadata
 from assets import bronze_carcasses_asset
 
 # Env vars – set these in Airflow UI (Admin > Variables) or container env
@@ -110,18 +110,16 @@ def daily_synthetic_ingestion():
 
         return PokeReturnValue(is_done=False)
 
-    @task
-    def mark_asset_produced(config: dict[str, str], **context):
+    @task(outlets=[bronze_carcasses_asset])
+    def mark_asset_produced(config: dict[str, str]):
         print(f"Bronze asset produced for date: {config['target_date_str']}")
 
-        emit_asset_with_metadata(
-            context=context,
+        yield Metadata(
             asset=bronze_carcasses_asset,
             extra={
                 "target_date_str": config["target_date_str"],
                 "target_prefix": config.get("target_prefix"),
             },
-            log_prefix=f"Emitted {bronze_carcasses_asset.name}",
         )
 
     # Chain tasks – TaskFlow passes config via XCom automatically

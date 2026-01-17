@@ -7,8 +7,8 @@ from airflow.providers.google.cloud.operators.dataproc import \
 from airflow.providers.google.cloud.sensors.gcs import \
     GCSObjectsWithPrefixExistenceSensor
 from airflow.sdk import dag, get_current_context, task
+from airflow.sdk.definitions.asset.metadata import Metadata
 
-from asset_utils import emit_asset_with_metadata
 from assets import bronze_carcasses_asset, silver_dv2_asset
 from config_utils import generate_dataproc_batch_id, get_target_config
 
@@ -114,20 +114,18 @@ def bronze_to_silver_dv2():
 
         return config
 
-    @task
-    def mark_asset_produced(config: Dict[str, str], **context):
+    @task(outlets=[silver_dv2_asset])
+    def mark_asset_produced(config: Dict[str, str]):
         print(
             f"Silver DV2 Iceberg asset produced for date: {config['target_date_str']}"
         )
 
-        emit_asset_with_metadata(
-            context=context,
+        yield Metadata(
             asset=silver_dv2_asset,
             extra={
                 "target_date_str": config["target_date_str"],
                 "target_prefix": config.get("target_prefix"),
             },
-            log_prefix=f"Emitted {silver_dv2_asset.name}",
         )
 
     # Chain

@@ -2,6 +2,7 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Dict
 
+from airflow.models.taskinstance import TaskInstance
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
@@ -118,12 +119,13 @@ def bronze_to_silver_dv2():
         return PokeReturnValue(is_done=False)
 
     @task(outlets=[silver_dv2_asset])
-    def mark_asset_produced(config: Dict[str, str], ti=None):
+    def mark_asset_produced(config: Dict[str, str], **context):
         print(
             f"Silver DV2 Iceberg asset produced for date: {config['target_date_str']}"
         )
 
         # Explicitly push to XCom for the downstream gold DAG
+        ti: TaskInstance = context["ti"]
         ti.xcom_push(key="asset_config", value=config)
 
         return Metadata(asset=silver_dv2_asset)

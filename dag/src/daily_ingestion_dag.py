@@ -2,6 +2,7 @@ import os
 from datetime import UTC, date, datetime, timedelta
 
 import requests
+from airflow.models.taskinstance import TaskInstance
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.sdk import Context, PokeReturnValue, dag, task
 from airflow.sdk.definitions.asset.metadata import Metadata
@@ -111,10 +112,11 @@ def daily_synthetic_ingestion():
         return PokeReturnValue(is_done=False)
 
     @task(outlets=[bronze_carcasses_asset])
-    def mark_asset_produced(config: dict[str, str], ti=None):
+    def mark_asset_produced(config: dict[str, str], **context):
         print(f"Bronze asset produced for date: {config['target_date_str']}")
 
         # Explicitly push to XCom for downstream DAGs to pull
+        ti: TaskInstance = context["ti"]
         ti.xcom_push(key="asset_config", value=config)
 
         # Still return Metadata for the asset event itself

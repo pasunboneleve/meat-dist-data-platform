@@ -113,7 +113,16 @@ def daily_synthetic_ingestion():
 
     @task(outlets=[bronze_carcasses_asset])
     def mark_asset_produced(config: dict[str, str], **context):
-        print(f"Bronze asset produced for date: {config['target_date_str']}")
+        print("MARK_ASSET_PRODUCED: Received config:", config)
+
+        if not config or "target_date_str" not in config:
+            raise ValueError(
+                f"MARK_ASSET_PRODUCED: Invalid or empty config received: {config}"
+            )
+
+        print(
+            f"Bronze asset produced for date: {config['target_date_str']}. Pushing to XCom."
+        )
 
         # Explicitly push to XCom for downstream DAGs to pull
         ti: TaskInstance = context["ti"]

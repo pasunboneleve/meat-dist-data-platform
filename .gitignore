@@ -1,6 +1,7 @@
 # AI droppings
 .aider*
 !.aider.conf.yml
+.agent-shell/
 
 # Secrets
 **/*.tfvars

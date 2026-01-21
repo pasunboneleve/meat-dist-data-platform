@@ -103,7 +103,7 @@ def main():
         ).distinct()
         hub_carcass.createOrReplaceTempView("source_hub_carcass")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_carcass USING iceberg AS SELECT * FROM source_hub_carcass LIMIT 0
+            CREATE TABLE IF NOT EXISTS hub_carcass USING iceberg AS SELECT * FROM source_hub_carcass
         """)
         spark.sql("""
             MERGE INTO hub_carcass t
@@ -122,7 +122,7 @@ def main():
         ).distinct()
         hub_plant.createOrReplaceTempView("source_hub_plant")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_plant USING iceberg AS SELECT * FROM source_hub_plant LIMIT 0
+            CREATE TABLE IF NOT EXISTS hub_plant USING iceberg AS SELECT * FROM source_hub_plant
         """)
         spark.sql("""
             MERGE INTO hub_plant t
@@ -140,7 +140,7 @@ def main():
         ).distinct()
         hub_indicator.createOrReplaceTempView("source_hub_indicator")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_indicator USING iceberg AS SELECT * FROM source_hub_indicator LIMIT 0
+            CREATE TABLE IF NOT EXISTS hub_indicator USING iceberg AS SELECT * FROM source_hub_indicator
         """)
         spark.sql("""
             MERGE INTO hub_indicator t
@@ -158,7 +158,7 @@ def main():
         ).distinct()
         hub_saleyard.createOrReplaceTempView("source_hub_saleyard")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_saleyard USING iceberg AS SELECT * FROM source_hub_saleyard LIMIT 0
+            CREATE TABLE IF NOT EXISTS hub_saleyard USING iceberg AS SELECT * FROM source_hub_saleyard
         """)
         spark.sql("""
             MERGE INTO hub_saleyard t
@@ -184,7 +184,7 @@ def main():
         )
         sat_carcass.createOrReplaceTempView("source_sat_carcass")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS sat_carcass_detail USING iceberg AS SELECT * FROM source_sat_carcass LIMIT 0
+            CREATE TABLE IF NOT EXISTS sat_carcass_detail USING iceberg AS SELECT * FROM source_sat_carcass
         """)
         spark.sql("""
             MERGE INTO sat_carcass_detail t
@@ -206,7 +206,7 @@ def main():
         )
         sat_saleyard.createOrReplaceTempView("source_sat_saleyard")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS sat_saleyard_detail USING iceberg AS SELECT * FROM source_sat_saleyard LIMIT 0
+            CREATE TABLE IF NOT EXISTS sat_saleyard_detail USING iceberg AS SELECT * FROM source_sat_saleyard
         """)
         spark.sql("""
             MERGE INTO sat_saleyard_detail t
@@ -227,7 +227,7 @@ def main():
         ).distinct()
         link_carcass_plant.createOrReplaceTempView("source_link_carcass_plant")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_plant USING iceberg AS SELECT * FROM source_link_carcass_plant LIMIT 0
+            CREATE TABLE IF NOT EXISTS link_carcass_plant USING iceberg AS SELECT * FROM source_link_carcass_plant
         """)
         spark.sql("""
             MERGE INTO link_carcass_plant t
@@ -246,7 +246,7 @@ def main():
         ).distinct()
         link_carcass_indicator.createOrReplaceTempView("source_link_carcass_indicator")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_indicator USING iceberg AS SELECT * FROM source_link_carcass_indicator LIMIT 0
+            CREATE TABLE IF NOT EXISTS link_carcass_indicator USING iceberg AS SELECT * FROM source_link_carcass_indicator
         """)
         spark.sql("""
             MERGE INTO link_carcass_indicator t
@@ -265,7 +265,7 @@ def main():
         ).distinct()
         link_carcass_saleyard.createOrReplaceTempView("source_link_carcass_saleyard")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_saleyard USING iceberg AS SELECT * FROM source_link_carcass_saleyard LIMIT 0
+            CREATE TABLE IF NOT EXISTS link_carcass_saleyard USING iceberg AS SELECT * FROM source_link_carcass_saleyard
         """)
         spark.sql("""
             MERGE INTO link_carcass_saleyard t

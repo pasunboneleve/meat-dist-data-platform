@@ -101,16 +101,14 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
+        hub_carcass.writeTo("hub_carcass").createOrReplace()
+        hub_carcass.createOrReplaceTempView("source_hub_carcass")
+
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_carcass (
-                carcass_hk STRING,
-                carcass_id STRING,
-                load_dts TIMESTAMP,
-                rec_src STRING
-            ) USING iceberg
-        """)
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_carcass USING iceberg AS SELECT * FROM source_hub_carcass
+            MERGE INTO hub_carcass t
+            USING source_hub_carcass s
+            ON t.carcass_hk = s.carcass_hk
+            WHEN NOT MATCHED THEN INSERT *
         """)
 
         # Hub_Plant
@@ -121,17 +119,12 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
+        hub_plant.writeTo("hub_plant").createOrReplace()
         hub_plant.createOrReplaceTempView("source_hub_plant")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_plant (
-                plant_hk STRING,
-                plant_id STRING,
-                load_dts TIMESTAMP,
-                rec_src STRING
-            ) USING iceberg
-        """)
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_plant USING iceberg AS SELECT * FROM source_hub_plant
+            MERGE INTO hub_plant t
+            USING source_hub_plant s ON t.plant_hk = s.plant_hk
+            WHEN NOT MATCHED THEN INSERT *
         """)
 
         # Hub_Indicator (new)
@@ -142,17 +135,12 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
+        hub_indicator.writeTo("hub_indicator").createOrReplace()
         hub_indicator.createOrReplaceTempView("source_hub_indicator")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_indicator (
-                indicator_hk STRING,
-                indicator_id LONG,
-                load_dts TIMESTAMP,
-                rec_src STRING
-            ) USING iceberg
-        """)
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_indicator USING iceberg AS SELECT * FROM source_hub_indicator
+            MERGE INTO hub_indicator t
+            USING source_hub_indicator s ON t.indicator_hk = s.indicator_hk
+            WHEN NOT MATCHED THEN INSERT *
         """)
 
         # Hub_Saleyard
@@ -163,17 +151,12 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
+        hub_saleyard.writeTo("hub_saleyard").createOrReplace()
         hub_saleyard.createOrReplaceTempView("source_hub_saleyard")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_saleyard (
-                saleyard_hk STRING,
-                saleyard_id INT,
-                load_dts TIMESTAMP,
-                rec_src STRING
-            ) USING iceberg
-        """)
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_saleyard USING iceberg AS SELECT * FROM source_hub_saleyard
+            MERGE INTO hub_saleyard t
+            USING source_hub_saleyard s ON t.saleyard_hk = s.saleyard_hk
+            WHEN NOT MATCHED THEN INSERT *
         """)
 
         # Sat_Carcass_Detail (hash diff for SCD2)
@@ -192,24 +175,14 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         )
+        sat_carcass.writeTo("sat_carcass_detail").createOrReplace()
         sat_carcass.createOrReplaceTempView("source_sat_carcass")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS sat_carcass_detail (
-                carcass_hk STRING,
-                hscw_kg DECIMAL(10, 2),
-                animal_class STRING,
-                price_aud_per_kg DECIMAL(10, 2),
-                marbling_score LONG,
-                quality_score LONG,
-                fat_depth_mm LONG,
-                total_price_aud DECIMAL(10, 2),
-                slaughter_date DATE,
-                load_dts TIMESTAMP,
-                rec_src STRING
-            ) USING iceberg
-        """)
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS sat_carcass_detail USING iceberg AS SELECT * FROM source_sat_carcass
+            MERGE INTO sat_carcass_detail t
+            USING source_sat_carcass s
+            ON t.carcass_hk = s.carcass_hk
+            WHEN NOT MATCHED THEN INSERT *
+            -- Add SCD logic: WHEN MATCHED AND hash_diff THEN update eff_to, insert new
         """)
 
         # Sat_Saleyard_Detail (hash diff for SCD2)
@@ -222,19 +195,14 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         )
+        sat_saleyard.writeTo("sat_saleyard_detail").createOrReplace()
         sat_saleyard.createOrReplaceTempView("source_sat_saleyard")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS sat_saleyard_detail (
-                saleyard_hk STRING,
-                saleyard_desc STRING,
-                state_id STRING,
-                nrmr_desc STRING,
-                load_dts TIMESTAMP,
-                rec_src STRING
-            ) USING iceberg
-        """)
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS sat_saleyard_detail USING iceberg AS SELECT * FROM source_sat_saleyard
+            MERGE INTO sat_saleyard_detail t
+            USING source_sat_saleyard s
+            ON t.saleyard_hk = s.saleyard_hk
+            WHEN NOT MATCHED THEN INSERT *
+            -- Add SCD logic: WHEN MATCHED AND hash_diff THEN update eff_to, insert new
         """)
 
         # Link_Carcass_Process (plant)
@@ -246,17 +214,13 @@ def main():
             lit(load_dts).alias("load_dts"),
             col("slaughter_date").cast("date").alias("process_date"),
         ).distinct()
+        link_carcass_plant.writeTo("link_carcass_plant").createOrReplace()
         link_carcass_plant.createOrReplaceTempView("source_link_carcass_plant")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_plant (
-                carcass_hk STRING,
-                plant_hk STRING,
-                load_dts TIMESTAMP,
-                process_date DATE
-            ) USING iceberg
-        """)
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_plant USING iceberg AS SELECT * FROM source_link_carcass_plant
+            MERGE INTO link_carcass_plant t
+            USING source_link_carcass_plant s
+            ON t.carcass_hk = s.carcass_hk AND t.plant_hk = s.plant_hk
+            WHEN NOT MATCHED THEN INSERT *
         """)
 
         # Link_Carcass_Indicator
@@ -267,16 +231,13 @@ def main():
             indicator_hk.alias("indicator_hk"),
             lit(load_dts).alias("load_dts"),
         ).distinct()
+        link_carcass_indicator.writeTo("link_carcass_indicator").createOrReplace()
         link_carcass_indicator.createOrReplaceTempView("source_link_carcass_indicator")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_indicator (
-                carcass_hk STRING,
-                indicator_hk STRING,
-                load_dts TIMESTAMP
-            ) USING iceberg
-        """)
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_indicator USING iceberg AS SELECT * FROM source_link_carcass_indicator
+            MERGE INTO link_carcass_indicator t
+            USING source_link_carcass_indicator s
+            ON t.carcass_hk = s.carcass_hk AND t.indicator_hk = s.indicator_hk
+            WHEN NOT MATCHED THEN INSERT *
         """)
 
         # Link_Carcass_Saleyard
@@ -287,16 +248,13 @@ def main():
             saleyard_hk.alias("saleyard_hk"),
             lit(load_dts).alias("load_dts"),
         ).distinct()
+        link_carcass_saleyard.writeTo("link_carcass_saleyard").createOrReplace()
         link_carcass_saleyard.createOrReplaceTempView("source_link_carcass_saleyard")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_saleyard (
-                carcass_hk STRING,
-                saleyard_hk STRING,
-                load_dts TIMESTAMP
-            ) USING iceberg
-        """)
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_saleyard USING iceberg AS SELECT * FROM source_link_carcass_saleyard
+            MERGE INTO link_carcass_saleyard t
+            USING source_link_carcass_saleyard s
+            ON t.carcass_hk = s.carcass_hk AND t.saleyard_hk = s.saleyard_hk
+            WHEN NOT MATCHED THEN INSERT *
         """)
 
         logger.info("Unpersisting cached dataframes.")

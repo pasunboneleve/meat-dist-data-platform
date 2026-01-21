@@ -174,7 +174,7 @@ def main():
         spark.sql("""
             CREATE TABLE IF NOT EXISTS hub_saleyard (
                 saleyard_hk STRING,
-                saleyard_id INT,
+                saleyard_id STRING,
                 load_dts TIMESTAMP,
                 rec_src STRING
             ) USING iceberg

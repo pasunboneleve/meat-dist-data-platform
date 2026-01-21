@@ -3,106 +3,61 @@ from datetime import UTC, date, datetime, timedelta
 from airflow.sdk import Asset, Context, get_current_context
 
 
-def get_target_config(
+def get_config_from_trigger(
     context: dict,
     upstream_asset: Asset,
-    date_offset_days: int = 1,
-    metadata_key: str = "target_date_str",
 ) -> dict[str, str]:
     """
-    Reusable function to resolve target_date_str and prefix.
-
-    Works for:
-    - Asset-triggered runs (reads from upstream asset event metadata)
-    - Manual triggers (prefers explicit logical_date if set)
+    Resolves run configuration by pulling from an upstream XCom for asset-
+    triggered runs or using the logical date for manual runs.
 
     Args:
-        context: The Airflow task context
-        upstream_asset: The Asset object that triggers this DAG
-        date_offset_days: How many days to subtract from logical_date (default 1)
-        metadata_key: The extra/metadata key where upstream stores the date string
+        context: The Airflow task context.
+        upstream_asset: The asset that is expected to trigger this DAG.
 
     Returns:
-        Dict with 'target_date_str' and 'target_prefix'
+        A dictionary containing the configuration for the run.
     """
     triggering_events = context.get("triggering_asset_events", {})
 
     if triggering_events and upstream_asset in triggering_events:
-        # Asset-triggered path – prefer metadata from upstream
-        events = triggering_events[upstream_asset]
-        if events:
-            latest_event = events[-1]
-            print("DEBUG: Full latest_event:", latest_event.__dict__)
-            print("DEBUG: latest_event.extra:", latest_event.extra)
-            print(
-                "DEBUG: latest_event.metadata (fallback):",
-                getattr(latest_event, "metadata", None),
-            )
-            print("DEBUG: All event keys:", dir(latest_event))
+        # Asset-triggered: Pull the XCom pushed by the producer DAG
+        latest_event = triggering_events[upstream_asset][-1]
+        source_dag_id = latest_event.source_dag_id
+        source_run_id = latest_event.source_run_id
 
-            extra = latest_event.extra or {}
-            metadata = getattr(latest_event, "metadata", {}) or {}
-            target_date_str = (
-                extra.get("target_date_str")
-                or metadata.get("target_date_str")
-                or extra.get("target_date")  # possible typo variants
-                or metadata.get("target_date")
+        print(
+            f"Asset-triggered run. Pulling XCom from {source_dag_id} run {source_run_id}"
+        )
+        config = context["ti"].xcom_pull(
+            key="asset_config",
+            dag_id=source_dag_id,
+            run_id=source_run_id,
+        )
+        if not config:
+            raise ValueError(
+                f"Could not find XCom 'asset_config' from {source_dag_id} run {source_run_id}. "
+                "Ensure the producer DAG's final task is pushing this XCom."
             )
-
-            if target_date_str:
-                try:
-                    target_date = date.fromisoformat(target_date_str)
-                    print(
-                        f"Asset-triggered: Using upstream metadata '{metadata_key}': {target_date_str}"
-                    )
-                except ValueError as e:
-                    raise ValueError(
-                        f"Invalid date format in upstream metadata '{metadata_key}': {target_date_str}"
-                    ) from e
-            else:
-                raise ValueError(
-                    f"Upstream event missing 'target_date_str' in extra or metadata. "
-                    f"Extra: {extra}, Metadata: {metadata}"
-                    f"Check producer DAG is emitting metadata correctly."
-                )
-        else:
-            raise ValueError(f"Empty event list for asset {upstream_asset.uri}")
+        print(f"Successfully pulled config: {config}")
+        return config
     else:
-        # Manual trigger path – try logical_date first
-        logical_date = context.get("logical_date")
-
-        if logical_date is not None:
-            target_date = logical_date.date() - timedelta(days=date_offset_days)
-            print(
-                f"Manual trigger: Using logical_date - {date_offset_days} day(s): "
-                f"{target_date.isoformat()}"
-            )
-        else:
-            # Very rare fallback for manual runs without logical_date
-            dag_run = context["dag_run"]
-            fallback_ts = dag_run.queued_at or dag_run.created_at
-            target_date = (fallback_ts - timedelta(days=date_offset_days)).date()
-            print(
-                f"Manual trigger without logical_date: Using fallback date "
-                f"{target_date.isoformat()}"
-            )
-
-    target_date_str = target_date.isoformat()
-
-    # Rebuild prefix (assumes Hive-style partitioning – adjust if needed)
-    prefix = (
-        f"carcasses/year={target_date.year}/"
-        f"month={target_date.month:02d}/"
-        f"day={target_date.day:02d}/"
-    )
-
-    print(f"Resolved target_date_str: {target_date_str}")
-    print(f"Resolved prefix: {prefix}")
-
-    return {
-        "target_date_str": target_date_str,
-        "target_prefix": prefix,
-    }
+        # Manual trigger: Fallback to using logical_date
+        print("Manual trigger run. Building config from logical_date.")
+        logical_date = context["logical_date"]
+        target_date = logical_date.date()
+        target_date_str = target_date.isoformat()
+        prefix = (
+            f"carcasses/year={target_date.year}/"
+            f"month={target_date.month:02d}/"
+            f"day={target_date.day:02d}/"
+        )
+        config = {
+            "target_date_str": target_date_str,
+            "target_prefix": prefix,
+        }
+        print(f"Built manual config: {config}")
+        return config
 
 
 def generate_dataproc_batch_id(

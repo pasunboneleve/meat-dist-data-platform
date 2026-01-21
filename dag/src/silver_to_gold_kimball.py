@@ -9,7 +9,8 @@ from airflow.sdk import PokeReturnValue, dag, get_current_context, task
 from airflow.sdk.definitions.asset.metadata import Metadata
 
 from assets import gold_kimball_asset, silver_dv2_asset
-from config_utils import generate_dataproc_batch_id, get_target_config
+from config_utils import generate_dataproc_batch_id, get_config_from_trigger
+
 
 default_args = {
     "owner": "data-eng",
@@ -35,12 +36,10 @@ if not GOLD_BUCKET:
 )
 def silver_to_gold_kimball():
     @task
-    def get_config(**context) -> Dict[str, str]:
-        return get_target_config(
+    def get_.config(**context) -> Dict[str, str]:
+        return get_config_from_trigger(
             context=context,
             upstream_asset=silver_dv2_asset,
-            date_offset_days=0,  # example: same day for silver→gold
-            metadata_key="target_date_str",
         )
 
     @task
@@ -127,10 +126,7 @@ def silver_to_gold_kimball():
         """Marks the gold asset as produced after Spark job success."""
 
         print(f"Gold Kimball fact table produced for date: {config['target_date_str']}")
-        return Metadata(
-            asset=gold_kimball_asset,
-            extra={"target_date_str": config["target_date_str"]},
-        )
+        return Metadata(asset=gold_kimball_asset)
         # Optional: lightweight post-checks, notifications, etc.
 
     waited = verify_gold(spark_job)  # type: ignore[arg-type]

@@ -110,17 +110,15 @@ def daily_synthetic_ingestion():
 
         return PokeReturnValue(is_done=False)
 
-    @task(outlets=[bronze_carcasses_asset])
-    def mark_asset_produced(config: dict[str, str]):
+    @task(outlets=[bronze_carcesses_asset])
+    def mark_asset_produced(config: dict[str, str], ti=None):
         print(f"Bronze asset produced for date: {config['target_date_str']}")
 
-        return Metadata(
-            asset=bronze_carcasses_asset,
-            extra={
-                "target_date_str": config["target_date_str"],
-                "target_prefix": config.get("target_prefix"),
-            },
-        )
+        # Explicitly push to XCom for downstream DAGs to pull
+        ti.xcom_push(key="asset_config", value=config)
+
+        # Still return Metadata for the asset event itself
+        return Metadata(asset=bronze_carcasses_asset)
 
     # Chain tasks – TaskFlow passes config via XCom automatically
 

@@ -9,7 +9,7 @@ from airflow.sdk import PokeReturnValue, dag, get_current_context, task
 from airflow.sdk.definitions.asset.metadata import Metadata
 
 from assets import bronze_carcasses_asset, silver_dv2_asset
-from config_utils import generate_dataproc_batch_id, get_target_config
+from config_utils import generate_dataproc_batch_id, get_config_from_trigger
 
 default_args = {
     "owner": "data-eng",
@@ -38,11 +38,9 @@ if not all([BRONZE_BUCKET, SILVER_BUCKET]):
 def bronze_to_silver_dv2():
     @task
     def get_config(**context) -> Dict[str, str]:
-        return get_target_config(
+        return get_config_from_trigger(
             context=context,
             upstream_asset=bronze_carcasses_asset,
-            date_offset_days=0,  # change if different DAG needs different offset
-            metadata_key="target_date_str",  # change if upstream uses different key
         )
 
     @task
@@ -120,18 +118,15 @@ def bronze_to_silver_dv2():
         return PokeReturnValue(is_done=False)
 
     @task(outlets=[silver_dv2_asset])
-    def mark_asset_produced(config: Dict[str, str]):
+    def mark_asset_produced(config: Dict[str, str], ti=None):
         print(
             f"Silver DV2 Iceberg asset produced for date: {config['target_date_str']}"
         )
 
-        return Metadata(
-            asset=silver_dv2_asset,
-            extra={
-                "target_date_str": config["target_date_str"],
-                "target_prefix": config.get("target_prefix"),
-            },
-        )
+        # Explicitly push to XCom for the downstream gold DAG
+        ti.xcom_push(key="asset_config", value=config)
+
+        return Metadata(asset=silver_dv2_asset)
 
     # Chain
     config = get_config()

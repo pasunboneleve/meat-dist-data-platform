@@ -13,7 +13,7 @@ from utils.config import generate_dataproc_batch_id, get_config_from_trigger
 
 default_args = {
     "owner": "data-eng",
-    "retries": 1,
+    "retries": 2,
     "retry_delay": timedelta(minutes=5),
 }
 

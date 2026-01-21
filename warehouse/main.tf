@@ -269,8 +269,8 @@ resource "google_composer_environment" "meat_composer" {
         CATALOG_NAME                   = google_biglake_catalog.meat_iceberg.name
       }
       airflow_config_overrides = {
-        "scheduler-min_file_process_interval" = "30" # default is higher (often ~120–300 in practice)
-        "scheduler-dag_dir_list_interval"     = "30" # how often to look for new files
+        "scheduler-min_file_process_interval" = "30"
+        "scheduler-dag_dir_list_interval"     = "30"
       }
     }
 

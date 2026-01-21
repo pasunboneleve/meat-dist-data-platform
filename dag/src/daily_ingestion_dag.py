@@ -22,7 +22,7 @@ if not all([BRONZE_BUCKET, SYNTHETIC_MEAT_URL]):
 
 default_args = {
     "owner": "data-eng",
-    "retries": 3,
+    "retries": 2,
     "retry_delay": timedelta(minutes=5),
 }
 

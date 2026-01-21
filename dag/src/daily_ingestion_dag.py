@@ -115,10 +115,11 @@ def daily_synthetic_ingestion():
         print(f"Bronze asset produced for date: {config['target_date_str']}")
 
         return Metadata(
+            asset=bronze_carcasses_asset,
             extra={
                 "target_date_str": config["target_date_str"],
                 "target_prefix": config.get("target_prefix"),
-            }
+            },
         )
 
     # Chain tasks – TaskFlow passes config via XCom automatically

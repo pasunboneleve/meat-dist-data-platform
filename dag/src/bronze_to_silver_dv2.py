@@ -126,10 +126,11 @@ def bronze_to_silver_dv2():
         )
 
         return Metadata(
+            asset=silver_dv2_asset,
             extra={
                 "target_date_str": config["target_date_str"],
                 "target_prefix": config.get("target_prefix"),
-            }
+            },
         )
 
     # Chain

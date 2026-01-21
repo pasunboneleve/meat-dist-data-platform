@@ -9,8 +9,8 @@ from airflow.providers.google.cloud.operators.dataproc import \
 from airflow.sdk import PokeReturnValue, dag, get_current_context, task
 from airflow.sdk.definitions.asset.metadata import Metadata
 
-from assets import bronze_carcasses_asset, silver_dv2_asset
-from config_utils import generate_dataproc_batch_id, get_config_from_trigger
+from utils.assets import bronze_carcasses_asset, silver_dv2_asset
+from utils.config import generate_dataproc_batch_id, get_config_from_trigger
 
 default_args = {
     "owner": "data-eng",

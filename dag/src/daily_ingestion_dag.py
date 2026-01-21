@@ -9,7 +9,7 @@ from airflow.sdk.definitions.asset.metadata import Metadata
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
 
-from assets import bronze_carcasses_asset
+from utils.assets import bronze_carcasses_asset
 
 # Env vars – set these in Airflow UI (Admin > Variables) or container env
 BRONZE_BUCKET = os.environ.get("BRONZE_BUCKET")

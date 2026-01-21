@@ -118,7 +118,7 @@ def main():
             col("marbling_score").cast("integer"),
             col("fat_depth_mm").cast("integer"),
             # Audit columns
-            col("load_dts"),
+            sat_carcass_incremental_df.load_dts,
         )
 
         # 5. Add partitioning columns based on slaughter_date

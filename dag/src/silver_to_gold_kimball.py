@@ -68,9 +68,9 @@ def silver_to_gold_kimball():
                         "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
                         "spark.sql.catalog.spark_catalog.type": "hadoop",
                         "spark.sql.catalog.spark_catalog.warehouse": f"gs://{os.environ['SILVER_BUCKET']}/iceberg_warehouse/",
-                        "spark.executor.instances": "2", # Min required by Dataproc
-                        "spark.executor.cores": "4", # Min required by Dataproc
-                        "spark.driver.cores": "4", # Default is 4
+                        "spark.executor.instances": "2",  # Min required by Dataproc
+                        "spark.executor.cores": "4",  # Min required by Dataproc
+                        "spark.driver.cores": "4",  # Default is 4
                         "spark.sql.execution_date": "{{ ds }}",
                         "spark.sql.gold_bucket": os.environ["GOLD_BUCKET"],
                         "spark.sql.silver_bucket": os.environ["SILVER_BUCKET"],
@@ -127,7 +127,7 @@ def silver_to_gold_kimball():
         """Marks the gold asset as produced after Spark job success."""
 
         print(f"Gold Kimball fact table produced for date: {config['target_date_str']}")
-        yield Metadata(
+        return Metadata(
             asset=gold_kimball_asset,
             extra={"target_date_str": config["target_date_str"]},
         )

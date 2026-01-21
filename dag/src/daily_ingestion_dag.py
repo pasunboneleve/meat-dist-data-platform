@@ -114,7 +114,7 @@ def daily_synthetic_ingestion():
     def mark_asset_produced(config: dict[str, str]):
         print(f"Bronze asset produced for date: {config['target_date_str']}")
 
-        yield Metadata(
+        return Metadata(
             asset=bronze_carcasses_asset,
             extra={
                 "target_date_str": config["target_date_str"],

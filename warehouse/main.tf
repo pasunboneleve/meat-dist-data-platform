@@ -211,7 +211,7 @@ resource "google_dataplex_asset" "silver_asset" {
   display_name  = "Silver GCS Bucket"
   discovery_spec {
     enabled          = true
-    exclude_patterns = ["iceberg_warehouse/*/metadata/**"]
+    exclude_patterns = ["**/metadata/**"]
   }
   resource_spec {
     name = "projects/${google_storage_bucket.silver_bucket.project}/buckets/${google_storage_bucket.silver_bucket.name}"

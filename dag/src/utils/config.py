@@ -34,7 +34,7 @@ def get_config_from_trigger(
             key="asset_config",
             dag_id=source_dag_id,
             run_id=source_run_id,
-            task_ids=[source_task_id],  # Be specific about the source task
+            task_ids=source_task_id,  # Pass task_id as a string, not a list
         )
         if not config:
             raise ValueError(

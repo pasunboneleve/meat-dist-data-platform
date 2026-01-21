@@ -11,7 +11,6 @@ from airflow.sdk.definitions.asset.metadata import Metadata
 from assets import gold_kimball_asset, silver_dv2_asset
 from config_utils import generate_dataproc_batch_id, get_config_from_trigger
 
-
 default_args = {
     "owner": "data-eng",
     "retries": 1,
@@ -36,7 +35,7 @@ if not GOLD_BUCKET:
 )
 def silver_to_gold_kimball():
     @task
-    def get_.config(**context) -> Dict[str, str]:
+    def get_config(**context) -> Dict[str, str]:
         return get_config_from_trigger(
             context=context,
             upstream_asset=silver_dv2_asset,

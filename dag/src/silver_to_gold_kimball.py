@@ -123,14 +123,11 @@ def silver_to_gold_kimball():
         return PokeReturnValue(is_done=False)
 
     @task(outlets=[gold_kimball_asset])
-    def mark_gold_produced(config: Dict[str, str]):
+    def mark_gold_produced(config: Dict[str, str]) -> dict:
         """Marks the gold asset as produced after Spark job success."""
 
         print(f"Gold Kimball fact table produced for date: {config['target_date_str']}")
-        return Metadata(
-            asset=gold_kimball_asset,
-            extra={"target_date_str": config["target_date_str"]},
-        )
+        return {"target_date_str": config["target_date_str"]}
         # Optional: lightweight post-checks, notifications, etc.
 
     waited = verify_gold(spark_job)  # type: ignore[arg-type]

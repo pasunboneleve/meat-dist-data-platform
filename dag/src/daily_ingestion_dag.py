@@ -111,16 +111,14 @@ def daily_synthetic_ingestion():
         return PokeReturnValue(is_done=False)
 
     @task(outlets=[bronze_carcasses_asset])
-    def mark_asset_produced(config: dict[str, str]):
+    def mark_asset_produced(config: dict[str, str]) -> dict:
         print(f"Bronze asset produced for date: {config['target_date_str']}")
 
-        return Metadata(
-            asset=bronze_carcasses_asset,
-            extra={
-                "target_date_str": config["target_date_str"],
-                "target_prefix": config.get("target_prefix"),
-            },
-        )
+        # Return a dictionary directly – Airflow uses this as `extra` metadata
+        return {
+            "target_date_str": config["target_date_str"],
+            "target_prefix": config.get("target_prefix"),
+        }
 
     # Chain tasks – TaskFlow passes config via XCom automatically
 

@@ -2,9 +2,9 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Dict
 
+from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
-from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.sdk import PokeReturnValue, dag, get_current_context, task
 from airflow.sdk.definitions.asset.metadata import Metadata
 
@@ -70,8 +70,8 @@ def bronze_to_silver_dv2():
                         "spark.sql.catalog.spark_catalog.type": "hadoop",
                         "spark.sql.catalog.spark_catalog.warehouse": f"gs://{SILVER_BUCKET}/iceberg_warehouse/",
                         "spark.sql.iceberg.merge-schema": "true",
-                        "spark.executor.instances": "2", # Min required by Dataproc
-                        "spark.executor.cores": "4", # Min required by Dataproc
+                        "spark.executor.instances": "2",  # Min required by Dataproc
+                        "spark.executor.cores": "4",  # Min required by Dataproc
                         "spark.executor.memory": "4g",
                         "spark.driver.cores": "4",
                         "spark.driver.memory": "4g",
@@ -125,12 +125,11 @@ def bronze_to_silver_dv2():
             f"Silver DV2 Iceberg asset produced for date: {config['target_date_str']}"
         )
 
-        yield Metadata(
-            asset=silver_dv2_asset,
+        return Metadata(
             extra={
                 "target_date_str": config["target_date_str"],
                 "target_prefix": config.get("target_prefix"),
-            },
+            }
         )
 
     # Chain

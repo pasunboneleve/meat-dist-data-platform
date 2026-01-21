@@ -76,15 +76,11 @@ def main():
             "spark_catalog.default.link_carcass_plant"
         )
 
-        # 2. Filter Satellite for incremental processing based on load date
-        logger.info(f"Filtering satellite data for load date: {target_date}")
+        # 2. Filter Satellite for incremental processing based on slaughter date
+        logger.info(f"Filtering satellite data for slaughter date: {target_date}")
         sat_carcass_incremental_df = sat_carcass_detail_df.where(
-            to_date(col("load_dts")) == target_date
+            col("slaughter_date") == target_date
         )
-
-        if sat_carcass_incremental_df.rdd.isEmpty():
-            logger.info("No new data in sat_carcass_detail to process. Exiting.")
-            sys.exit(0)
 
         # 3. Denormalize by joining Hubs, Satellites, and Links
         logger.info("Joining Silver tables to create denormalized fact view...")
@@ -95,16 +91,14 @@ def main():
         )
 
         # Join with saleyard info
-        carcass_denormalized = (
-            carcass_denormalized.join(link_carcass_saleyard_df, "carcass_hk", "left")
-            .join(hub_saleyard_df, "saleyard_hk", "left")
-        )
+        carcass_denormalized = carcass_denormalized.join(
+            link_carcass_saleyard_df, "carcass_hk", "left"
+        ).join(hub_saleyard_df, "saleyard_hk", "left")
 
         # Join with plant info through the link table
-        carcass_denormalized = (
-            carcass_denormalized.join(link_carcass_plant_df, "carcass_hk", "left")
-            .join(hub_plant_df, "plant_hk", "left")
-        )
+        carcass_denormalized = carcass_denormalized.join(
+            link_carcass_plant_df, "carcass_hk", "left"
+        ).join(hub_plant_df, "plant_hk", "left")
 
         # 4. Create the Gold Fact Table
         logger.info("Creating fact_carcass_transactions table...")

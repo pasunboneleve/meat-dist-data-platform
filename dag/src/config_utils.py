@@ -9,7 +9,7 @@ def get_config_from_trigger(
 ) -> dict[str, str]:
     """
     Resolves run configuration by pulling from an upstream XCom for asset-
-    triggered runs or using the logical date for manual runs.
+    triggered runs, or using the logical date for manual runs.
 
     Args:
         context: The Airflow task context.

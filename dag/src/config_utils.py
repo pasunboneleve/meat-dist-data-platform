@@ -1,5 +1,6 @@
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime
 
+from airflow.models.xcom import XComApi
 from airflow.sdk import Asset, Context, get_current_context
 
 
@@ -25,14 +26,16 @@ def get_config_from_trigger(
         latest_event = triggering_events[upstream_asset][-1]
         source_dag_id = latest_event.source_dag_id
         source_run_id = latest_event.source_run_id
+        source_task_id = latest_event.source_task_id
 
         print(
-            f"Asset-triggered run. Pulling XCom from {source_dag_id} run {source_run_id}"
+            f"Asset-triggered run. Pulling XCom from {source_dag_id}.{source_task_id} run {source_run_id}"
         )
-        config = context["ti"].xcom_pull(
+        config = XComApi.get_one(
             key="asset_config",
             dag_id=source_dag_id,
             run_id=source_run_id,
+            task_id=source_task_id,
         )
         if not config:
             raise ValueError(

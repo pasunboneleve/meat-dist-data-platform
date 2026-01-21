@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # PySpark script for Bronze -> Silver DV2 Iceberg
 # Run via DataprocCreateBatchOperator
-# Filters to target_date partition only (passed via spark.conf)
+# Filters to target_date partition only (passed via xcom_push)
 
 import hashlib
 import logging
@@ -103,9 +103,6 @@ def main():
         ).distinct()
         hub_carcass.createOrReplaceTempView("source_hub_carcass")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_carcass USING iceberg AS SELECT * FROM source_hub_carcass
-        """)
-        spark.sql("""
             MERGE INTO hub_carcass t
             USING source_hub_carcass s
             ON t.carcass_hk = s.carcass_hk
@@ -122,9 +119,6 @@ def main():
         ).distinct()
         hub_plant.createOrReplaceTempView("source_hub_plant")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_plant USING iceberg AS SELECT * FROM source_hub_plant
-        """)
-        spark.sql("""
             MERGE INTO hub_plant t
             USING source_hub_plant s ON t.plant_hk = s.plant_hk
             WHEN NOT MATCHED THEN INSERT *
@@ -140,9 +134,6 @@ def main():
         ).distinct()
         hub_indicator.createOrReplaceTempView("source_hub_indicator")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_indicator USING iceberg AS SELECT * FROM source_hub_indicator
-        """)
-        spark.sql("""
             MERGE INTO hub_indicator t
             USING source_hub_indicator s ON t.indicator_hk = s.indicator_hk
             WHEN NOT MATCHED THEN INSERT *
@@ -157,9 +148,6 @@ def main():
             lit("BRONZE").alias("rec_src"),
         ).distinct()
         hub_saleyard.createOrReplaceTempView("source_hub_saleyard")
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_saleyard USING iceberg AS SELECT * FROM source_hub_saleyard
-        """)
         spark.sql("""
             MERGE INTO hub_saleyard t
             USING source_hub_saleyard s ON t.saleyard_hk = s.saleyard_hk
@@ -184,9 +172,6 @@ def main():
         )
         sat_carcass.createOrReplaceTempView("source_sat_carcass")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS sat_carcass_detail USING iceberg AS SELECT * FROM source_sat_carcass
-        """)
-        spark.sql("""
             MERGE INTO sat_carcass_detail t
             USING source_sat_carcass s
             ON t.carcass_hk = s.carcass_hk
@@ -206,9 +191,6 @@ def main():
         )
         sat_saleyard.createOrReplaceTempView("source_sat_saleyard")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS sat_saleyard_detail USING iceberg AS SELECT * FROM source_sat_saleyard
-        """)
-        spark.sql("""
             MERGE INTO sat_saleyard_detail t
             USING source_sat_saleyard s
             ON t.saleyard_hk = s.saleyard_hk
@@ -227,9 +209,6 @@ def main():
         ).distinct()
         link_carcass_plant.createOrReplaceTempView("source_link_carcass_plant")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_plant USING iceberg AS SELECT * FROM source_link_carcass_plant
-        """)
-        spark.sql("""
             MERGE INTO link_carcass_plant t
             USING source_link_carcass_plant s
             ON t.carcass_hk = s.carcass_hk AND t.plant_hk = s.plant_hk
@@ -246,9 +225,6 @@ def main():
         ).distinct()
         link_carcass_indicator.createOrReplaceTempView("source_link_carcass_indicator")
         spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_indicator USING iceberg AS SELECT * FROM source_link_carcass_indicator
-        """)
-        spark.sql("""
             MERGE INTO link_carcass_indicator t
             USING source_link_carcass_indicator s
             ON t.carcass_hk = s.carcass_hk AND t.indicator_hk = s.indicator_hk
@@ -264,9 +240,6 @@ def main():
             lit(load_dts).alias("load_dts"),
         ).distinct()
         link_carcass_saleyard.createOrReplaceTempView("source_link_carcass_saleyard")
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_saleyard USING iceberg AS SELECT * FROM source_link_carcass_saleyard
-        """)
         spark.sql("""
             MERGE INTO link_carcass_saleyard t
             USING source_link_carcass_saleyard s

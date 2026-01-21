@@ -55,7 +55,7 @@ def main():
         if not target_date_str:
             raise DagConfigError("target_date_str missing.")
         target_date = date.fromisoformat(target_date_str)
-        load_dts = datetime.now().isoformat()
+        load_dts = datetime.now()
         logger.info(
             "Loaded configuration",
             extra={
@@ -98,7 +98,7 @@ def main():
         hub_carcass = carcass_df.select(
             hash_key(col("carcass_id")).alias("carcass_hk"),
             col("carcass_id"),
-            lit(load_dts).cast("timestamp").alias("load_dts"),
+            lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
         spark.sql("""
@@ -122,7 +122,7 @@ def main():
         hub_plant = carcass_df.select(
             hash_key(col("plant_id")).alias("plant_hk"),
             col("plant_id"),
-            lit(load_dts).cast("timestamp").alias("load_dts"),
+            lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
         spark.sql("""
@@ -145,7 +145,7 @@ def main():
         hub_indicator = indicator_df.select(
             hash_key(col("indicator_id")).alias("indicator_hk"),
             col("indicator_id"),
-            lit(load_dts).cast("timestamp").alias("load_dts"),
+            lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
         spark.sql("""
@@ -168,7 +168,7 @@ def main():
         hub_saleyard = saleyard_df.select(
             hash_key(col("saleyard_id")).alias("saleyard_hk"),
             col("saleyard_id"),
-            lit(load_dts).cast("timestamp").alias("load_dts"),
+            lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
         spark.sql("""
@@ -199,7 +199,7 @@ def main():
             col("fat_depth_mm"),
             col("total_price_aud"),
             col("slaughter_date").cast("date").alias("slaughter_date"),
-            lit(load_dts).cast("timestamp").alias("load_dts"),
+            lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         )
         spark.sql("""
@@ -233,7 +233,7 @@ def main():
             col("saleyard_desc"),
             col("state_id"),
             col("nrmr_desc"),
-            lit(load_dts).cast("timestamp").alias("load_dts"),
+            lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         )
         spark.sql("""
@@ -261,7 +261,7 @@ def main():
         link_carcass_plant = carcass_df.select(
             carcass_hk.alias("carcass_hk"),
             plant_hk.alias("plant_hk"),
-            lit(load_dts).cast("timestamp").alias("load_dts"),
+            lit(load_dts).alias("load_dts"),
             col("slaughter_date").cast("date").alias("process_date"),
         ).distinct()
         spark.sql("""
@@ -286,7 +286,7 @@ def main():
         link_carcass_indicator = carcass_df.select(
             carcass_hk.alias("carcass_hk"),
             indicator_hk.alias("indicator_hk"),
-            lit(load_dts).cast("timestamp").alias("load_dts"),
+            lit(load_dts).alias("load_dts"),
         ).distinct()
         spark.sql("""
             CREATE TABLE IF NOT EXISTS link_carcass_indicator (
@@ -309,7 +309,7 @@ def main():
         link_carcass_saleyard = carcass_df.select(
             carcass_hk.alias("carcass_hk"),
             saleyard_hk.alias("saleyard_hk"),
-            lit(load_dts).cast("timestamp").alias("load_dts"),
+            lit(load_dts).alias("load_dts"),
         ).distinct()
         spark.sql("""
             CREATE TABLE IF NOT EXISTS link_carcass_saleyard (

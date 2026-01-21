@@ -101,9 +101,13 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
-        hub_carcass.writeTo("hub_carcass").createOrReplace()
-        hub_carcass.createOrReplaceTempView("source_hub_carcass")
 
+        # Idempotently create table with schema if it doesn't exist
+        if not spark.catalog.tableExists("hub_carcass"):
+            empty_hub_carcass = spark.createDataFrame([], hub_carcass.schema)
+            empty_hub_carcass.writeTo("hub_carcass").create()
+
+        hub_carcass.createOrReplaceTempView("source_hub_carcass")
         spark.sql("""
             MERGE INTO hub_carcass t
             USING source_hub_carcass s
@@ -119,7 +123,11 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
-        hub_plant.writeTo("hub_plant").createOrReplace()
+
+        if not spark.catalog.tableExists("hub_plant"):
+            empty_hub_plant = spark.createDataFrame([], hub_plant.schema)
+            empty_hub_plant.writeTo("hub_plant").create()
+
         hub_plant.createOrReplaceTempView("source_hub_plant")
         spark.sql("""
             MERGE INTO hub_plant t
@@ -135,7 +143,11 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
-        hub_indicator.writeTo("hub_indicator").createOrReplace()
+
+        if not spark.catalog.tableExists("hub_indicator"):
+            empty_hub_indicator = spark.createDataFrame([], hub_indicator.schema)
+            empty_hub_indicator.writeTo("hub_indicator").create()
+
         hub_indicator.createOrReplaceTempView("source_hub_indicator")
         spark.sql("""
             MERGE INTO hub_indicator t
@@ -151,7 +163,11 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
-        hub_saleyard.writeTo("hub_saleyard").createOrReplace()
+
+        if not spark.catalog.tableExists("hub_saleyard"):
+            empty_hub_saleyard = spark.createDataFrame([], hub_saleyard.schema)
+            empty_hub_saleyard.writeTo("hub_saleyard").create()
+
         hub_saleyard.createOrReplaceTempView("source_hub_saleyard")
         spark.sql("""
             MERGE INTO hub_saleyard t
@@ -175,7 +191,11 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         )
-        sat_carcass.writeTo("sat_carcass_detail").createOrReplace()
+
+        if not spark.catalog.tableExists("sat_carcass_detail"):
+            empty_sat_carcass = spark.createDataFrame([], sat_carcass.schema)
+            empty_sat_carcass.writeTo("sat_carcass_detail").create()
+
         sat_carcass.createOrReplaceTempView("source_sat_carcass")
         spark.sql("""
             MERGE INTO sat_carcass_detail t
@@ -195,7 +215,11 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         )
-        sat_saleyard.writeTo("sat_saleyard_detail").createOrReplace()
+
+        if not spark.catalog.tableExists("sat_saleyard_detail"):
+            empty_sat_saleyard = spark.createDataFrame([], sat_saleyard.schema)
+            empty_sat_saleyard.writeTo("sat_saleyard_detail").create()
+
         sat_saleyard.createOrReplaceTempView("source_sat_saleyard")
         spark.sql("""
             MERGE INTO sat_saleyard_detail t
@@ -214,7 +238,13 @@ def main():
             lit(load_dts).alias("load_dts"),
             col("slaughter_date").cast("date").alias("process_date"),
         ).distinct()
-        link_carcass_plant.writeTo("link_carcass_plant").createOrReplace()
+
+        if not spark.catalog.tableExists("link_carcass_plant"):
+            empty_link_carcass_plant = spark.createDataFrame(
+                [], link_carcass_plant.schema
+            )
+            empty_link_carcass_plant.writeTo("link_carcass_plant").create()
+
         link_carcass_plant.createOrReplaceTempView("source_link_carcass_plant")
         spark.sql("""
             MERGE INTO link_carcass_plant t
@@ -231,7 +261,13 @@ def main():
             indicator_hk.alias("indicator_hk"),
             lit(load_dts).alias("load_dts"),
         ).distinct()
-        link_carcass_indicator.writeTo("link_carcass_indicator").createOrReplace()
+
+        if not spark.catalog.tableExists("link_carcass_indicator"):
+            empty_link_carcass_indicator = spark.createDataFrame(
+                [], link_carcass_indicator.schema
+            )
+            empty_link_carcass_indicator.writeTo("link_carcass_indicator").create()
+
         link_carcass_indicator.createOrReplaceTempView("source_link_carcass_indicator")
         spark.sql("""
             MERGE INTO link_carcass_indicator t
@@ -248,7 +284,13 @@ def main():
             saleyard_hk.alias("saleyard_hk"),
             lit(load_dts).alias("load_dts"),
         ).distinct()
-        link_carcass_saleyard.writeTo("link_carcass_saleyard").createOrReplace()
+
+        if not spark.catalog.tableExists("link_carcass_saleyard"):
+            empty_link_carcass_saleyard = spark.createDataFrame(
+                [], link_carcass_saleyard.schema
+            )
+            empty_link_carcass_saleyard.writeTo("link_carcass_saleyard").create()
+
         link_carcass_saleyard.createOrReplaceTempView("source_link_carcass_saleyard")
         spark.sql("""
             MERGE INTO link_carcass_saleyard t

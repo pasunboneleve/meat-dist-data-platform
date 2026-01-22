@@ -49,11 +49,17 @@ def main():
         .config("spark.sql.adaptive.enabled", "true")
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
         .config(f"spark.sql.catalog.biglake", "org.apache.iceberg.spark.SparkCatalog")
-        .config(f"spark.sql.catalog.biglake.catalog-impl", "org.apache.iceberg.gcp.biglake.BigLakeCatalog")
+        .config(
+            f"spark.sql.catalog.biglake.catalog-impl",
+            "org.apache.iceberg.gcp.biglake.BigLakeCatalog",
+        )
         .config(f"spark.sql.catalog.biglake.gcp_project", gcp_project)
         .config(f"spark.sql.catalog.biglake.gcp_location", dataproc_region)
         .config(f"spark.sql.catalog.biglake.blms_catalog", catalog_name)
-        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        )
         .getOrCreate()
     )
     try:
@@ -323,7 +329,7 @@ def main():
         link_carcass_saleyard = carcass_df.select(
             carcass_hk.alias("carcass_hk"),
             saleyard_hk.alias("saleyard_hk"),
-            lit(load_dts).alias("load_dts"),.distinct()
+            lit(load_dts).alias("load_dts").distinct(),
         )
         spark.sql(f"""
             CREATE TABLE IF NOT EXISTS biglake.{db_name}.link_carcass_saleyard (

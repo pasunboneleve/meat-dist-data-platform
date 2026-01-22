@@ -78,7 +78,7 @@ def bronze_to_silver_dv2():
                         "spark.sql.silver_bucket": SILVER_BUCKET,
                         "spark.sql.target_date_str": config["target_date_str"],
                         "spark.sql.gcp_project": os.environ["GCP_PROJECT_ID"],
-                        "spark.sql.dataproc_region": os.environ["DATAProc_REGION"],
+                        "spark.sql.dataproc_region": os.environ["DATAPROC_REGION"],
                         "spark.sql.catalog_name": os.environ["CATALOG_NAME"],
                         "spark.sql.db_name": os.environ["DB_NAME"],
                     },

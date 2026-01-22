@@ -104,8 +104,12 @@ def bronze_to_silver_dv2():
         mode="reschedule",
     )
     def verify_silver(config: Dict[str, str]) -> PokeReturnValue:
+        db_name = os.environ.get("DB_NAME")
+        if not db_name:
+            raise ValueError("Missing DB_NAME env var")
+
         hook = GCSHook(gcp_conn_id="google_cloud_default")
-        prefix = "iceberg_warehouse/default/hub_carcass/metadata/"
+        prefix = f"iceberg_warehouse/{db_name}/hub_carcass/metadata/"
 
         objects = hook.list(
             bucket_name=SILVER_BUCKET,  # type: ignore[arg-type]

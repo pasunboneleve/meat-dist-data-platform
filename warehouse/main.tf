@@ -314,21 +314,7 @@ resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_writer" {
   member = "serviceAccount:${google_service_account.ingestion_sa.email}"
 }
 
-resource "google_storage_bucket_iam_member" "biglake_sa_bronze_reader" {
-  bucket = google_storage_bucket.bronze_bucket.name
-  role   = "roles/storage.objectViewer"
-  member = "serviceAccount:${google_bigquery_connection.biglake.cloud_resource[0].service_account_id}"
 
-  depends_on = [time_sleep.wait_for_biglake_sa]
-}
-
-resource "google_storage_bucket_iam_member" "biglake_sa_silver_reader" {
-  bucket = google_storage_bucket.silver_bucket.name
-  role   = "roles/storage.objectViewer"
-  member = "serviceAccount:${google_bigquery_connection.biglake.cloud_resource[0].service_account_id}"
-
-  depends_on = [time_sleep.wait_for_biglake_sa]
-}
 
 # Required for Composer 2+ environment creation: Grant Composer Service Agent V2 Ext role
 resource "google_project_iam_member" "composer_service_agent_v2_ext" {

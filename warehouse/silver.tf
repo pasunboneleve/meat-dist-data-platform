@@ -6,26 +6,10 @@ resource "google_bigquery_table" "hub_carcass" {
 
   schema = <<EOF
 [
-  {
-    "name": "carcass_hk",
-    "type": "STRING",
-    "mode": "NULLABLE"
-  },
-  {
-    "name": "carcass_id",
-    "type": "STRING",
-    "mode": "NULLABLE"
-  },
-  {
-    "name": "load_dts",
-    "type": "TIMESTAMP",
-    "mode": "NULLABLE"
-  },
-  {
-    "name": "rec_src",
-    "type": "STRING",
-    "mode": "NULLABLE"
-  }
+  {"name": "carcass_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "carcass_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "load_dts", "type": "TIMESTAMP", "mode": "NULLABLE"},
+  {"name": "rec_src", "type": "STRING", "mode": "NULLABLE"}
 ]
 EOF
 
@@ -43,6 +27,15 @@ resource "google_bigquery_table" "hub_plant" {
   table_id            = "hub_plant"
   deletion_protection = false
 
+  schema = <<EOF
+[
+  {"name": "plant_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "plant_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "load_dts", "type": "TIMESTAMP", "mode": "NULLABLE"},
+  {"name": "rec_src", "type": "STRING", "mode": "NULLABLE"}
+]
+EOF
+
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
     file_format   = "PARQUET"
@@ -56,6 +49,15 @@ resource "google_bigquery_table" "hub_indicator" {
   dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id            = "hub_indicator"
   deletion_protection = false
+
+  schema = <<EOF
+[
+  {"name": "indicator_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "indicator_id", "type": "INTEGER", "mode": "NULLABLE"},
+  {"name": "load_dts", "type": "TIMESTAMP", "mode": "NULLABLE"},
+  {"name": "rec_src", "type": "STRING", "mode": "NULLABLE"}
+]
+EOF
 
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
@@ -71,6 +73,22 @@ resource "google_bigquery_table" "sat_carcass_detail" {
   table_id            = "sat_carcass_detail"
   deletion_protection = false
 
+  schema = <<EOF
+[
+  {"name": "carcass_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "hscw_kg", "type": "BIGNUMERIC", "precision": 10, "scale": 2, "mode": "NULLABLE"},
+  {"name": "animal_class", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "price_aud_per_kg", "type": "BIGNUMERIC", "precision": 10, "scale": 2, "mode": "NULLABLE"},
+  {"name": "marbling_score", "type": "INTEGER", "mode": "NULLABLE"},
+  {"name": "quality_score", "type": "INTEGER", "mode": "NULLABLE"},
+  {"name": "fat_depth_mm", "type": "INTEGER", "mode": "NULLABLE"},
+  {"name": "total_price_aud", "type": "BIGNUMERIC", "precision": 10, "scale": 2, "mode": "NULLABLE"},
+  {"name": "slaughter_date", "type": "DATE", "mode": "NULLABLE"},
+  {"name": "load_dts", "type": "TIMESTAMP", "mode": "NULLABLE"},
+  {"name": "rec_src", "type": "STRING", "mode": "NULLABLE"}
+]
+EOF
+
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
     file_format   = "PARQUET"
@@ -84,6 +102,15 @@ resource "google_bigquery_table" "link_carcass_plant" {
   dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id            = "link_carcass_plant"
   deletion_protection = false
+
+  schema = <<EOF
+[
+  {"name": "carcass_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "plant_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "load_dts", "type": "TIMESTAMP", "mode": "NULLABLE"},
+  {"name": "process_date", "type": "DATE", "mode": "NULLABLE"}
+]
+EOF
 
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
@@ -99,6 +126,14 @@ resource "google_bigquery_table" "link_carcass_indicator" {
   table_id            = "link_carcass_indicator"
   deletion_protection = false
 
+  schema = <<EOF
+[
+  {"name": "carcass_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "indicator_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "load_dts", "type": "TIMESTAMP", "mode": "NULLABLE"}
+]
+EOF
+
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
     file_format   = "PARQUET"
@@ -112,6 +147,15 @@ resource "google_bigquery_table" "hub_saleyard" {
   dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id            = "hub_saleyard"
   deletion_protection = false
+
+  schema = <<EOF
+[
+  {"name": "saleyard_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "saleyard_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "load_dts", "type": "TIMESTAMP", "mode": "NULLABLE"},
+  {"name": "rec_src", "type": "STRING", "mode": "NULLABLE"}
+]
+EOF
 
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
@@ -127,6 +171,17 @@ resource "google_bigquery_table" "sat_saleyard_detail" {
   table_id            = "sat_saleyard_detail"
   deletion_protection = false
 
+  schema = <<EOF
+[
+  {"name": "saleyard_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "saleyard_desc", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "state_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "nrmr_desc", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "load_dts", "type": "TIMESTAMP", "mode": "NULLABLE"},
+  {"name": "rec_src", "type": "STRING", "mode": "NULLABLE"}
+]
+EOF
+
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
     file_format   = "PARQUET"
@@ -140,6 +195,14 @@ resource "google_bigquery_table" "link_carcass_saleyard" {
   dataset_id          = google_bigquery_dataset.silver_meat_market.dataset_id
   table_id            = "link_carcass_saleyard"
   deletion_protection = false
+
+  schema = <<EOF
+[
+  {"name": "carcass_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "saleyard_hk", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "load_dts", "type": "TIMESTAMP", "mode": "NULLABLE"}
+]
+EOF
 
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id

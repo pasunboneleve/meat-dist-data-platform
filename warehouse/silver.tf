@@ -4,11 +4,11 @@ resource "google_bigquery_table" "hub_carcass" {
   table_id            = "hub_carcass"
   deletion_protection = false
 
-  external_data_configuration {
-    autodetect            = true
-    source_format         = "ICEBERG"
-    connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_carcass"]
+  biglake_configuration {
+    connection_id = google_bigquery_connection.biglake.id
+    file_format   = "PARQUET"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_carcass"
+    table_format  = "ICEBERG"
   }
 }
 
@@ -18,11 +18,11 @@ resource "google_bigquery_table" "hub_plant" {
   table_id            = "hub_plant"
   deletion_protection = false
 
-  external_data_configuration {
-    autodetect            = true
-    source_format         = "ICEBERG"
-    connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_plant"]
+  biglake_configuration {
+    connection_id = google_bigquery_connection.biglake.id
+    file_format   = "PARQUET"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_plant"
+    table_format  = "ICEBERG"
   }
 }
 
@@ -32,11 +32,11 @@ resource "google_bigquery_table" "hub_indicator" {
   table_id            = "hub_indicator"
   deletion_protection = false
 
-  external_data_configuration {
-    autodetect            = true
-    source_format         = "ICEBERG"
-    connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_indicator"]
+  biglake_configuration {
+    connection_id = google_bigquery_connection.biglake.id
+    file_format   = "PARQUET"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_indicator"
+    table_format  = "ICEBERG"
   }
 }
 
@@ -46,11 +46,11 @@ resource "google_bigquery_table" "sat_carcass_detail" {
   table_id            = "sat_carcass_detail"
   deletion_protection = false
 
-  external_data_configuration {
-    autodetect            = true
-    source_format         = "ICEBERG"
-    connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/sat_carcass_detail"]
+  biglake_configuration {
+    connection_id = google_bigquery_connection.biglake.id
+    file_format   = "PARQUET"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/sat_carcass_detail"
+    table_format  = "ICEBERG"
   }
 }
 
@@ -60,11 +60,11 @@ resource "google_bigquery_table" "link_carcass_plant" {
   table_id            = "link_carcass_plant"
   deletion_protection = false
 
-  external_data_configuration {
-    autodetect            = true
-    source_format         = "ICEBERG"
-    connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/link_carcass_plant"]
+  biglake_configuration {
+    connection_id = google_bigquery_connection.biglake.id
+    file_format   = "PARQUET"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/link_carcass_plant"
+    table_format  = "ICEBERG"
   }
 }
 
@@ -74,11 +74,11 @@ resource "google_bigquery_table" "link_carcass_indicator" {
   table_id            = "link_carcass_indicator"
   deletion_protection = false
 
-  external_data_configuration {
-    autodetect            = true
-    source_format         = "ICEBERG"
-    connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/link_carcass_indicator"]
+  biglake_configuration {
+    connection_id = google_bigquery_connection.biglake.id
+    file_format   = "PARQUET"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/link_carcass_indicator"
+    table_format  = "ICEBERG"
   }
 }
 
@@ -88,11 +88,11 @@ resource "google_bigquery_table" "hub_saleyard" {
   table_id            = "hub_saleyard"
   deletion_protection = false
 
-  external_data_configuration {
-    autodetect            = true
-    source_format         = "ICEBERG"
-    connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_saleyard"]
+  biglake_configuration {
+    connection_id = google_bigquery_connection.biglake.id
+    file_format   = "PARQUET"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_saleyard"
+    table_format  = "ICEBERG"
   }
 }
 
@@ -102,11 +102,11 @@ resource "google_bigquery_table" "sat_saleyard_detail" {
   table_id            = "sat_saleyard_detail"
   deletion_protection = false
 
-  external_data_configuration {
-    autodetect            = true
-    source_format         = "ICEBERG"
-    connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/sat_saleyard_detail"]
+  biglake_configuration {
+    connection_id = google_bigquery_connection.biglake.id
+    file_format   = "PARQUET"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/sat_saleyard_detail"
+    table_format  = "ICEBERG"
   }
 }
 
@@ -116,10 +116,10 @@ resource "google_bigquery_table" "link_carcass_saleyard" {
   table_id            = "link_carcass_saleyard"
   deletion_protection = false
 
-  external_data_configuration {
-    autodetect            = true
-    source_format         = "ICEBERG"
-    connection_id         = google_bigquery_connection.biglake.id
-    source_uris           = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/link_carcass_saleyard"]
+  biglake_configuration {
+    connection_id = google_bigquery_connection.biglake.id
+    file_format   = "PARQUET"
+    storage_uri   = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/link_carcass_saleyard"
+    table_format  = "ICEBERG"
   }
 }

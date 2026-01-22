@@ -80,6 +80,7 @@ def bronze_to_silver_dv2():
                         "spark.sql.gcp_project": os.environ["GCP_PROJECT_ID"],
                         "spark.sql.dataproc_region": os.environ["DATAProc_REGION"],
                         "spark.sql.catalog_name": os.environ["CATALOG_NAME"],
+                        "spark.sql.db_name": os.environ["DB_NAME"],
                     },
                 },
                 "environment_config": {

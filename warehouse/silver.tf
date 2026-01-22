@@ -4,6 +4,31 @@ resource "google_bigquery_table" "hub_carcass" {
   table_id            = "hub_carcass"
   deletion_protection = false
 
+  schema = <<EOF
+[
+  {
+    "name": "carcass_hk",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "carcass_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "load_dts",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "rec_src",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]
+EOF
+
   biglake_configuration {
     connection_id = google_bigquery_connection.biglake.id
     file_format   = "PARQUET"

@@ -76,13 +76,13 @@ resource "google_bigquery_table" "sat_carcass_detail" {
   schema = <<EOF
 [
   {"name": "carcass_hk", "type": "STRING", "mode": "NULLABLE"},
-  {"name": "hscw_kg", "type": "BIGNUMERIC", "precision": 10, "scale": 2, "mode": "NULLABLE"},
+  {"name": "hscw_kg", "type": "NUMERIC", "precision": "10", "scale": "2", "mode": "NULLABLE"},
   {"name": "animal_class", "type": "STRING", "mode": "NULLABLE"},
-  {"name": "price_aud_per_kg", "type": "BIGNUMERIC", "precision": 10, "scale": 2, "mode": "NULLABLE"},
+  {"name": "price_aud_per_kg", "type": "NUMERIC", "precision": "10", "scale": "2", "mode": "NULLABLE"},
   {"name": "marbling_score", "type": "INTEGER", "mode": "NULLABLE"},
   {"name": "quality_score", "type": "INTEGER", "mode": "NULLABLE"},
   {"name": "fat_depth_mm", "type": "INTEGER", "mode": "NULLABLE"},
-  {"name": "total_price_aud", "type": "BIGNUMERIC", "precision": 10, "scale": 2, "mode": "NULLABLE"},
+  {"name": "total_price_aud", "type": "NUMERIC", "precision": "10", "scale": "2", "mode": "NULLABLE"},
   {"name": "slaughter_date", "type": "DATE", "mode": "NULLABLE"},
   {"name": "load_dts", "type": "TIMESTAMP", "mode": "NULLABLE"},
   {"name": "rec_src", "type": "STRING", "mode": "NULLABLE"}

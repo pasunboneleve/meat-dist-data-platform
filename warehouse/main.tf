@@ -4,6 +4,10 @@ data "google_project" "project" {
 }
 
 locals {
+  db_name = "silver_meat_market_db"
+}
+
+locals {
   # APIs needed for the data warehouse infrastructure
   required_apis = [
     "dataproc.googleapis.com",
@@ -87,6 +91,16 @@ resource "google_biglake_catalog" "meat_iceberg" {
   location   = var.app_engine_region
   name       = "meat_iceberg_catalog"
   depends_on = [google_project_service.biglake_api]
+}
+
+resource "google_biglake_database" "meat_db" {
+  name    = "silver_meat_market_db"
+  catalog = google_biglake_catalog.meat_iceberg.id
+  type    = "HIVE"
+
+  hive_options {
+    location_uri = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}"
+  }
 }
 
 # BigLake connection for querying GCS data from BigQuery

@@ -38,15 +38,26 @@ def hash_key(*cols) -> Column:
 
 
 def main():
+    # Get params from Spark conf (passed via Airflow templating)
+    gcp_project = spark.conf.get("spark.sql.gcp_project")
+    dataproc_region = spark.conf.get("spark.sql.dataproc_region")
+    catalog_name = spark.conf.get("spark.sql.catalog_name", "meat_iceberg_catalog")
+    db_name = spark.conf.get("spark.sql.db_name", "silver_meat_market_db")
+
     spark = (
         SparkSession.builder.appName("bronze-to-silver-dv2")
         .config("spark.sql.adaptive.enabled", "true")
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
+        .config(f"spark.sql.catalog.biglake", "org.apache.iceberg.spark.SparkCatalog")
+        .config(f"spark.sql.catalog.biglake.catalog-impl", "org.apache.iceberg.gcp.biglake.BigLakeCatalog")
+        .config(f"spark.sql.catalog.biglake.gcp_project", gcp_project)
+        .config(f"spark.sql.catalog.biglake.gcp_location", dataproc_region)
+        .config(f"spark.sql.catalog.biglake.blms_catalog", catalog_name)
+        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
         .getOrCreate()
     )
     try:
         logger.info("Starting Bronze-to-Silver transformation.")
-        # Get params from Spark conf (passed via Airflow templating)
         bronze_bucket = spark.conf.get("spark.sql.bronze_bucket")
         silver_bucket = spark.conf.get("spark.sql.silver_bucket")
         target_date_str = spark.conf.get(
@@ -92,6 +103,9 @@ def main():
         )
         saleyard_df.cache()
 
+        # Create DB if not exists
+        spark.sql(f"CREATE DATABASE IF NOT EXISTS biglake.{db_name}")
+
         # DV2 Entities (simplified, add SCD/eff dates as needed)
         # Hub_Carcass
         logger.info("Creating and merging Hub_Carcass.")
@@ -101,17 +115,17 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_carcass (
+        spark.sql(f"""
+            CREATE TABLE IF NOT EXISTS biglake.{db_name}.hub_carcass (
                 carcass_hk STRING,
                 carcass_id STRING,
                 load_dts TIMESTAMP,
                 rec_src STRING
-            ) USING iceberg
+            )
         """)
         hub_carcass.createOrReplaceTempView("source_hub_carcass")
-        spark.sql("""
-            MERGE INTO hub_carcass t
+        spark.sql(f"""
+            MERGE INTO biglake.{db_name}.hub_carcass t
             USING source_hub_carcass s
             ON t.carcass_hk = s.carcass_hk
             WHEN NOT MATCHED THEN INSERT *
@@ -125,17 +139,17 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_plant (
+        spark.sql(f"""
+            CREATE TABLE IF NOT EXISTS biglake.{db_name}.hub_plant (
                 plant_hk STRING,
                 plant_id STRING,
                 load_dts TIMESTAMP,
                 rec_src STRING
-            ) USING iceberg
+            )
         """)
         hub_plant.createOrReplaceTempView("source_hub_plant")
-        spark.sql("""
-            MERGE INTO hub_plant t
+        spark.sql(f"""
+            MERGE INTO biglake.{db_name}.hub_plant t
             USING source_hub_plant s ON t.plant_hk = s.plant_hk
             WHEN NOT MATCHED THEN INSERT *
         """)
@@ -148,17 +162,17 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_indicator (
+        spark.sql(f"""
+            CREATE TABLE IF NOT EXISTS biglake.{db_name}.hub_indicator (
                 indicator_hk STRING,
                 indicator_id LONG,
                 load_dts TIMESTAMP,
                 rec_src STRING
-            ) USING iceberg
+            )
         """)
         hub_indicator.createOrReplaceTempView("source_hub_indicator")
-        spark.sql("""
-            MERGE INTO hub_indicator t
+        spark.sql(f"""
+            MERGE INTO biglake.{db_name}.hub_indicator t
             USING source_hub_indicator s ON t.indicator_hk = s.indicator_hk
             WHEN NOT MATCHED THEN INSERT *
         """)
@@ -171,17 +185,17 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         ).distinct()
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS hub_saleyard (
+        spark.sql(f"""
+            CREATE TABLE IF NOT EXISTS biglake.{db_name}.hub_saleyard (
                 saleyard_hk STRING,
                 saleyard_id STRING,
                 load_dts TIMESTAMP,
                 rec_src STRING
-            ) USING iceberg
+            )
         """)
         hub_saleyard.createOrReplaceTempView("source_hub_saleyard")
-        spark.sql("""
-            MERGE INTO hub_saleyard t
+        spark.sql(f"""
+            MERGE INTO biglake.{db_name}.hub_saleyard t
             USING source_hub_saleyard s ON t.saleyard_hk = s.saleyard_hk
             WHEN NOT MATCHED THEN INSERT *
         """)
@@ -202,8 +216,8 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         )
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS sat_carcass_detail (
+        spark.sql(f"""
+            CREATE TABLE IF NOT EXISTS biglake.{db_name}.sat_carcass_detail (
                 carcass_hk STRING,
                 hscw_kg DECIMAL(10, 2),
                 animal_class STRING,
@@ -215,11 +229,11 @@ def main():
                 slaughter_date DATE,
                 load_dts TIMESTAMP,
                 rec_src STRING
-            ) USING iceberg
+            )
         """)
         sat_carcass.createOrReplaceTempView("source_sat_carcass")
-        spark.sql("""
-            MERGE INTO sat_carcass_detail t
+        spark.sql(f"""
+            MERGE INTO biglake.{db_name}.sat_carcass_detail t
             USING source_sat_carcass s
             ON t.carcass_hk = s.carcass_hk
             WHEN NOT MATCHED THEN INSERT *
@@ -236,19 +250,19 @@ def main():
             lit(load_dts).alias("load_dts"),
             lit("BRONZE").alias("rec_src"),
         )
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS sat_saleyard_detail (
+        spark.sql(f"""
+            CREATE TABLE IF NOT EXISTS biglake.{db_name}.sat_saleyard_detail (
                 saleyard_hk STRING,
                 saleyard_desc STRING,
                 state_id STRING,
                 nrmr_desc STRING,
                 load_dts TIMESTAMP,
                 rec_src STRING
-            ) USING iceberg
+            )
         """)
         sat_saleyard.createOrReplaceTempView("source_sat_saleyard")
-        spark.sql("""
-            MERGE INTO sat_saleyard_detail t
+        spark.sql(f"""
+            MERGE INTO biglake.{db_name}.sat_saleyard_detail t
             USING source_sat_saleyard s
             ON t.saleyard_hk = s.saleyard_hk
             WHEN NOT MATCHED THEN INSERT *
@@ -264,17 +278,17 @@ def main():
             lit(load_dts).alias("load_dts"),
             col("slaughter_date").cast("date").alias("process_date"),
         ).distinct()
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_plant (
+        spark.sql(f"""
+            CREATE TABLE IF NOT EXISTS biglake.{db_name}.link_carcass_plant (
                 carcass_hk STRING,
                 plant_hk STRING,
                 load_dts TIMESTAMP,
                 process_date DATE
-            ) USING iceberg
+            )
         """)
         link_carcass_plant.createOrReplaceTempView("source_link_carcass_plant")
-        spark.sql("""
-            MERGE INTO link_carcass_plant t
+        spark.sql(f"""
+            MERGE INTO biglake.{db_name}.link_carcass_plant t
             USING source_link_carcass_plant s
             ON t.carcass_hk = s.carcass_hk AND t.plant_hk = s.plant_hk
             WHEN NOT MATCHED THEN INSERT *
@@ -288,16 +302,16 @@ def main():
             indicator_hk.alias("indicator_hk"),
             lit(load_dts).alias("load_dts"),
         ).distinct()
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_indicator (
+        spark.sql(f"""
+            CREATE TABLE IF NOT EXISTS biglake.{db_name}.link_carcass_indicator (
                 carcass_hk STRING,
                 indicator_hk STRING,
                 load_dts TIMESTAMP
-            ) USING iceberg
+            )
         """)
         link_carcass_indicator.createOrReplaceTempView("source_link_carcass_indicator")
-        spark.sql("""
-            MERGE INTO link_carcass_indicator t
+        spark.sql(f"""
+            MERGE INTO biglake.{db_name}.link_carcass_indicator t
             USING source_link_carcass_indicator s
             ON t.carcass_hk = s.carcass_hk AND t.indicator_hk = s.indicator_hk
             WHEN NOT MATCHED THEN INSERT *
@@ -309,18 +323,18 @@ def main():
         link_carcass_saleyard = carcass_df.select(
             carcass_hk.alias("carcass_hk"),
             saleyard_hk.alias("saleyard_hk"),
-            lit(load_dts).alias("load_dts"),
-        ).distinct()
-        spark.sql("""
-            CREATE TABLE IF NOT EXISTS link_carcass_saleyard (
+            lit(load_dts).alias("load_dts"),.distinct()
+        )
+        spark.sql(f"""
+            CREATE TABLE IF NOT EXISTS biglake.{db_name}.link_carcass_saleyard (
                 carcass_hk STRING,
                 saleyard_hk STRING,
                 load_dts TIMESTAMP
-            ) USING iceberg
+            )
         """)
         link_carcass_saleyard.createOrReplaceTempView("source_link_carcass_saleyard")
-        spark.sql("""
-            MERGE INTO link_carcass_saleyard t
+        spark.sql(f"""
+            MERGE INTO biglake.{db_name}.link_carcass_saleyard t
             USING source_link_carcass_saleyard s
             ON t.carcass_hk = s.carcass_hk AND t.saleyard_hk = s.saleyard_hk
             WHEN NOT MATCHED THEN INSERT *
@@ -338,7 +352,3 @@ def main():
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

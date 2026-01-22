@@ -65,8 +65,6 @@ def bronze_to_silver_dv2():
                     "version": "2.2",
                     "properties": {
                         "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-                        "spark.sql.catalog.spark_catalog": "org.apache.iceberg.spark.SparkCatalog",
-                        "spark.sql.catalog.spark_catalog.type": "hadoop",
                         "spark.sql.catalog.spark_catalog.warehouse": f"gs://{SILVER_BUCKET}/iceberg_warehouse/",
                         "spark.sql.iceberg.merge-schema": "true",
                         "spark.executor.instances": "2",  # Min required by Dataproc
@@ -79,6 +77,9 @@ def bronze_to_silver_dv2():
                         "spark.sql.bronze_bucket": BRONZE_BUCKET,
                         "spark.sql.silver_bucket": SILVER_BUCKET,
                         "spark.sql.target_date_str": config["target_date_str"],
+                        "spark.sql.gcp_project": os.environ["GCP_PROJECT_ID"],
+                        "spark.sql.dataproc_region": os.environ["DATAProc_REGION"],
+                        "spark.sql.catalog_name": os.environ["CATALOG_NAME"],
                     },
                 },
                 "environment_config": {

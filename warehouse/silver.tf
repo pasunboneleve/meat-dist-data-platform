@@ -13,7 +13,7 @@ resource "google_bigquery_table" "bq_hub_carcass" {
   external_data_configuration {
     autodetect    = true
     source_format = "ICEBERG"
-    connection_id = google_bigquery_connection.biglake.id
+
     source_uris   = [google_biglake_table.hub_carcass.id]
   }
 }
@@ -33,7 +33,7 @@ resource "google_bigquery_table" "bq_hub_plant" {
   external_data_configuration {
     autodetect    = true
     source_format = "ICEBERG"
-    connection_id = google_bigquery_connection.biglake.id
+
     source_uris   = [google_biglake_table.hub_plant.id]
   }
 }
@@ -53,7 +53,7 @@ resource "google_bigquery_table" "bq_hub_indicator" {
   external_data_configuration {
     autodetect    = true
     source_format = "ICEBERG"
-    connection_id = google_bigquery_connection.biglake.id
+
     source_uris   = [google_biglake_table.hub_indicator.id]
   }
 }
@@ -73,7 +73,7 @@ resource "google_bigquery_table" "bq_sat_carcass_detail" {
   external_data_configuration {
     autodetect    = true
     source_format = "ICEBERG"
-    connection_id = google_bigquery_connection.biglake.id
+
     source_uris   = [google_biglake_table.sat_carcass_detail.id]
   }
 }
@@ -93,7 +93,7 @@ resource "google_bigquery_table" "bq_link_carcass_plant" {
   external_data_configuration {
     autodetect    = true
     source_format = "ICEBERG"
-    connection_id = google_bigquery_connection.biglake.id
+
     source_uris   = [google_biglake_table.link_carcass_plant.id]
   }
 }
@@ -113,7 +113,7 @@ resource "google_bigquery_table" "bq_link_carcass_indicator" {
   external_data_configuration {
     autodetect    = true
     source_format = "ICEBERG"
-    connection_id = google_bigquery_connection.biglake.id
+
     source_uris   = [google_biglake_table.link_carcass_indicator.id]
   }
 }
@@ -133,7 +133,7 @@ resource "google_bigquery_table" "bq_hub_saleyard" {
   external_data_configuration {
     autodetect    = true
     source_format = "ICEBERG"
-    connection_id = google_bigquery_connection.biglake.id
+
     source_uris   = [google_biglake_table.hub_saleyard.id]
   }
 }
@@ -153,7 +153,7 @@ resource "google_bigquery_table" "bq_sat_saleyard_detail" {
   external_data_configuration {
     autodetect    = true
     source_format = "ICEBERG"
-    connection_id = google_bigquery_connection.biglake.id
+
     source_uris   = [google_biglake_table.sat_saleyard_detail.id]
   }
 }
@@ -173,7 +173,7 @@ resource "google_bigquery_table" "bq_link_carcass_saleyard" {
   external_data_configuration {
     autodetect    = true
     source_format = "ICEBERG"
-    connection_id = google_bigquery_connection.biglake.id
+
     source_uris   = [google_biglake_table.link_carcass_saleyard.id]
   }
 }

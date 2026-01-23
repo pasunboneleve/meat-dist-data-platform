@@ -50,7 +50,7 @@ def bronze_to_silver_dv2():
         task_id="submit_spark_transform",
         project_id=os.environ["GCP_PROJECT_ID"],
         region=os.environ["DATAPROC_REGION"],
-        batch_id=generate_dataproc_batch_id(prefix="bronze-to-silver-dv2"),
+        batch_id="{{ task.env['utils.config'].generate_dataproc_batch_id(prefix='bronze-to-silver-dv2') }}",
         batch={
             "pyspark_batch": {
                 "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",

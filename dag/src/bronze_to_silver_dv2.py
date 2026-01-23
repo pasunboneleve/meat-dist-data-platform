@@ -35,6 +35,7 @@ if not all([BRONZE_BUCKET, SILVER_BUCKET]):
     catchup=False,
     tags=["transform", "silver", "dataproc", "iceberg"],
     max_active_runs=1,
+    user_defined_macros={"utils": {"config": {"generate_dataproc_batch_id": generate_dataproc_batch_id}}},
 )
 def bronze_to_silver_dv2():
     @task
@@ -50,7 +51,7 @@ def bronze_to_silver_dv2():
         task_id="submit_spark_transform",
         project_id=os.environ["GCP_PROJECT_ID"],
         region=os.environ["DATAPROC_REGION"],
-        batch_id="{{ task.env['utils.config'].generate_dataproc_batch_id(prefix='bronze-to-silver-dv2') }}",
+        batch_id="{{ utils.config.generate_dataproc_batch_id(prefix='bronze-to-silver-dv2') }}",
         batch={
             "pyspark_batch": {
                 "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",
@@ -67,7 +68,7 @@ def bronze_to_silver_dv2():
                     "spark.driver.cores": "4",
                     "spark.driver.memory": "4g",
                     "spark.dynamicAllocation.enabled": "false",
-                    "spark.sql.execution_date": "{{ ds }}",
+                    "spark.sql.execution_date": "{{ ti.xcom_pull(task_ids='get_config')['target_date_str'] }}",
                     "spark.sql.bronze_bucket": BRONZE_BUCKET,
                     "spark.sql.silver_bucket": SILVER_BUCKET,
                     "spark.sql.target_date_str": "{{ ti.xcom_pull(task_ids='get_config')['target_date_str'] }}",
@@ -94,7 +95,7 @@ def bronze_to_silver_dv2():
         timeout=300,
         mode="reschedule",
     )
-    def verify_silver(config: Dict[str, str]) -> PokeReturnValue:
+    def verify_silver() -> PokeReturnValue:
         db_name = os.environ.get("DB_NAME")
         if not db_name:
             raise ValueError("Missing DB_NAME env var")
@@ -103,16 +104,13 @@ def bronze_to_silver_dv2():
         prefix = f"iceberg_warehouse/{db_name}/hub_carcass/metadata/"
 
         objects = hook.list(
-            bucket_name=SILVER_BUCKET,  # type: ignore
+            bucket_name=SILVER_BUCKET,
             prefix=prefix,
             max_results=1,
         )
         exists = bool(objects)
 
-        if exists:
-            return PokeReturnValue(is_done=True, xcom_value=config)
-
-        return PokeReturnValue(is_done=False)
+        return PokeReturnValue(is_done=exists)
 
     @task(outlets=[silver_dv2_asset])
     def mark_asset_produced(config: Dict[str, str], **context):
@@ -123,10 +121,9 @@ def bronze_to_silver_dv2():
         ti.xcom_push(key="asset_config", value=config)
         return Metadata(asset=silver_dv2_asset)
 
-    waited = verify_silver(config=config_task)  # type: ignore
-    marked = mark_asset_produced(config=waited)  # type: ignore
+    verified = verify_silver()
+    marked = mark_asset_produced(config=config_task)
 
-    config_task >> submit_spark_transform >> waited
-
+    config_task >> submit_spark_transform >> verified >> marked
 
 bronze_to_silver_dv2()

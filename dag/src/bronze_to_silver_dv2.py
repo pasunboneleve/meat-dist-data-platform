@@ -9,8 +9,9 @@ from airflow.providers.google.cloud.operators.dataproc import \
 from airflow.sdk import PokeReturnValue, dag, task
 from airflow.sdk.definitions.asset.metadata import Metadata
 
-from utils.assets import bronze_carcasses_asset, silver_dv2_asset
-from utils.config import generate_dataproc_batch_id, get_config_from_trigger
+from src.utils.assets import bronze_carcasses_asset, silver_dv2_asset
+from src.utils.config import (generate_dataproc_batch_id,
+                              get_config_from_trigger)
 
 default_args = {
     "owner": "data-eng",
@@ -35,7 +36,9 @@ if not all([BRONZE_BUCKET, SILVER_BUCKET]):
     catchup=False,
     tags=["transform", "silver", "dataproc", "iceberg"],
     max_active_runs=1,
-    user_defined_macros={"utils": {"config": {"generate_dataproc_batch_id": generate_dataproc_batch_id}}},
+    user_defined_macros={
+        "utils": {"config": {"generate_dataproc_batch_id": generate_dataproc_batch_id}}
+    },
 )
 def bronze_to_silver_dv2():
     @task
@@ -64,9 +67,15 @@ def bronze_to_silver_dv2():
                     "spark.sql.iceberg.merge-schema": "true",
                     "spark.sql.catalog.biglake": "org.apache.iceberg.spark.SparkCatalog",
                     "spark.sql.catalog.biglake.catalog-impl": "org.apache.iceberg.gcp.biglake.BigLakeCatalog",
-                    "spark.sql.catalog.biglake.gcp_project": os.environ["GCP_PROJECT_ID"],
-                    "spark.sql.catalog.biglake.gcp_location": os.environ["DATAPROC_REGION"],
-                    "spark.sql.catalog.biglake.blms_catalog": os.environ["CATALOG_NAME"],
+                    "spark.sql.catalog.biglake.gcp_project": os.environ[
+                        "GCP_PROJECT_ID"
+                    ],
+                    "spark.sql.catalog.biglake.gcp_location": os.environ[
+                        "DATAPROC_REGION"
+                    ],
+                    "spark.sql.catalog.biglake.blms_catalog": os.environ[
+                        "CATALOG_NAME"
+                    ],
                     "spark.sql.catalog.biglake.warehouse": f"gs://{SILVER_BUCKET}/iceberg_warehouse",
                     "spark.executor.instances": "2",
                     "spark.executor.cores": "4",
@@ -131,5 +140,6 @@ def bronze_to_silver_dv2():
     marked = mark_asset_produced(config=config_task)
 
     config_task >> submit_spark_transform >> verified >> marked
+
 
 bronze_to_silver_dv2()

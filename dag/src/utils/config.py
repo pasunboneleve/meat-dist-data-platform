@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
-from airflow.sdk import Asset, Context, get_current_context
+from airflow.sdk import Asset, get_current_context
+from airflow.utils.context import Context
 
 
 def get_config_from_trigger(

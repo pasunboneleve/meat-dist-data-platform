@@ -6,7 +6,7 @@ from airflow.models.taskinstance import TaskInstance
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
-from airflow.sdk import PokeReturnValue, dag, get_current_context, task
+from airflow.sdk import PokeReturnValue, dag, task
 from airflow.sdk.definitions.asset.metadata import Metadata
 
 from utils.assets import bronze_carcasses_asset, silver_dv2_asset
@@ -44,56 +44,50 @@ def bronze_to_silver_dv2():
             upstream_asset=bronze_carcasses_asset,
         )
 
-    @task
-    def submit_spark_transform(config: Dict[str, str]):
-        batch_id = generate_dataproc_batch_id(
-            prefix="bronze-to-silver-dv2",
-        )
-        operator = DataprocCreateBatchOperator(
-            task_id="transform_dv2_iceberg",
-            project_id=os.environ["GCP_PROJECT_ID"],
-            region=os.environ["DATAPROC_REGION"],
-            batch_id=batch_id,
-            batch={
-                "pyspark_batch": {
-                    "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",
-                },
-                "runtime_config": {
-                    "version": "2.2",
-                    "properties": {
-                        "spark.jars.packages": "org.apache.iceberg:iceberg-spark-runtime-3.5_2.13:1.10.1,org.apache.iceberg:iceberg-gcp-bundle:1.10.1",
-                        "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-                        "spark.sql.iceberg.merge-schema": "true",
-                        "spark.executor.instances": "2",  # Min required by Dataproc
-                        "spark.executor.cores": "4",  # Min required by Dataproc
-                        "spark.executor.memory": "4g",
-                        "spark.driver.cores": "4",
-                        "spark.driver.memory": "4g",
-                        "spark.dynamicAllocation.enabled": "false",
-                        "spark.sql.execution_date": "{{ ds }}",
-                        "spark.sql.bronze_bucket": BRONZE_BUCKET,
-                        "spark.sql.silver_bucket": SILVER_BUCKET,
-                        "spark.sql.target_date_str": config["target_date_str"],
-                        "spark.sql.gcp_project": os.environ["GCP_PROJECT_ID"],
-                        "spark.sql.dataproc_region": os.environ["DATAPROC_REGION"],
-                        "spark.sql.catalog_name": os.environ["CATALOG_NAME"],
-                        "spark.sql.db_name": os.environ["DB_NAME"],
-                    },
-                },
-                "environment_config": {
-                    "execution_config": {
-                        "service_account": os.environ["DATAPROC_BATCH_SERVICE_ACCOUNT"],
-                    }
-                },
-                "labels": {
-                    "layer": "bronze-to-silver",
+    config_task = get_config()
+
+    submit_spark_transform = DataprocCreateBatchOperator(
+        task_id="submit_spark_transform",
+        project_id=os.environ["GCP_PROJECT_ID"],
+        region=os.environ["DATAPROC_REGION"],
+        batch_id=generate_dataproc_batch_id(prefix="bronze-to-silver-dv2"),
+        batch={
+            "pyspark_batch": {
+                "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",
+            },
+            "runtime_config": {
+                "version": "2.2",
+                "properties": {
+                    "spark.jars.packages": "org.apache.iceberg:iceberg-spark-runtime-3.5_2.13:1.10.1,org.apache.iceberg:iceberg-gcp-bundle:1.10.1",
+                    "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+                    "spark.sql.iceberg.merge-schema": "true",
+                    "spark.executor.instances": "2",
+                    "spark.executor.cores": "4",
+                    "spark.executor.memory": "4g",
+                    "spark.driver.cores": "4",
+                    "spark.driver.memory": "4g",
+                    "spark.dynamicAllocation.enabled": "false",
+                    "spark.sql.execution_date": "{{ ds }}",
+                    "spark.sql.bronze_bucket": BRONZE_BUCKET,
+                    "spark.sql.silver_bucket": SILVER_BUCKET,
+                    "spark.sql.target_date_str": "{{ ti.xcom_pull(task_ids='get_config')['target_date_str'] }}",
+                    "spark.sql.gcp_project": os.environ["GCP_PROJECT_ID"],
+                    "spark.sql.dataproc_region": os.environ["DATAPROC_REGION"],
+                    "spark.sql.catalog_name": os.environ["CATALOG_NAME"],
+                    "spark.sql.db_name": os.environ["DB_NAME"],
                 },
             },
-            gcp_conn_id="google_cloud_default",
-        )
-        context = get_current_context()
-        operator.execute(context=context)
-        return config
+            "environment_config": {
+                "execution_config": {
+                    "service_account": os.environ["DATAPROC_BATCH_SERVICE_ACCOUNT"],
+                }
+            },
+            "labels": {
+                "layer": "bronze-to-silver",
+            },
+        },
+        gcp_conn_id="google_cloud_default",
+    )
 
     @task.sensor(
         poke_interval=30,
@@ -109,14 +103,13 @@ def bronze_to_silver_dv2():
         prefix = f"iceberg_warehouse/{db_name}/hub_carcass/metadata/"
 
         objects = hook.list(
-            bucket_name=SILVER_BUCKET,  # type: ignore[arg-type]
+            bucket_name=SILVER_BUCKET,  # type: ignore
             prefix=prefix,
             max_results=1,
         )
         exists = bool(objects)
 
         if exists:
-            # Success → push config as XCom value
             return PokeReturnValue(is_done=True, xcom_value=config)
 
         return PokeReturnValue(is_done=False)
@@ -126,18 +119,14 @@ def bronze_to_silver_dv2():
         print(
             f"Silver DV2 Iceberg asset produced for date: {config['target_date_str']}"
         )
-
-        # Explicitly push to XCom for the downstream gold DAG
         ti: TaskInstance = context["ti"]
         ti.xcom_push(key="asset_config", value=config)
-
         return Metadata(asset=silver_dv2_asset)
 
-    # Chain
-    config = get_config()
-    spark_job = submit_spark_transform(config)  # type: ignore[arg-type]
-    waited = verify_silver(spark_job)  # type: ignore[arg-type]
-    mark_asset_produced(waited)  # type: ignore[arg-type]
+    waited = verify_silver(config=config_task)  # type: ignore
+    marked = mark_asset_produced(config=waited)  # type: ignore
+
+    config_task >> submit_spark_transform >> waited
 
 
 bronze_to_silver_dv2()

@@ -91,6 +91,7 @@ def main():
             & (month("slaughter_date") == target_date.month)
             & (dayofmonth("slaughter_date") == target_date.day)
         )
+        logger.info(f"Read {carcass_df.count()} rows from bronze.")
 
         # Read indicator table
         logger.info("Reading indicator data.")

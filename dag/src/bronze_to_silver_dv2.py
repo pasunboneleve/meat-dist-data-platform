@@ -57,13 +57,11 @@ def bronze_to_silver_dv2():
             batch={
                 "pyspark_batch": {
                     "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",
-                    "jar_file_uris": [
-                        f"gs://{os.environ['DEPS_BUCKET']}/iceberg-spark-runtime-3.5_2.13-1.10.1.jar",
-                    ],
                 },
                 "runtime_config": {
                     "version": "2.2",
                     "properties": {
+                        "spark.jars.packages": "org.apache.iceberg:iceberg-spark-runtime-3.5_2.13:1.10.1,org.apache.iceberg:iceberg-gcp-bundle:1.10.1",
                         "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                         "spark.sql.iceberg.merge-schema": "true",
                         "spark.executor.instances": "2",  # Min required by Dataproc

@@ -39,3 +39,4 @@ infra/*.auto.tfvars
 /dist/
 **/dist/
 **/*.egg-info/
+**/__pycache__

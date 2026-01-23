@@ -59,7 +59,7 @@ def bronze_to_silver_dv2():
             "runtime_config": {
                 "version": "2.2",
                 "properties": {
-                    "spark.jars.packages": "org.apache.iceberg:iceberg-spark-runtime-3.5_2.13:1.10.1,org.apache.iceberg:iceberg-gcp-bundle:1.10.1",
+                    "spark.jars.packages": "org.apache.iceberg:iceberg-spark-runtime-3.5_2.13:1.10.1,org.apache.iceberg:iceberg-gcp:1.10.1",
                     "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                     "spark.sql.iceberg.merge-schema": "true",
                     "spark.sql.catalog.biglake": "org.apache.iceberg.spark.SparkCatalog",
@@ -67,6 +67,7 @@ def bronze_to_silver_dv2():
                     "spark.sql.catalog.biglake.gcp_project": os.environ["GCP_PROJECT_ID"],
                     "spark.sql.catalog.biglake.gcp_location": os.environ["DATAPROC_REGION"],
                     "spark.sql.catalog.biglake.blms_catalog": os.environ["CATALOG_NAME"],
+                    "spark.sql.catalog.biglake.warehouse": f"gs://{SILVER_BUCKET}/iceberg_warehouse",
                     "spark.executor.instances": "2",
                     "spark.executor.cores": "4",
                     "spark.executor.memory": "4g",

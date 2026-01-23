@@ -38,30 +38,10 @@ def hash_key(*cols) -> Column:
 
 
 def main():
-    # Get params from Spark conf (passed via Airflow templating)
-    gcp_project = spark.conf.get("spark.sql.gcp_project")
-    dataproc_region = spark.conf.get("spark.sql.dataproc_region")
-    catalog_name = spark.conf.get("spark.sql.catalog_name", "meat_iceberg_catalog")
+    spark = SparkSession.builder.appName("bronze-to-silver-dv2").getOrCreate()
+
     db_name = spark.conf.get("spark.sql.db_name", "silver_meat_market_db")
 
-    spark = (
-        SparkSession.builder.appName("bronze-to-silver-dv2")
-        .config("spark.sql.adaptive.enabled", "true")
-        .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
-        .config(f"spark.sql.catalog.biglake", "org.apache.iceberg.spark.SparkCatalog")
-        .config(
-            f"spark.sql.catalog.biglake.catalog-impl",
-            "org.apache.iceberg.gcp.biglake.BigLakeCatalog",
-        )
-        .config(f"spark.sql.catalog.biglake.gcp_project", gcp_project)
-        .config(f"spark.sql.catalog.biglake.gcp_location", dataproc_region)
-        .config(f"spark.sql.catalog.biglake.blms_catalog", catalog_name)
-        .config(
-            "spark.sql.extensions",
-            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
-        )
-        .getOrCreate()
-    )
     try:
         logger.info("Starting Bronze-to-Silver transformation.")
         bronze_bucket = spark.conf.get("spark.sql.bronze_bucket")

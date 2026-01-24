@@ -2,7 +2,6 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Dict
 
-from airflow.models.taskinstance import TaskInstance
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.cloud.operators.dataproc import \
     DataprocCreateBatchOperator
@@ -97,9 +96,7 @@ def silver_to_gold_kimball():
                     "spark.sql.dataproc_region": os.environ["DATAPROC_REGION"],
                     "spark.sql.catalog_name": os.environ["CATALOG_NAME"],
                     "spark.sql.silver_db_name": os.environ["SILVER_DB_NAME"],
-                    "spark.sql.gold_db_name": os.environ.get(
-                        "GOLD_DB_NAME", "gold"
-                    ),
+                    "spark.sql.gold_db_name": os.environ.get("GOLD_DB_NAME", "gold"),
                 },
             },
             "environment_config": {
@@ -119,36 +116,35 @@ def silver_to_gold_kimball():
         timeout=300,
         mode="reschedule",
     )
-    def verify_gold(config: Dict[str, str]) -> PokeReturnValue:
+    def verify_gold() -> PokeReturnValue:
         db_name = os.environ.get("GOLD_DB_NAME", "gold")
-        target_date = datetime.fromisoformat(config["target_date_str"]).date()
-        date_key = int(target_date.strftime("%Y%m%d"))
-        
+        if not db_name:
+            raise ValueError("Missing GOLD_DB_NAME env var")
+
         hook = GCSHook(gcp_conn_id="google_cloud_default")
         # Check for data files in the gold table location for the specific partition
-        prefix = f"iceberg_warehouse/{db_name}.db/fact_sales/data/date_key={date_key}/"
+        prefix = f"iceberg_warehouse/{db_name}.db/fact_sales/data/"
 
         objects = hook.list(
-            bucket_name=GOLD_BUCKET, # type: ignore
+            bucket_name=GOLD_BUCKET,  # type: ignore
             prefix=prefix,
             max_results=1,
         )
         exists = bool(objects)
-        
-        if exists:
-             return PokeReturnValue(is_done=True, xcom_value=config)
-             
-        return PokeReturnValue(is_done=False)
+
+        return PokeReturnValue(is_done=exists)
 
     @task(outlets=[gold_kimball_asset])
-    def mark_gold_produced(config: Dict[str, str]):
+    def mark_asset_produced(config: Dict[str, str]):
         """Marks the gold asset as produced after Spark job success."""
 
         print(f"Gold Kimball fact table produced for date: {config['target_date_str']}")
         return Metadata(asset=gold_kimball_asset)
 
-    waited = verify_gold(spark_job)  # type: ignore[arg-type]
-    mark_gold_produced(waited)  # type: ignore[arg-type]
+    verified = verify_gold()
+    marked = mark_asset_produced(config=config_task)  # type: ignore
+
+    config_task >> submit_spark_transform >> verified >> marked
 
 
 silver_to_gold_kimball()

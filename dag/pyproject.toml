@@ -35,3 +35,11 @@ warn_unused_ignores = true
 show_error_codes = true
 pretty = true
 namespace_packages = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--maxfail=2"
+pythonpath = "src"
+testpaths = [
+    "tests"
+]

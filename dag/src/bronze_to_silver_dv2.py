@@ -123,13 +123,13 @@ def bronze_to_silver_dv2():
     def verify_silver() -> PokeReturnValue:
         db_name = os.environ.get("SILVER_DB_NAME")
         if not db_name:
-            raise ValueError("Missing DB_NAME env var")
+            raise ValueError("Missing SILVER_DB_NAME env var")
 
         hook = GCSHook(gcp_conn_id="google_cloud_default")
         prefix = f"iceberg_warehouse/{db_name}.db/hub_carcass/data/"
 
         objects = hook.list(
-            bucket_name=SILVER_BUCKET,
+            bucket_name=SILVER_BUCKET,  # type: ignore
             prefix=prefix,
             max_results=1,
         )
@@ -147,7 +147,7 @@ def bronze_to_silver_dv2():
         return Metadata(asset=silver_dv2_asset)
 
     verified = verify_silver()
-    marked = mark_asset_produced(config=config_task)
+    marked = mark_asset_produced(config=config_task)  # type: ignore
 
     config_task >> submit_spark_transform >> verified >> marked
 

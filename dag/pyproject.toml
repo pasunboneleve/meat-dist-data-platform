@@ -42,10 +42,20 @@ namespace_packages = true
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "--maxfail=2"
-pythonpath = "src"
+pythonpath = [
+    "src",
+    "spark_jobs"
+]
 testpaths = [
     "tests"
 ]
 filterwarnings = [
     "ignore::DeprecationWarning:httplib2.*"
 ]
+
+[tool.pytest_watcher]
+now = true
+delay = 0.2
+runner = "pytest"
+patterns = ["*.py", "*.ini"]
+ignore_patterns = []

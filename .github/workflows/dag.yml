@@ -18,7 +18,8 @@ env:
   DEPS_BUCKET: ${{ secrets.DEPS_BUCKET }}
 
 jobs:
-  test:
+  deploy:
+    name: Test and deploy DAGs
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'

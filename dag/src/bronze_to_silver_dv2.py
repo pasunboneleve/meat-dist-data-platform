@@ -61,14 +61,17 @@ def bronze_to_silver_dv2():
             "runtime_config": {
                 "version": "2.2",  # Runs Spark 3.5
                 "properties": {
-                    # 1. ADDED: The BigLake Catalog JAR (fixes the ClassNotFound error and handles Auth)
-                    "spark.jars.packages": "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.6.0,org.apache.iceberg:iceberg-gcp-bundle:1.6.0,com.google.biglake:biglake-catalog-iceberg:0.1.1",
+                    # 1. Standard Iceberg Dependencies (Maven)
+                    "spark.jars.packages": "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.6.0,org.apache.iceberg:iceberg-gcp-bundle:1.6.0",
+                    # 2. VALID GCS ARTIFACT: Point to the 'iceberg-bigquery-catalog' jar
+                    "spark.jars": "gs://spark-lib/bigquery/iceberg-bigquery-catalog-1.6.1-1.0.2.jar",
                     "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                     "spark.sql.iceberg.merge-schema": "true",
-                    # 2. CHANGED: Use the Google-specific catalog implementation
+                    # 3. CATALOG CONFIG: Updated for the new JAR
                     "spark.sql.catalog.biglake": "org.apache.iceberg.spark.SparkCatalog",
-                    "spark.sql.catalog.biglake.catalog-impl": "org.apache.iceberg.gcp.biglake.BigLakeCatalog",
-                    # 3. RESTORED: These are required by the BigLakeCatalog class
+                    # The class name often changes with this JAR.
+                    # Use 'org.apache.iceberg.gcp.bigquery.BigQueryMetastoreCatalog' for the modern BLMS service.
+                    "spark.sql.catalog.biglake.catalog-impl": "org.apache.iceberg.gcp.bigquery.BigQueryMetastoreCatalog",
                     "spark.sql.catalog.biglake.gcp_project": os.environ[
                         "GCP_PROJECT_ID"
                     ],

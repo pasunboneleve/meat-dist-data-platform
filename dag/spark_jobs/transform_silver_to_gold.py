@@ -61,7 +61,9 @@ def run_transform(spark: SparkSession, config: dict):
     sat_carcass = spark.read.table(f"biglake.{silver_db}.sat_carcass_detail")
     hub_plant = spark.read.table(f"biglake.{silver_db}.hub_plant")
     hub_saleyard = spark.read.table(f"biglake.{silver_db}.hub_saleyard")
-    link_carcass_saleyard = spark.read.table(f"biglake.{silver_db}.link_carcass_saleyard")
+    link_carcass_saleyard = spark.read.table(
+        f"biglake.{silver_db}.link_carcass_saleyard"
+    )
     link_carcass_plant = spark.read.table(f"biglake.{silver_db}.link_carcass_plant")
 
     # Filter Satellite for incremental processing
@@ -77,7 +79,7 @@ def run_transform(spark: SparkSession, config: dict):
     logger.info("Processing DIM_PLANT")
     dim_plant_df = hub_plant.select(
         col("plant_id"),
-        lit("Unknown").alias("location") # Placeholder as location isn't in Silver yet
+        lit("Unknown").alias("location"),  # Placeholder as location isn't in Silver yet
     ).distinct()
 
     spark.sql(f"""
@@ -94,13 +96,14 @@ def run_transform(spark: SparkSession, config: dict):
     # or rely on an internal ID if available. Hub_Plant has plant_hk (hash).
     # Let's simple use creating a predictable integer hash from the ID for this demo
     # to avoid maintaining a stateful sequence map table for now.
-    from pyspark.sql.functions import hash as spark_hash, abs as spark_abs
-    
+    from pyspark.sql.functions import abs as spark_abs
+    from pyspark.sql.functions import hash as spark_hash
+
     dim_plant_prepared = dim_plant_df.withColumn(
         "plant_key", spark_abs(spark_hash("plant_id")).cast("long")
     )
     dim_plant_prepared.createOrReplaceTempView("source_dim_plant")
-    
+
     # Merge Dim Plant
     spark.sql(f"""
         MERGE INTO biglake.{gold_db}.dim_plant t
@@ -115,10 +118,10 @@ def run_transform(spark: SparkSession, config: dict):
     # Attributes: grade, breed, marbling_score, fat_depth_mm
     # Note: 'grade' and 'breed' might need mappings. map animal_class to grade/breed for now.
     dim_product_source = sat_carcass_incremental.select(
-        col("animal_class").alias("grade"), # Proxy
-        col("animal_class").alias("breed"), # Proxy
+        col("animal_class").alias("grade"),  # Proxy
+        col("animal_class").alias("breed"),  # Proxy
         col("marbling_score"),
-        col("fat_depth_mm")
+        col("fat_depth_mm"),
     ).distinct()
 
     spark.sql(f"""
@@ -130,13 +133,15 @@ def run_transform(spark: SparkSession, config: dict):
             fat_depth_mm INT
         )
     """)
-    
+
     dim_product_prepared = dim_product_source.withColumn(
-        "product_key", 
-        spark_abs(spark_hash("grade", "breed", "marbling_score", "fat_depth_mm")).cast("long")
+        "product_key",
+        spark_abs(spark_hash("grade", "breed", "marbling_score", "fat_depth_mm")).cast(
+            "long"
+        ),
     )
     dim_product_prepared.createOrReplaceTempView("source_dim_product")
-    
+
     spark.sql(f"""
         MERGE INTO biglake.{gold_db}.dim_product t
         USING source_dim_product s ON t.product_key = s.product_key
@@ -148,13 +153,15 @@ def run_transform(spark: SparkSession, config: dict):
     logger.info("Processing DIM_DATE")
     # target_date is a date object
     date_key = int(target_date.strftime("%Y%m%d"))
-    dim_date_data = [{
-        "date_key": date_key,
-        "full_date": target_date,
-        "year": target_date.year,
-        "month": target_date.month,
-        "day": target_date.day
-    }]
+    dim_date_data = [
+        {
+            "date_key": date_key,
+            "full_date": target_date,
+            "year": target_date.year,
+            "month": target_date.month,
+            "day": target_date.day,
+        }
+    ]
     dim_date_df = spark.createDataFrame(dim_date_data)
 
     spark.sql(f"""
@@ -166,7 +173,7 @@ def run_transform(spark: SparkSession, config: dict):
             day INT
         )
     """)
-    
+
     dim_date_df.createOrReplaceTempView("source_dim_date")
     spark.sql(f"""
         MERGE INTO biglake.{gold_db}.dim_date t
@@ -176,53 +183,63 @@ def run_transform(spark: SparkSession, config: dict):
 
     # --- 3. Create FACT_SALES ---
     logger.info("Processing FACT_SALES")
-    
+
     # Join Logic
     # Sat -> Hub Carcass -> Link Plant -> Hub Plant -> Link Saleyard (if needed)
     # We need to lookup keys from Dimensions
-    
+
     # 3.1 Denormalize
-    df = sat_carcass_incremental.alias("sat") \
-        .join(hub_carcass.alias("hub"), on="carcass_hk", how="inner") \
-        .join(link_carcass_plant.alias("lnk_pl"), on="carcass_hk", how="left") \
+    df = (
+        sat_carcass_incremental.alias("sat")
+        .join(hub_carcass.alias("hub"), on="carcass_hk", how="inner")
+        .join(link_carcass_plant.alias("lnk_pl"), on="carcass_hk", how="left")
         .join(hub_plant.alias("hub_pl"), on="plant_hk", how="left")
-    
+    )
+
     # 3.2 Measure Calculations & Key Lookups
     # Product Key Lookup
     # We do a broadcast join since dim_product is small-ish or we calculate hash again
     # Calculating hash is safer if we trust the logic is identical
-    df_with_keys = df.withColumn(
-            "product_key", 
-            spark_abs(spark_hash(col("sat.animal_class"), col("sat.animal_class"), col("sat.marbling_score"), col("sat.fat_depth_mm"))).cast("long")
-        ).withColumn(
-            "plant_key",
-            spark_abs(spark_hash(col("hub_pl.plant_id"))).cast("long")
-        ).withColumn(
-            "date_key",
-            lit(date_key).cast("int")
+    df_with_keys = (
+        df.withColumn(
+            "product_key",
+            spark_abs(
+                spark_hash(
+                    col("sat.animal_class"),
+                    col("sat.animal_class"),
+                    col("sat.marbling_score"),
+                    col("sat.fat_depth_mm"),
+                )
+            ).cast("long"),
         )
+        .withColumn(
+            "plant_key", spark_abs(spark_hash(col("hub_pl.plant_id"))).cast("long")
+        )
+        .withColumn("date_key", lit(date_key).cast("int"))
+    )
 
     fact_sales_df = df_with_keys.select(
         col("date_key"),
         col("product_key"),
         col("plant_key"),
         col("hub.carcass_id"),
-        lit("UNKNOWN").alias("batch_id"), # Placeholder, batch_id not in current silver Sat payload
+        lit("UNKNOWN").alias(
+            "batch_id"
+        ),  # Placeholder, batch_id not in current silver Sat payload
         col("sat.total_price_aud").cast("decimal(10, 2)").alias("total_price"),
         col("sat.hscw_kg").cast("decimal(10, 2)").alias("total_weight_kg"),
-        lit(None).cast("float").alias("average_yield"), # Placeholder
-        lit(load_dts).alias("load_dts")
+        lit(None).cast("float").alias("average_yield"),  # Placeholder
+        lit(load_dts).alias("load_dts"),
     )
-    
+
     # Add Facts Primary Key (Surrogate)
     fact_sales_df = fact_sales_df.withColumn(
-        "fact_key",
-        spark_abs(spark_hash("carcass_id", "date_key")).cast("long")
+        "fact_key", spark_abs(spark_hash("carcass_id", "date_key")).cast("long")
     )
-    
+
     # Validations / Deduplication
     # Ensure one row per carcass per day
-    
+
     spark.sql(f"""
         CREATE TABLE IF NOT EXISTS biglake.{gold_db}.fact_sales (
             fact_key LONG,
@@ -238,9 +255,9 @@ def run_transform(spark: SparkSession, config: dict):
         )
         PARTITIONED BY (date_key)
     """)
-    
+
     fact_sales_df.createOrReplaceTempView("source_fact_sales")
-    
+
     # Overwrite partition for robustness
     spark.sql(f"""
         INSERT OVERWRITE biglake.{gold_db}.fact_sales

@@ -195,7 +195,8 @@ resource "google_composer_environment" "meat_composer" {
         GOLD_BUCKET                    = google_storage_bucket.gold_bucket.name
         DEPS_BUCKET                    = google_storage_bucket.deps_bucket.name
         CATALOG_NAME                   = google_biglake_catalog.meat_iceberg.name
-        DB_NAME                        = local.db_name
+        SILVER_DB_NAME                 = local.silver_db_name
+        GOLD_DB_NAME                   = local.gold_db_name
       }
       airflow_config_overrides = {
         "scheduler-min_file_process_interval" = "30"

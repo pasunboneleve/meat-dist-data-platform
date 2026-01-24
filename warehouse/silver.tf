@@ -7,7 +7,7 @@ resource "google_bigquery_table" "hub_carcass" {
     autodetect    = true
     source_format = "ICEBERG"
     connection_id = google_bigquery_connection.biglake.id
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_carcass"]
+    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.silver_db_name}/hub_carcass"]
   }
 }
 
@@ -20,7 +20,7 @@ resource "google_bigquery_table" "hub_plant" {
     autodetect    = true
     source_format = "ICEBERG"
     connection_id = google_bigquery_connection.biglake.id
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_plant"]
+    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.silver_db_name}/hub_plant"]
   }
 }
 
@@ -33,7 +33,7 @@ resource "google_bigquery_table" "hub_indicator" {
     autodetect    = true
     source_format = "ICEBERG"
     connection_id = google_bigquery_connection.biglake.id
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_indicator"]
+    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.silver_db_name}/hub_indicator"]
   }
 }
 
@@ -46,7 +46,7 @@ resource "google_bigquery_table" "sat_carcass_detail" {
     autodetect    = true
     source_format = "ICEBERG"
     connection_id = google_bigquery_connection.biglake.id
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/sat_carcass_detail"]
+    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.silver_db_name}/sat_carcass_detail"]
   }
 }
 
@@ -59,7 +59,7 @@ resource "google_bigquery_table" "link_carcass_plant" {
     autodetect    = true
     source_format = "ICEBERG"
     connection_id = google_bigquery_connection.biglake.id
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/link_carcass_plant"]
+    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.silver_db_name}/link_carcass_plant"]
   }
 }
 
@@ -72,7 +72,7 @@ resource "google_bigquery_table" "link_carcass_indicator" {
     autodetect    = true
     source_format = "ICEBERG"
     connection_id = google_bigquery_connection.biglake.id
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/link_carcass_indicator"]
+    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.silver_db_name}/link_carcass_indicator"]
   }
 }
 
@@ -85,7 +85,7 @@ resource "google_bigquery_table" "hub_saleyard" {
     autodetect    = true
     source_format = "ICEBERG"
     connection_id = google_bigquery_connection.biglake.id
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/hub_saleyard"]
+    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.silver_db_name}/hub_saleyard"]
   }
 }
 
@@ -98,7 +98,7 @@ resource "google_bigquery_table" "sat_saleyard_detail" {
     autodetect    = true
     source_format = "ICEBERG"
     connection_id = google_bigquery_connection.biglake.id
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/sat_saleyard_detail"]
+    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.silver_db_name}/sat_saleyard_detail"]
   }
 }
 
@@ -111,6 +111,6 @@ resource "google_bigquery_table" "link_carcass_saleyard" {
     autodetect    = true
     source_format = "ICEBERG"
     connection_id = google_bigquery_connection.biglake.id
-    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}/link_carcass_saleyard"]
+    source_uris   = ["gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.silver_db_name}/link_carcass_saleyard"]
   }
 }

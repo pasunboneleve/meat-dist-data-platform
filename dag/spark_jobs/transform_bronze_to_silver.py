@@ -48,7 +48,7 @@ def run_transform(spark: SparkSession, config: dict):
     bronze_bucket = config.get("bronze_bucket")
     silver_bucket = config.get("silver_bucket")
     target_date_str = config.get("target_date_str")
-    db_name = config.get("db_name", "silver_meat_market_db")
+    db_name = config.get("db_name", "silver")
     # Use provided load_dts or default to now
     load_dts = config.get("load_dts", datetime.now())
 
@@ -89,9 +89,7 @@ def run_transform(spark: SparkSession, config: dict):
 
     # Read saleyard table
     logger.info("Reading saleyard data.")
-    saleyard_df = spark.read.parquet(
-        f"gs://{bronze_bucket}/saleyard/saleyard.parquet"
-    )
+    saleyard_df = spark.read.parquet(f"gs://{bronze_bucket}/saleyard/saleyard.parquet")
     saleyard_df.cache()
 
     # Create DB if not exists
@@ -337,11 +335,11 @@ def run_transform(spark: SparkSession, config: dict):
     saleyard_df.unpersist()
     logger.info("Bronze-to-Silver transformation completed successfully.")
 
+
 def main():
     spark = SparkSession.builder.appName("bronze-to-silver-dv2").getOrCreate()
 
     db_name = spark.conf.get("spark.sql.db_name", "silver_meat_market_db")
-
 
     try:
         logger.info("Starting Bronze-to-Silver transformation.")
@@ -355,9 +353,9 @@ def main():
             "target_date_str": target_date_str,
             "db_name": db_name,
         }
-        
+
         run_transform(spark, config)
-        
+
         spark.stop()
     except DagConfigError as e:
         logger.error(f"Configuration Error: {e}", exc_info=True)
@@ -369,4 +367,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

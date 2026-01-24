@@ -100,7 +100,7 @@ def bronze_to_silver_dv2():
                     "spark.sql.gcp_project": os.environ["GCP_PROJECT_ID"],
                     "spark.sql.dataproc_region": os.environ["DATAPROC_REGION"],
                     "spark.sql.catalog_name": os.environ["CATALOG_NAME"],
-                    "spark.sql.db_name": os.environ["DB_NAME"],
+                    "spark.sql.db_name": os.environ["SILVER_DB_NAME"],
                 },
             },
             "environment_config": {
@@ -121,7 +121,7 @@ def bronze_to_silver_dv2():
         mode="reschedule",
     )
     def verify_silver() -> PokeReturnValue:
-        db_name = os.environ.get("DB_NAME")
+        db_name = os.environ.get("SILVER_DB_NAME")
         if not db_name:
             raise ValueError("Missing DB_NAME env var")
 

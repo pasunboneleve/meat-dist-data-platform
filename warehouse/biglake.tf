@@ -1,7 +1,8 @@
 # --- BigLake ---
 
 locals {
-  db_name = "silver_meat_market_db"
+  silver_db_name = "silver"
+  gold_db_name = "gold"
 }
 
 resource "google_project_service" "biglake_api" {
@@ -19,13 +20,23 @@ resource "google_biglake_catalog" "meat_iceberg" {
   depends_on = [google_project_service.biglake_api]
 }
 
-resource "google_biglake_database" "meat_db" {
-  name    = "silver_meat_market_db"
+resource "google_biglake_database" "silver_db" {
+  name    = local.silver_db_name
   catalog = google_biglake_catalog.meat_iceberg.id
   type    = "HIVE"
 
   hive_options {
-    location_uri = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.db_name}"
+    location_uri = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.silver_db_name}"
+  }
+}
+
+resource "google_biglake_database" "gold_db" {
+  name    = local.gold_db_name
+  catalog = google_biglake_catalog.meat_iceberg.id
+  type    = "HIVE"
+
+  hive_options {
+    location_uri = "gs://${google_storage_bucket.silver_bucket.name}/iceberg_warehouse/${local.gold_db_name}"
   }
 }
 

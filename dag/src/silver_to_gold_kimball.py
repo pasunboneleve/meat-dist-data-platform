@@ -119,35 +119,36 @@ def silver_to_gold_kimball():
         timeout=300,
         mode="reschedule",
     )
-    def verify_gold() -> PokeReturnValue:
+    def verify_gold(config: Dict[str, str]) -> PokeReturnValue:
         db_name = os.environ.get("GOLD_DB_NAME", "gold")
+        target_date = datetime.fromisoformat(config["target_date_str"]).date()
+        date_key = int(target_date.strftime("%Y%m%d"))
         
         hook = GCSHook(gcp_conn_id="google_cloud_default")
-        # Check for data files in the gold table location
-        prefix = f"iceberg_warehouse/{db_name}.db/fact_carcass_transactions/data/"
+        # Check for data files in the gold table location for the specific partition
+        prefix = f"iceberg_warehouse/{db_name}.db/fact_sales/data/date_key={date_key}/"
 
         objects = hook.list(
-            bucket_name=GOLD_BUCKET,
+            bucket_name=GOLD_BUCKET, # type: ignore
             prefix=prefix,
             max_results=1,
         )
         exists = bool(objects)
-
-        return PokeReturnValue(is_done=exists)
+        
+        if exists:
+             return PokeReturnValue(is_done=True, xcom_value=config)
+             
+        return PokeReturnValue(is_done=False)
 
     @task(outlets=[gold_kimball_asset])
-    def mark_asset_produced(config: Dict[str, str], **context):
-        print(
-            f"Gold Kimball Iceberg asset produced for date: {config['target_date_str']}"
-        )
-        ti: TaskInstance = context["ti"]
-        ti.xcom_push(key="asset_config", value=config)
+    def mark_gold_produced(config: Dict[str, str]):
+        """Marks the gold asset as produced after Spark job success."""
+
+        print(f"Gold Kimball fact table produced for date: {config['target_date_str']}")
         return Metadata(asset=gold_kimball_asset)
 
-    verified = verify_gold()
-    marked = mark_asset_produced(config=config_task)
-
-    config_task >> submit_spark_transform >> verified >> marked
+    waited = verify_gold(spark_job)  # type: ignore[arg-type]
+    mark_gold_produced(waited)  # type: ignore[arg-type]
 
 
 silver_to_gold_kimball()

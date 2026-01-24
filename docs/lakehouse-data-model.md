@@ -114,6 +114,10 @@ erDiagram
 
  HUB_CARCASS ||--o{ LINK_CARCASS_PROCESSING : "is processed by"
 
+ HUB_SALEYARD ||--o{ SAT_SALEYARD_DETAILS : "describes"
+
+ HUB_CARCASS ||--o{ LINK_CARCASS_SALEYARD : "sold at"
+
  HUB_CARCASS {
   string carcass_hash_key PK
   string carcass_id "BK"
@@ -147,6 +151,20 @@ erDiagram
   string batch_id
   float price_per_kg
  }
+ 
+ SAT_SALEYARD_DETAILS {
+  string saleyard_hash_key FK
+  timestamp load_date
+  string saleyard_desc
+  string state_id
+ }
+ 
+ LINK_CARCASS_SALEYARD {
+  string link_hash_key PK
+  string carcass_hash_key FK
+  string saleyard_hash_key FK
+  timestamp load_date
+ }
 ```
 
 ## Gold Layer (Kimball Star Schema)
@@ -159,6 +177,7 @@ The gold layer provides a Kimball star schema for BI and analytics, materialized
   - **dim_date**: Date dimension (year, month, day, etc.).
   - **dim_product**: Product dimension (grade, breed, quality attributes).
   - **dim_plant**: Plant dimension (plant_id, location).
+  - **dim_saleyard**: Saleyard dimension (saleyard_id, state, region).
 
 - **Fact Table**:
   - **fact_sales**: Sales facts (price, weight, yield; aggregated per
@@ -181,11 +200,14 @@ erDiagram
 
  FACT_SALES ||--o{ DIM_PLANT : "at plant"
 
+ FACT_SALES ||--o{ DIM_SALEYARD : "at saleyard"
+
  FACT_SALES {
   int fact_key PK
   int date_key FK
   int product_key FK
   int plant_key FK
+  int saleyard_key FK
   string carcass_id DD
   string batch_id DD
   float total_price
@@ -213,6 +235,13 @@ erDiagram
   int plant_key PK
   string plant_id
   string location
+ }
+ 
+ DIM_SALEYARD {
+  int saleyard_key PK
+  string saleyard_id
+  string saleyard_desc
+  string state_id
  }
 ```
 

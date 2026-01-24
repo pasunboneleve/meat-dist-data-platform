@@ -181,6 +181,53 @@ def run_transform(spark: SparkSession, config: dict):
         WHEN NOT MATCHED THEN INSERT *
     """)
 
+    # DIM_SALEYARD
+    # Logic: Source from Hub_Saleyard + Sat_Saleyard_Detail (if joined).
+    # Since we didn't explicitly join sat_saleyard to hub_saleyard in the dimension prep block yet,
+    # we'll use hub_saleyard and if details are needed we can join sat_saleyard_detail.
+    # Looking at silver tables: hub_saleyard, sat_saleyard_detail.
+    # We should join them to get descriptions.
+
+    logger.info("Processing DIM_SALEYARD")
+    sat_saleyard = spark.read.table(f"biglake.{silver_db}.sat_saleyard_detail")
+
+    # Get latest/distinct saleyard info.
+    # For this batch, we can arguably just take all unique saleyards referenced or full update.
+    # Full update from Silver Hub+Sat is safest for dimensions usually.
+    # Let's do a join of Hub and Sat Saleyard to get attributes.
+    dim_saleyard_source = (
+        hub_saleyard.join(sat_saleyard, "saleyard_hk", "left")
+        .select(
+            col("saleyard_id"), col("saleyard_desc"), col("state_id"), col("nrmr_desc")
+        )
+        .distinct()
+    )
+
+    spark.sql(f"""
+        CREATE TABLE IF NOT EXISTS biglake.{gold_db}.dim_saleyard (
+            saleyard_key LONG,
+            saleyard_id STRING,
+            saleyard_desc STRING,
+            state_id STRING,
+            nrmr_desc STRING
+        )
+    """)
+
+    dim_saleyard_prepared = dim_saleyard_source.withColumn(
+        "saleyard_key", spark_abs(spark_hash("saleyard_id")).cast("long")
+    )
+    dim_saleyard_prepared.createOrReplaceTempView("source_dim_saleyard")
+
+    spark.sql(f"""
+        MERGE INTO biglake.{gold_db}.dim_saleyard t
+        USING source_dim_saleyard s ON t.saleyard_id = s.saleyard_id
+        WHEN NOT MATCHED THEN INSERT *
+        WHEN MATCHED THEN UPDATE SET
+            saleyard_desc = s.saleyard_desc,
+            state_id = s.state_id,
+            nrmr_desc = s.nrmr_desc
+    """)
+
     # --- 3. Create FACT_SALES ---
     logger.info("Processing FACT_SALES")
 
@@ -194,6 +241,8 @@ def run_transform(spark: SparkSession, config: dict):
         .join(hub_carcass.alias("hub"), on="carcass_hk", how="inner")
         .join(link_carcass_plant.alias("lnk_pl"), on="carcass_hk", how="left")
         .join(hub_plant.alias("hub_pl"), on="plant_hk", how="left")
+        .join(link_carcass_saleyard.alias("lnk_sy"), on="carcass_hk", how="left")
+        .join(hub_saleyard.alias("hub_sy"), on="saleyard_hk", how="left")
     )
 
     # 3.2 Measure Calculations & Key Lookups
@@ -215,6 +264,10 @@ def run_transform(spark: SparkSession, config: dict):
         .withColumn(
             "plant_key", spark_abs(spark_hash(col("hub_pl.plant_id"))).cast("long")
         )
+        .withColumn(
+            "saleyard_key",
+            spark_abs(spark_hash(col("hub_sy.saleyard_id"))).cast("long"),
+        )
         .withColumn("date_key", lit(date_key).cast("int"))
     )
 
@@ -222,6 +275,7 @@ def run_transform(spark: SparkSession, config: dict):
         col("date_key"),
         col("product_key"),
         col("plant_key"),
+        col("saleyard_key"),
         col("hub.carcass_id"),
         lit("UNKNOWN").alias(
             "batch_id"
@@ -246,6 +300,7 @@ def run_transform(spark: SparkSession, config: dict):
             date_key INT,
             product_key LONG,
             plant_key LONG,
+            saleyard_key LONG,
             carcass_id STRING,
             batch_id STRING,
             total_price DECIMAL(10, 2),

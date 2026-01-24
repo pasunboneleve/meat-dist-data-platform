@@ -12,7 +12,8 @@ os.environ.setdefault("DEPS_BUCKET", "test-deps")
 os.environ.setdefault("GCP_PROJECT_ID", "test-project")
 os.environ.setdefault("DATAPROC_REGION", "us-central1")
 os.environ.setdefault("CATALOG_NAME", "test_catalog")
-os.environ.setdefault("DB_NAME", "test_db")
+os.environ.setdefault("SILVER_DB_NAME", "test_db")
+os.environ.setdefault("GOLD_DB_NAME", "test_db")
 os.environ.setdefault(
     "DATAPROC_BATCH_SERVICE_ACCOUNT", "test-sa@project.iam.gserviceaccount.com"
 )

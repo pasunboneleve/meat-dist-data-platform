@@ -108,8 +108,8 @@ def run_transform(spark: SparkSession, config: dict):
     spark.sql(f"""
         MERGE INTO biglake.{gold_db}.dim_plant t
         USING source_dim_plant s ON t.plant_id = s.plant_id
-        WHEN NOT MATCHED THEN INSERT *
         WHEN MATCHED THEN UPDATE SET location = s.location
+        WHEN NOT MATCHED THEN INSERT *
     """)
 
     # DIM_PRODUCT
@@ -221,11 +221,11 @@ def run_transform(spark: SparkSession, config: dict):
     spark.sql(f"""
         MERGE INTO biglake.{gold_db}.dim_saleyard t
         USING source_dim_saleyard s ON t.saleyard_id = s.saleyard_id
-        WHEN NOT MATCHED THEN INSERT *
         WHEN MATCHED THEN UPDATE SET
             saleyard_desc = s.saleyard_desc,
             state_id = s.state_id,
             nrmr_desc = s.nrmr_desc
+        WHEN NOT MATCHED THEN INSERT *
     """)
 
     # --- 3. Create FACT_SALES ---

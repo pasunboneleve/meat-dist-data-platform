@@ -291,6 +291,27 @@ def run_transform(spark: SparkSession, config: dict):
         "fact_key", spark_abs(spark_hash("carcass_id", "date_key")).cast("long")
     )
 
+    # Add Facts Primary Key (Surrogate)
+    fact_sales_df = fact_sales_df.withColumn(
+        "fact_key", spark_abs(spark_hash("carcass_id", "date_key")).cast("long")
+    )
+
+    # Reorder columns to match Table Schema exactly
+    # Schema: fact_key, date_key, product_key, plant_key, saleyard_key, carcass_id, batch_id, total_price, total_weight_kg, average_yield, load_dts
+    fact_sales_df = fact_sales_df.select(
+        col("fact_key"),
+        col("date_key"),
+        col("product_key"),
+        col("plant_key"),
+        col("saleyard_key"),
+        col("carcass_id"),
+        col("batch_id"),
+        col("total_price"),
+        col("total_weight_kg"),
+        col("average_yield"),
+        col("load_dts")
+    )
+
     # Validations / Deduplication
     # Ensure one row per carcass per day
 

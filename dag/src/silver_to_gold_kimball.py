@@ -116,14 +116,18 @@ def silver_to_gold_kimball():
         timeout=300,
         mode="reschedule",
     )
-    def verify_gold() -> PokeReturnValue:
+    def verify_gold(config: Dict[str, str]) -> PokeReturnValue:
         db_name = os.environ.get("GOLD_DB_NAME", "gold")
         if not db_name:
             raise ValueError("Missing GOLD_DB_NAME env var")
 
+        # Re-derive date_key from target_date_str
+        target_date = datetime.fromisoformat(config["target_date_str"]).date()
+        date_key = int(target_date.strftime("%Y%m%d"))
+
         hook = GCSHook(gcp_conn_id="google_cloud_default")
         # Check for data files in the gold table location for the specific partition
-        prefix = f"iceberg_warehouse/{db_name}.db/fact_sales/data/"
+        prefix = f"iceberg_warehouse/{db_name}.db/fact_sales/data/date_key={date_key}/"
 
         objects = hook.list(
             bucket_name=GOLD_BUCKET,  # type: ignore
@@ -132,7 +136,10 @@ def silver_to_gold_kimball():
         )
         exists = bool(objects)
 
-        return PokeReturnValue(is_done=exists)
+        if exists:
+            return PokeReturnValue(is_done=True, xcom_value=config)
+
+        return PokeReturnValue(is_done=False)
 
     @task(outlets=[gold_kimball_asset])
     def mark_asset_produced(config: Dict[str, str]):
@@ -141,8 +148,8 @@ def silver_to_gold_kimball():
         print(f"Gold Kimball fact table produced for date: {config['target_date_str']}")
         return Metadata(asset=gold_kimball_asset)
 
-    verified = verify_gold()
-    marked = mark_asset_produced(config=config_task)  # type: ignore
+    verified = verify_gold(config=config_task)  # type: ignore
+    marked = mark_asset_produced(config=verified)  # type: ignore
 
     config_task >> submit_spark_transform >> verified >> marked
 

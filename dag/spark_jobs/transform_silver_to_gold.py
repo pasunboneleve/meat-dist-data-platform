@@ -1,9 +1,13 @@
+#!/usr/bin/env python3
+# PySpark script for Silver -> Gold Kimball Iceberg
+# Run via DataprocCreateBatchOperator
+
 import logging
 import sys
-from datetime import datetime
+from datetime import date, datetime
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, date_format, to_date
+from pyspark.sql.functions import col, lit
 
 # --- CONFIGURATION ---
 logging.basicConfig(
@@ -15,131 +19,149 @@ logger = logging.getLogger(__name__)
 
 
 class DagConfigError(Exception):
-    """Custom exception for missing DAG configuration."""
-
     pass
 
 
-def get_spark_session() -> SparkSession:
+def run_transform(spark: SparkSession, config: dict):
     """
-    Initializes and returns a Spark session with necessary configurations for Iceberg.
-    The configurations are expected to be set by the Dataproc operator.
+    Executes the Silver to Gold transformation.
+    args:
+        spark: The SparkSession object.
+        config: A dictionary containing configuration.
     """
-    return SparkSession.builder.appName("SilverToGoldKimball").getOrCreate()
+    silver_bucket = config.get("silver_bucket")
+    gold_bucket = config.get("gold_bucket")
+    target_date_str = config.get("target_date_str")
+    silver_db = config.get("silver_db_name")
+    gold_db = config.get("gold_db_name", "gold")
+    load_dts = config.get("load_dts", datetime.now())
 
+    if not all([silver_bucket, gold_bucket, target_date_str, silver_db]):
+        raise DagConfigError(f"Missing config. Provided: {config}")
 
-def get_config(spark: SparkSession) -> dict:
-    """
-    Retrieves configuration parameters from the Spark session.
-    """
-    conf = spark.conf
-    required_configs = [
-        "spark.sql.gold_bucket",
-        "spark.sql.target_date_str",
-    ]
-    config = {}
-    for key in required_configs:
-        value = conf.get(key, None)
-        if not value:
-            raise DagConfigError(f"Required Spark config '{key}' is not set.")
-        config[key.split(".")[-1]] = value
+    target_date = date.fromisoformat(target_date_str)  # type: ignore
 
-    # Convert target_date_str to date object
-    config["target_date"] = datetime.fromisoformat(config["target_date_str"]).date()
-    return config
+    logger.info(
+        "Loaded configuration",
+        extra={
+            "silver_bucket": silver_bucket,
+            "gold_bucket": gold_bucket,
+            "target_date": target_date_str,
+            "silver_db": silver_db,
+            "gold_db": gold_db,
+        },
+    )
+
+    # Ensure Gold DB exists
+    spark.sql(f"CREATE DATABASE IF NOT EXISTS biglake.{gold_db}")
+
+    # 1. Read Silver Data (Iceberg tables from Catalog)
+    logger.info("Reading Silver Iceberg tables.")
+
+    # We read directly from the biglake catalog where silver tables reside
+    hub_carcass = spark.read.table(f"biglake.{silver_db}.hub_carcass")
+    sat_carcass = spark.read.table(f"biglake.{silver_db}.sat_carcass_detail")
+    hub_plant = spark.read.table(f"biglake.{silver_db}.hub_plant")
+    hub_saleyard = spark.read.table(f"biglake.{silver_db}.hub_saleyard")
+    link_carcass_saleyard = spark.read.table(
+        f"biglake.{silver_db}.link_carcass_saleyard"
+    )
+    link_carcass_plant = spark.read.table(f"biglake.{silver_db}.link_carcass_plant")
+
+    # 2. Filter Satellite for incremental processing
+    logger.info(f"Filtering satellite data for slaughter date: {target_date}")
+    # Using 'slaughter_date' from sat_carcass_detail
+    sat_carcass_incremental = sat_carcass.filter(col("slaughter_date") == target_date)
+
+    # 3. Join Logic (Denormalization)
+    logger.info("Joining Silver tables...")
+
+    # Start with Sat Carcass (filtered)
+    df = sat_carcass_incremental.alias("sat").join(
+        hub_carcass.alias("hub"), on="carcass_hk", how="inner"
+    )
+
+    # Join Saleyard info
+    df = df.join(
+        link_carcass_saleyard.alias("lnk_sy"), on="carcass_hk", how="left"
+    ).join(hub_saleyard.alias("hub_sy"), on="saleyard_hk", how="left")
+
+    # Join Plant info
+    df = df.join(link_carcass_plant.alias("lnk_pl"), on="carcass_hk", how="left").join(
+        hub_plant.alias("hub_pl"), on="plant_hk", how="left"
+    )
+
+    # Select Final Columns
+    fact_df = df.select(
+        col("hub.carcass_id"),
+        col("hub_pl.plant_id"),
+        col("hub_sy.saleyard_id"),
+        col("sat.animal_class"),
+        col("sat.slaughter_date"),
+        col("sat.hscw_kg").cast("decimal(10, 2)"),
+        col("sat.price_aud_per_kg").cast("decimal(10, 2)"),
+        col("sat.total_price_aud").cast("decimal(10, 2)"),
+        col("sat.quality_score").cast("int"),
+        col("sat.marbling_score").cast("int"),
+        col("sat.fat_depth_mm").cast("int"),
+        lit(load_dts).alias("load_dts"),
+    )
+
+    # 4. Write to Gold Iceberg Table
+    table_name = f"biglake.{gold_db}.fact_carcass_transactions"
+
+    logger.info(f"Creating/Verifying table {table_name}")
+    spark.sql(f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            carcass_id STRING,
+            plant_id STRING,
+            saleyard_id STRING,
+            animal_class STRING,
+            slaughter_date DATE,
+            hscw_kg DECIMAL(10, 2),
+            price_aud_per_kg DECIMAL(10, 2),
+            total_price_aud DECIMAL(10, 2),
+            quality_score INT,
+            marbling_score INT,
+            fat_depth_mm INT,
+            load_dts TIMESTAMP
+        )
+        PARTITIONED BY (slaughter_date)
+    """)
+
+    logger.info(f"Writing fact data for {target_date}...")
+
+    # Register temp view for SQL based insert
+    fact_df.createOrReplaceTempView("source_fact")
+
+    # INSERT OVERWRITE for idempotency on the partition
+    spark.sql(f"""
+        INSERT OVERWRITE {table_name}
+        SELECT * FROM source_fact
+    """)
+
+    logger.info("Silver-to-Gold transformation completed successfully.")
 
 
 def main():
-    """
-    Main ETL logic for transforming Silver Data Vault tables into a Gold Kimball fact table.
-    """
-    spark = get_spark_session()
+    spark = SparkSession.builder.appName("silver-to-gold-kimball").getOrCreate()
+
     try:
-        config = get_config(spark)
-        logger.info(f"Loaded configuration: {config}")
+        logger.info("Starting Silver-to-Gold transformation.")
 
-        target_date = config["target_date"]
-        gold_bucket = config["gold_bucket"]
+        # Read config from Spark conf (passed by Dataproc Operator)
+        conf = spark.conf
+        config = {
+            "silver_bucket": conf.get("spark.sql.silver_bucket"),
+            "gold_bucket": conf.get("spark.sql.gold_bucket"),
+            "target_date_str": conf.get("spark.sql.target_date_str"),
+            "silver_db_name": conf.get("spark.sql.silver_db_name"),
+            "gold_db_name": conf.get("spark.sql.gold_db_name", "gold"),
+        }
 
-        # 1. Load Silver Iceberg Tables
-        logger.info("Loading Silver Iceberg tables...")
-        hub_carcass_df = spark.read.table("spark_catalog.default.hub_carcass")
-        sat_carcass_detail_df = spark.read.table(
-            "spark_catalog.default.sat_carcass_detail"
-        )
-        hub_plant_df = spark.read.table("spark_catalog.default.hub_plant")
-        hub_saleyard_df = spark.read.table("spark_catalog.default.hub_saleyard")
-        link_carcass_saleyard_df = spark.read.table(
-            "spark_catalog.default.link_carcass_saleyard"
-        )
-        link_carcass_plant_df = spark.read.table(
-            "spark_catalog.default.link_carcass_plant"
-        )
+        run_transform(spark, config)
 
-        # 2. Filter Satellite for incremental processing based on slaughter date
-        logger.info(f"Filtering satellite data for slaughter date: {target_date}")
-        sat_carcass_incremental_df = sat_carcass_detail_df.where(
-            col("slaughter_date") == target_date
-        )
-
-        # 3. Denormalize by joining Hubs, Satellites, and Links
-        logger.info("Joining Silver tables to create denormalized fact view...")
-
-        # Join carcass hub and sat
-        carcass_denormalized = sat_carcass_incremental_df.join(
-            hub_carcass_df, "carcass_hk", "inner"
-        )
-
-        # Join with saleyard info
-        carcass_denormalized = carcass_denormalized.join(
-            link_carcass_saleyard_df, "carcass_hk", "left"
-        ).join(hub_saleyard_df, "saleyard_hk", "left")
-
-        # Join with plant info through the link table
-        carcass_denormalized = carcass_denormalized.join(
-            link_carcass_plant_df, "carcass_hk", "left"
-        ).join(hub_plant_df, "plant_hk", "left")
-
-        # 4. Create the Gold Fact Table
-        logger.info("Creating fact_carcass_transactions table...")
-        fact_carcass_transactions = carcass_denormalized.select(
-            # Degenerate Dimensions & Business Keys
-            col("carcass_id"),
-            col("plant_id"),
-            col("saleyard_id"),
-            col("animal_class"),
-            # Date Dimension Key
-            to_date(col("slaughter_date")).alias("slaughter_date"),
-            # Measures
-            col("hscw_kg").cast("decimal(10, 2)"),
-            col("price_aud_per_kg").cast("decimal(10, 2)"),
-            col("total_price_aud").cast("decimal(10, 2)"),
-            col("quality_score").cast("integer"),
-            col("marbling_score").cast("integer"),
-            col("fat_depth_mm").cast("integer"),
-            # Audit columns
-            sat_carcass_incremental_df.load_dts,
-        )
-
-        # 5. Add partitioning columns based on slaughter_date
-        fact_carcass_transactions = (
-            fact_carcass_transactions.withColumn(
-                "year", date_format(col("slaughter_date"), "yyyy")
-            )
-            .withColumn("month", date_format(col("slaughter_date"), "MM"))
-            .withColumn("day", date_format(col("slaughter_date"), "dd"))
-        )
-
-        # 6. Write to Gold GCS bucket
-        output_path = f"gs://{gold_bucket}/fact_carcass_transactions"
-        logger.info(f"Writing fact table to {output_path}")
-
-        fact_carcass_transactions.write.partitionBy("year", "month", "day").mode(
-            "overwrite"
-        ).parquet(output_path)
-
-        logger.info("Silver-to-Gold transformation completed successfully.")
-
+        spark.stop()
     except DagConfigError as e:
         logger.error(f"Configuration Error: {e}", exc_info=True)
         sys.exit(1)

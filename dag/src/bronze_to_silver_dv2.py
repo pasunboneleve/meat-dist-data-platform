@@ -126,7 +126,7 @@ def bronze_to_silver_dv2():
             raise ValueError("Missing DB_NAME env var")
 
         hook = GCSHook(gcp_conn_id="google_cloud_default")
-        prefix = f"iceberg_warehouse/{db_name}/hub_carcass/data/"
+        prefix = f"iceberg_warehouse/{db_name}.db/hub_carcass/data/"
 
         objects = hook.list(
             bucket_name=SILVER_BUCKET,

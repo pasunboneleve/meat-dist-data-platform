@@ -59,13 +59,16 @@ def bronze_to_silver_dv2():
                 "main_python_file_uri": f"gs://{os.environ['DEPS_BUCKET']}/spark_jobs/transform_bronze_to_silver.py",
             },
             "runtime_config": {
-                "version": "2.2",
+                "version": "2.2",  # Runs Spark 3.5
                 "properties": {
-                    "spark.jars.packages": "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.6.0,org.apache.iceberg:iceberg-gcp-bundle:1.6.0",
+                    # 1. ADDED: The BigLake Catalog JAR (fixes the ClassNotFound error and handles Auth)
+                    "spark.jars.packages": "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.6.0,org.apache.iceberg:iceberg-gcp-bundle:1.6.0,com.google.biglake:biglake-catalog-iceberg:0.1.1",
                     "spark.sql.extensions": "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
                     "spark.sql.iceberg.merge-schema": "true",
+                    # 2. CHANGED: Use the Google-specific catalog implementation
                     "spark.sql.catalog.biglake": "org.apache.iceberg.spark.SparkCatalog",
                     "spark.sql.catalog.biglake.catalog-impl": "org.apache.iceberg.gcp.biglake.BigLakeCatalog",
+                    # 3. RESTORED: These are required by the BigLakeCatalog class
                     "spark.sql.catalog.biglake.gcp_project": os.environ[
                         "GCP_PROJECT_ID"
                     ],
@@ -75,13 +78,18 @@ def bronze_to_silver_dv2():
                     "spark.sql.catalog.biglake.blms_catalog": os.environ[
                         "CATALOG_NAME"
                     ],
+                    # 4. REMOVED: 'type': 'rest' and 'uri' are not needed when using catalog-impl
                     "spark.sql.catalog.biglake.warehouse": f"gs://{SILVER_BUCKET}/iceberg_warehouse",
+                    # Note: GCSFileIO is still needed for the actual data access
+                    "spark.sql.catalog.biglake.io-impl": "org.apache.iceberg.gcp.gcs.GCSFileIO",
+                    # Performance & Resources
                     "spark.executor.instances": "2",
                     "spark.executor.cores": "4",
                     "spark.executor.memory": "4g",
                     "spark.driver.cores": "4",
                     "spark.driver.memory": "4g",
                     "spark.dynamicAllocation.enabled": "false",
+                    # Job Arguments
                     "spark.sql.execution_date": "{{ ti.xcom_pull(task_ids='get_config')['target_date_str'] }}",
                     "spark.sql.bronze_bucket": BRONZE_BUCKET,
                     "spark.sql.silver_bucket": SILVER_BUCKET,

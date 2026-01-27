@@ -149,23 +149,6 @@ resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_bucket_writer" 
 # }
 
 # --- BigQuery ---
-# Silver dataset for external tables pointing to the curated zone
-resource "google_bigquery_dataset" "silver_meat_market" {
-  project    = var.project_id
-  dataset_id = "silver_meat_market"
-  location   = var.app_engine_region
-
-  depends_on = [google_project_service.apis]
-}
-
-# Gold dataset for Kimball models and BI
-resource "google_bigquery_dataset" "gold_meat_market" {
-  project    = var.project_id
-  dataset_id = "gold_meat_market"
-  location   = var.app_engine_region
-
-  depends_on = [google_project_service.apis]
-}
 
 # # --- Dynamically set Python dependencies for DAGs.
 # data "external" "uv_lock_deps" {

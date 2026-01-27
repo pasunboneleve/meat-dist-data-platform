@@ -72,81 +72,81 @@ resource "google_storage_bucket_iam_member" "ingestion_sa_bronze_bucket_writer" 
 
 # --- Dataplex ---
 # Dataplex Lake for centralized management and governance
-resource "google_dataplex_lake" "meat_market_lake" {
-  project      = var.project_id
-  name         = "meat-market-lake"
-  location     = var.app_engine_region
-  display_name = "Meat Market Data Lake"
+# resource "google_dataplex_lake" "meat_market_lake" {
+#   project      = var.project_id
+#   name         = "meat-market-lake"
+#   location     = var.app_engine_region
+#   display_name = "Meat Market Data Lake"
 
-  depends_on = [google_project_service.apis]
-}
+#   depends_on = [google_project_service.apis]
+# }
 
-# Raw zone for bronze data
-resource "google_dataplex_zone" "raw_zone" {
-  project      = var.project_id
-  lake         = google_dataplex_lake.meat_market_lake.name
-  location     = var.app_engine_region
-  name         = "raw"
-  display_name = "Raw Zone (Bronze)"
-  type         = "RAW"
-  discovery_spec {
-    enabled = true
-  }
-  resource_spec {
-    location_type = "SINGLE_REGION"
-  }
-}
+# # Raw zone for bronze data
+# resource "google_dataplex_zone" "raw_zone" {
+#   project      = var.project_id
+#   lake         = google_dataplex_lake.meat_market_lake.name
+#   location     = var.app_engine_region
+#   name         = "raw"
+#   display_name = "Raw Zone (Bronze)"
+#   type         = "RAW"
+#   discovery_spec {
+#     enabled = true
+#   }
+#   resource_spec {
+#     location_type = "SINGLE_REGION"
+#   }
+# }
 
-# Curated zone for silver data
-resource "google_dataplex_zone" "curated_zone" {
-  project      = var.project_id
-  lake         = google_dataplex_lake.meat_market_lake.name
-  location     = var.app_engine_region
-  name         = "curated"
-  display_name = "Curated Zone (Silver)"
-  type         = "CURATED"
-  discovery_spec {
-    enabled = true
-  }
-  resource_spec {
-    location_type = "SINGLE_REGION"
-  }
-}
+# # Curated zone for silver data
+# resource "google_dataplex_zone" "curated_zone" {
+#   project      = var.project_id
+#   lake         = google_dataplex_lake.meat_market_lake.name
+#   location     = var.app_engine_region
+#   name         = "curated"
+#   display_name = "Curated Zone (Silver)"
+#   type         = "CURATED"
+#   discovery_spec {
+#     enabled = true
+#   }
+#   resource_spec {
+#     location_type = "SINGLE_REGION"
+#   }
+# }
 
-# Link bronze bucket to the raw zone
-resource "google_dataplex_asset" "bronze_asset" {
-  project       = var.project_id
-  lake          = google_dataplex_lake.meat_market_lake.name
-  location      = var.app_engine_region
-  dataplex_zone = google_dataplex_zone.raw_zone.name
-  name          = "bronze-storage"
-  display_name  = "Bronze GCS Bucket"
-  discovery_spec {
-    enabled = true
-  }
-  resource_spec {
-    name = "projects/${google_storage_bucket.bronze_bucket.project}/buckets/${google_storage_bucket.bronze_bucket.name}"
-    type = "STORAGE_BUCKET"
-  }
-}
+# # Link bronze bucket to the raw zone
+# resource "google_dataplex_asset" "bronze_asset" {
+#   project       = var.project_id
+#   lake          = google_dataplex_lake.meat_market_lake.name
+#   location      = var.app_engine_region
+#   dataplex_zone = google_dataplex_zone.raw_zone.name
+#   name          = "bronze-storage"
+#   display_name  = "Bronze GCS Bucket"
+#   discovery_spec {
+#     enabled = true
+#   }
+#   resource_spec {
+#     name = "projects/${google_storage_bucket.bronze_bucket.project}/buckets/${google_storage_bucket.bronze_bucket.name}"
+#     type = "STORAGE_BUCKET"
+#   }
+# }
 
-# Link silver bucket to the curated zone
-resource "google_dataplex_asset" "silver_asset" {
-  project       = var.project_id
-  lake          = google_dataplex_lake.meat_market_lake.name
-  location      = var.app_engine_region
-  dataplex_zone = google_dataplex_zone.curated_zone.name
-  name          = "silver-storage"
-  display_name  = "Silver GCS Bucket"
-  discovery_spec {
-    enabled          = true
-    exclude_patterns = ["**/metadata/**"]
-  }
-  resource_spec {
-    name = "projects/${google_storage_bucket.silver_bucket.project}/buckets/${google_storage_bucket.silver_bucket.name}"
-    type = "STORAGE_BUCKET"
-  }
-}
+# # Link silver bucket to the curated zone
+# resource "google_dataplex_asset" "silver_asset" {
+#   project       = var.project_id
+#   lake          = google_dataplex_lake.meat_market_lake.name
+#   location      = var.app_engine_region
+#   dataplex_zone = google_dataplex_zone.curated_zone.name
+#   name          = "silver-storage"
+#   display_name  = "Silver GCS Bucket"
+#   discovery_spec {
+#     enabled          = true
+#     exclude_patterns = ["**/metadata/**"]
+#   }
+#   resource_spec {
+#     name = "projects/${google_storage_bucket.silver_bucket.project}/buckets/${google_storage_bucket.silver_bucket.name}"
+#     type = "STORAGE_BUCKET"
+#   }
+# }
 
 # --- BigQuery ---
 # Silver dataset for external tables pointing to the curated zone
@@ -167,99 +167,99 @@ resource "google_bigquery_dataset" "gold_meat_market" {
   depends_on = [google_project_service.apis]
 }
 
-# --- Dynamically set Python dependencies for DAGs.
-data "external" "uv_lock_deps" {
-  program     = ["python3", "${path.root}/../scripts/parse_uv_lock.py"]
-  working_dir = "${path.root}/../dag"
-}
+# # --- Dynamically set Python dependencies for DAGs.
+# data "external" "uv_lock_deps" {
+#   program     = ["python3", "${path.root}/../scripts/parse_uv_lock.py"]
+#   working_dir = "${path.root}/../dag"
+# }
 
-# --- Cloud Composer for Pipeline Orchestration ---
-resource "google_composer_environment" "meat_composer" {
-  name   = "meat-composer"
-  region = var.app_engine_region
-  labels = {
-    environment = "prod"
-  }
+# # --- Cloud Composer for Pipeline Orchestration ---
+# resource "google_composer_environment" "meat_composer" {
+#   name   = "meat-composer"
+#   region = var.app_engine_region
+#   labels = {
+#     environment = "prod"
+#   }
 
-  config {
-    software_config {
-      image_version = "composer-3-airflow-3.1.0-build.6"
-      pypi_packages = data.external.uv_lock_deps.result
-      env_variables = {
-        GCP_PROJECT_ID                 = var.project_id
-        DATAPROC_REGION                = var.app_engine_region
-        DATAPROC_BATCH_SERVICE_ACCOUNT = google_service_account.dataproc_batch_sa.email
-        SYNTHETIC_MEAT_URL             = local.ingestion_service_url
-        BRONZE_BUCKET                  = google_storage_bucket.bronze_bucket.name
-        SILVER_BUCKET                  = google_storage_bucket.silver_bucket.name
-        GOLD_BUCKET                    = google_storage_bucket.gold_bucket.name
-        DEPS_BUCKET                    = google_storage_bucket.deps_bucket.name
-        CATALOG_NAME                   = google_biglake_catalog.meat_iceberg.name
-        SILVER_DB_NAME                 = local.silver_db_name
-        GOLD_DB_NAME                   = local.gold_db_name
-      }
-      airflow_config_overrides = {
-        "scheduler-min_file_process_interval" = "30"
-        "scheduler-dag_dir_list_interval"     = "30"
-      }
-    }
+#   config {
+#     software_config {
+#       image_version = "composer-3-airflow-3.1.0-build.6"
+#       pypi_packages = data.external.uv_lock_deps.result
+#       env_variables = {
+#         GCP_PROJECT_ID                 = var.project_id
+#         DATAPROC_REGION                = var.app_engine_region
+#         DATAPROC_BATCH_SERVICE_ACCOUNT = google_service_account.dataproc_batch_sa.email
+#         SYNTHETIC_MEAT_URL             = local.ingestion_service_url
+#         BRONZE_BUCKET                  = google_storage_bucket.bronze_bucket.name
+#         SILVER_BUCKET                  = google_storage_bucket.silver_bucket.name
+#         GOLD_BUCKET                    = google_storage_bucket.gold_bucket.name
+#         DEPS_BUCKET                    = google_storage_bucket.deps_bucket.name
+#         CATALOG_NAME                   = google_biglake_catalog.meat_iceberg.name
+#         SILVER_DB_NAME                 = local.silver_db_name
+#         GOLD_DB_NAME                   = local.gold_db_name
+#       }
+#       airflow_config_overrides = {
+#         "scheduler-min_file_process_interval" = "30"
+#         "scheduler-dag_dir_list_interval"     = "30"
+#       }
+#     }
 
-    # --- AUTOSCALING CONFIG ---
-    workloads_config {
-      scheduler {
-        cpu        = 0.5
-        memory_gb  = 2
-        storage_gb = 1
-        count      = 1
-      }
-      web_server {
-        cpu        = 0.5
-        memory_gb  = 2
-        storage_gb = 1
-      }
-      worker {
-        cpu        = 0.5
-        memory_gb  = 2
-        storage_gb = 1
-        min_count  = 1
-        max_count  = 6
-      }
-      triggerer {
-        cpu       = 0.5
-        memory_gb = 2.0
-        count     = 1
-      }
-      dag_processor {
-        cpu        = 0.5 # or 1.0 if budget allows
-        memory_gb  = 2
-        storage_gb = 1
-        count      = 1 # usually 1 is enough for personal use
-      }
-    }
+#     # --- AUTOSCALING CONFIG ---
+#     workloads_config {
+#       scheduler {
+#         cpu        = 0.5
+#         memory_gb  = 2
+#         storage_gb = 1
+#         count      = 1
+#       }
+#       web_server {
+#         cpu        = 0.5
+#         memory_gb  = 2
+#         storage_gb = 1
+#       }
+#       worker {
+#         cpu        = 0.5
+#         memory_gb  = 2
+#         storage_gb = 1
+#         min_count  = 1
+#         max_count  = 6
+#       }
+#       triggerer {
+#         cpu       = 0.5
+#         memory_gb = 2.0
+#         count     = 1
+#       }
+#       dag_processor {
+#         cpu        = 0.5 # or 1.0 if budget allows
+#         memory_gb  = 2
+#         storage_gb = 1
+#         count      = 1 # usually 1 is enough for personal use
+#       }
+#     }
 
-    # --- DATA RETENTION CONFIG (New) ---
-    # Automatically deletes database metadata older than 90 days.
-    # This keeps the Airflow database fast and responsive.
-    data_retention_config {
-      airflow_metadata_retention_config {
-        retention_mode = "RETENTION_MODE_ENABLED"
-        retention_days = 90
-      }
-    }
+#     # --- DATA RETENTION CONFIG (New) ---
+#     # Automatically deletes database metadata older than 90 days.
+#     # This keeps the Airflow database fast and responsive.
+#     data_retention_config {
+#       airflow_metadata_retention_config {
+#         retention_mode = "RETENTION_MODE_ENABLED"
+#         retention_days = 90
+#       }
+#     }
 
-    # --- IDENTITY CONFIG ---
-    node_config {
-      service_account = google_service_account.dataproc_sa.email
-    }
-  }
+#     # --- IDENTITY CONFIG ---
+#     node_config {
+#       service_account = google_service_account.dataproc_sa.email
+#     }
+#   }
 
-  depends_on = [google_project_service.apis]
-}
+#   depends_on = [google_project_service.apis]
+# }
 
-# send that info to Github Actions
-locals {
-  composer_bucket = google_composer_environment.meat_composer.config[0].dag_gcs_prefix
-}
+# # send that info to Github Actions
+# locals {
+#   composer_bucket = google_composer_environment.meat_composer.config[0].dag_gcs_prefix
+# }
 
 # --- IAM / Service Accounts ---
 

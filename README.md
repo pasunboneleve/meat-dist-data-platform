@@ -1,163 +1,225 @@
-# Modern Open Lakehouse Portfolio Project on Google Cloud
+# Meat Distribution Data Platform (Learning Project)
 
-[![CI/CD Status](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/deploy.yml/badge.svg)](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/deploy.yml) [![Ingestion Tests](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/ingestion.yml/badge.svg)](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/ingestion.yml) [![DAG Deploy](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/dag.yml/badge.svg)](https://github.com/pasunboneleve/meat-dist-data-platform/actions/workflows/dag.yml)
+A small data platform built on Google Cloud to explore modern lakehouse tooling, infrastructure as code, and CI/CD for data pipelines.
 
-**Goal**: Build a cost-effective (~$10–30/month), serverless-first Lakehouse for a meat distribution platform, demonstrating modern data engineering practices (Iceberg, DataPlex, Data Vault 2.0 + Kimball, Terraform IaC, CI/CD).
+This repository accompanies the article [**“Cheap to run, expensive to change”**](https://boneleve.blog/posts/2026-03-04-cost-of-change).
 
-**Key Technologies**:
-- **Data Source**: A synthetic data generator that simulates a stream of meat processing data.
-- **Ingestion**: Cloud Run service (Python container) triggered by Cloud Scheduler.
-- **Bronze Layer**: Raw JSON/Parquet files in GCS.
-- **Silver Layer**: Data Vault 2.0 modeled Iceberg tables in GCS.
-- **Gold Layer**: Kimball star schema views or materialized tables queried via BigQuery (over Iceberg/BigLake).
-- **Transformations**: Dataproc Serverless Spark (PySpark) batches for Iceberg support.
-- **Catalog & Governance**: DataPlex Universal Catalog (auto-discovery, lineage).
-- **BI**: Looker Studio (free) public dashboards.
-- **IaC**: OpenTofu for everything, configured using HCL.
-- **CI/CD & Testing**: GitHub Actions (lint, plan, tests, apply on merge).
+The project began as an attempt to build a **cheap, realistic data platform** for a meat distribution business. It succeeded technically, but it also exposed something more important: how easily the **cost of change hides inside well-intentioned best practices**.
 
-## Project Structure
+The repository remains available as a **learning artifact** illustrating both the implementation and the architectural trade-offs described in the article.
+
+---
+
+## Architecture Overview
+
+The platform follows a typical lakehouse pipeline:
+
+```mermaid
+flowchart TB
+    subgraph OUTER[" "]
+        subgraph INTERNET["🌐 Internet"]
+            A[MLA Statistics API]
+        end
+
+        subgraph DESKTOP["💻 Desktop"]
+            K1[OpenTofu IaC<br/>infra/]
+        end
+
+        subgraph GHA["🐙 GitHub Actions"]
+            K2[OpenTofu IaC<br/>warehouse/]
+        end
+    end
+
+    subgraph GCP["☁️ GCP Infrastructure"]
+        B[Cloud Run synthetic-meat-ingestor]
+        H[BigLake Catalog]
+        I[BigQuery]
+        J[Looker Studio]
+
+        subgraph COMPOSER["🌀 Cloud Composer 3"]
+            O[Airflow DAGs]
+            D[Dataproc Serverless Spark<br/>Bronze to Silver DV2]
+            E[Dataproc Serverless Spark<br/>Silver to Gold Kimball]
+        end
+
+        subgraph GCS["🪣 Cloud Storage"]
+            C[🥉 Bronze GCS Parquet<br/>carcasses, saleyard, indicator]
+            F[🥈 Silver GCS Iceberg<br/>Data Vault 2.0 tables]
+            G[🥇 Gold GCS Iceberg<br/>Kimball marts]
+        end
+    end
+
+    A --> B
+    B --> C
+    O -->|OIDC HTTP trigger| B
+    O -->|Dataproc batch submit| D
+    O -->|Dataproc batch submit| E
+    C --> D
+    D --> F
+    F --> E
+    E --> G
+    F --> H
+    G --> H
+    H --> I
+    I --> J
+    K1 --> K2
+    K2 --> O
+    K2 --> B
+    K2 --> C
+    K2 --> F
+    K2 --> G
+    style OUTER fill:none,stroke:none
+```
+
+Key orchestration and infrastructure components:
+
+- **Apache Airflow (Cloud Composer 3)** for orchestration
+- **Dataproc Serverless Spark** for batch transformations
+- **Google Cloud Storage** for Bronze and Silver layers
+- **BigQuery / BigLake** for analytics access
+- **DataPlex** for catalog and governance
+- **OpenTofu (Terraform)** for infrastructure provisioning
+- **GitHub Actions** for CI/CD
+
+A synthetic data generator simulates carcass-level events derived from public livestock statistics so that traceability can be modelled realistically.
+
+---
+
+## Architecture Decisions
+
+Some design choices in this project were deliberate learning trade-offs:
+
+- **Synthetic carcass generation** allowed realistic traceability modelling but introduced coupling between ingestion and modelling.
+- **Cloud Composer (Airflow)** provided familiar orchestration patterns but slowed the local feedback loop.
+- **Separate infrastructure roots (`infra/` and `warehouse/`)** mirrored common organisational structures but added operational indirection.
+
+These decisions are explored in detail in the accompanying article:
+
+This repository accompanies the article [**“Cheap to run, expensive to change”**](https://boneleve.blog/posts/2026-03-04-cost-of-change).
+
+---
+
+## Repository Structure
 
 ```
 repo-root/
-├── .github/workflows/        # GitHub Actions CI/CD pipelines
+├── .github/workflows/        # CI/CD pipelines
 │   ├── deploy.yml
+│   ├── dag.yml
 │   └── ingestion.yml
-├── infra/                    # Core infrastructure (WIF, deploy SA, permissions)
-│   ├── main.tf
-│   └── ...
-├── ingestion/
-│   └── synthetic-meat/       # Source for the Cloud Run ingestion service
-│       ├── src/
-│       ├── tests/
-│       ├── Dockerfile
-│       └── pyproject.toml
-├── warehouse/                # Data platform infrastructure (GCS, Dataplex, etc.)
-│   ├── main.tf
-│   └── ...
+├── dag/                      # Airflow DAGs and Spark jobs
+├── infra/                    # Base infrastructure and IAM configuration
+├── ingestion/                # Cloud Run ingestion service
+│   └── synthetic-meat/
+├── warehouse/                # Data platform infrastructure
+├── docs/                     # Architecture and development notes
+├── scripts/                  # Utility scripts
 └── README.md
 ```
 
-## Phase 1: Project Setup (1–2 hours)
+The infrastructure is split across two OpenTofu roots:
 
-1. Create a new GCP project, enable billing.
-2. Enable required APIs:
-   - Cloud Scheduler API
-   - Cloud Build API
-   - Dataproc API
-   - BigQuery API
-   - DataPlex API
-   - Cloud Storage API
-3. Install locally: `gcloud` CLI, Terraform, Git.
-4. Create GitHub repo and clone locally.
+- **infra/** – foundational CI/CD permissions and Workload Identity
+- **warehouse/** – the data platform resources themselves
 
-## Phase 2: Infrastructure with Terraform
+This separation mirrors common organisational practices but also introduces some of the operational friction discussed in the article.
 
-Deploy in this order:
+---
 
-- GCS buckets:
-  - `${project_id}-bronze`
-  - `${project_id}-silver`
-  - `${project_id}-deps` (for Spark jars/temp)
-- DataPlex Lake with zones:
-  - Lake: `meat-market-lake`
-  - Zones: `raw` (bronze), `curated` (silver)
-  - Assets linking buckets to zones
-- BigQuery dataset: `gold_meat_market`
-- Service accounts & IAM:
-  - One for Dataproc (BigQuery, Storage, DataPlex roles)
-- BigLake connection (if needed for Iceberg catalog)
+## Deployment Model
 
-Use community modules where possible (e.g., GoogleCloudPlatform/cloud-foundation-fabric).
+The project uses a two-stage deployment strategy.
 
-Validate locally: `tofu init → fmt → validate → plan → apply`.
+### Core infrastructure (`infra/`)
 
-## Deployment Process
+Creates foundational components such as:
 
-This repository uses a two-part deployment strategy:
+- Workload Identity Federation
+- deployment service account
+- project IAM permissions
 
-1.  **Core Infrastructure (`infra/`)**: This configuration sets up the foundational components for CI/CD, including the Workload Identity Federation, the deployment service account, and its project-level IAM permissions. Because it grants powerful permissions, **it is designed to be applied manually from a local machine** after careful review. Any changes to IAM roles in `infra/main.tf` must be applied locally before they will take effect in the CI/CD pipeline.
+Because these permissions are sensitive, this configuration is intended to be applied manually from a local machine.
 
-    ```bash
-    # From your local machine, inside the infra/ directory
-    tofu apply -var-file="prod.tfvars"
-    ```
+```bash
+cd infra
+tofu apply -var-file="prod.tfvars"
+```
 
-2.  **Warehouse Infrastructure (`warehouse/`)**: This configuration defines the application-specific infrastructure, such as GCS buckets, and Dataplex assets. It is deployed automatically by the GitHub Actions workflow (`.github/workflows/deploy.yml`) whenever changes are pushed to the `warehouse/` directory.
+### Warehouse infrastructure (`warehouse/`)
 
-## Phase 3: Data Generation & Ingestion to Bronze
+Defines the data platform itself:
 
-- **Data Source**: A synthetic data generator script (Python) that simulates a stream of meat processing data.
-- **Methodology**:
-  - Use aggregated public data (e.g., from [MLA](https://www.mla.com.au/prices-markets/)) as a baseline for realistic distributions of weights (e.g., 250-400kg HSCW), grades, and prices.
-  - Use a library like `polars` to generate thousands of "fake" individual animal/carcass records.
-  - Sample attributes like weight from normal distributions based on grade and animal class.
-  - Assign pseudo-random identifiers (e.g., RFID-style tags) for traceability.
-  - Calculate prices based on grid formulas, applying premiums/discounts for factors like marbling, fat depth, and yield.
-  - Include additional fields for rich analytics, such as slaughter date, processing plant ID, breed, and quality scores.
-- **Container**: The data generation logic is packaged as a Docker container and deployed as a serverless Cloud Run service.
-- **Execution**: A Cloud Scheduler job triggers the Cloud Run service via an HTTP request on a daily schedule.
-  - The service generates a new batch of data upon each invocation.
-  - It converts the generated data to Parquet format.
-  - It writes the partitioned data to the bronze GCS bucket, e.g., `gs://bronze/carcasses/year=2025/month=12/day=27/plant_id=P01/batch_12345.parquet`
-- **Discovery**: DataPlex automatically discovers the new Parquet files as they land, making them available for querying via BigLake.
+- GCS buckets
+- DataPlex lake and zones
+- BigQuery datasets
+- orchestration resources
 
-## Phase 4: Transformations
+This configuration is deployed automatically through the GitHub Actions workflow when changes are pushed to the `warehouse/` directory.
 
-### Bronze → Silver (Data Vault 2.0 with Iceberg)
+---
 
-Use Dataproc Serverless PySpark batch:
+## Data Flow
 
-- Catalog: BigLakeCatalog (integrated with DataPlex).
-- Read bronze Parquet.
-- Build DV2 entities:
-  - Hub_Carcass (business key: carcass_id/rfid_tag)
-  - Hub_Processor (business key: plant_id)
-  - Sat_Carcass_Details (quality scores, weights, grades)
-  - Link_Carcass_Processing (linking carcasses to processing events)
-- Write as Iceberg tables in silver bucket, partitioned appropriately.
-- Trigger initially manual (`gcloud dataproc batches submit`), later via Scheduler or Pub/Sub on new bronze files.
+### Ingestion
 
-### Silver → Gold (Kimball Star Schema)
+A Cloud Run service generates synthetic carcass records derived from public livestock statistics and writes partitioned Parquet files to the Bronze layer.
 
-- Create dimension/fact tables (e.g., dim_product, dim_date, fact_trades).
-- Materialize as:
-  - BigQuery native tables (recommended), or
-  - Iceberg tables queried via BigLake.
-- Use views in BigQuery for final Kimball schema.
+Triggering:
 
-## Phase 5: BI Layer
+Airflow DAG (`daily_synthetic_ingestion`) → authenticated HTTP request → Cloud Run ingestion service
 
-- Connect Looker Studio to BigQuery `gold_meat_market` dataset.
-- Build dashboards:
-  - Carcass weight distribution by grade
-  - Average price per kg over time
-  - Yield analysis by processing plant
-- Make dashboards public (share link) for portfolio demo.
+### Transformation
 
-## Phase 6: CI/CD and Testing
+Dataproc Serverless Spark jobs perform:
 
-**GitHub Actions Workflow** (on push/PR and merge):
+- Bronze → Silver transformations using **Data Vault 2.0 modelling**
+- Silver → Gold transformations into **Kimball-style marts**
 
-1. OpenTofu fmt/validate/plan
-2. Unit tests (pytest) for the data generator and transformation logic.
-3. Integration tests (optional separate test project):
-   - Deploy infra
-   - Trigger ingestion
-   - Assert files in GCS
-   - Run Spark job
-   - Query BigQuery for expected rows
-4. On main merge (with approval): `terraform apply`
+### Analytics
 
-**Testing Tips**:
-- Mock API calls in unit tests.
-- Use local Spark for DV logic testing.
-- Keep tests fast and idempotent.
+Gold layer tables are queried through BigQuery and visualised using Looker Studio dashboards.
 
-## Validation Milestones (Quick Wins)
+---
 
-1. OpenTofu apply → DataPlex lake + buckets visible.
-2. Run data generator → Files land in bronze → BigLake table auto-created.
-3. Run Dataproc Spark job → Iceberg tables in silver → Queryable in BigQuery.
-4. Build Looker Studio dashboard → Data visualized.
-5. CI/CD pipeline runs successfully on a commit.
+## CI/CD and Testing
+
+GitHub Actions pipelines perform:
+
+- unit tests for DAG logic (`dag.yml`)
+- unit tests for ingestion logic
+- Docker image builds for the ingestion service (when required)
+- OpenTofu plan/apply for `warehouse/` on merge to `main` (`deploy.yml`)
+- DAG sync to Composer and Spark job sync to the deps bucket (`dag.yml`)
+
+`infra/` is intended for manual bootstrap/apply. `warehouse/` is applied through CI/CD.
+
+---
+
+## What This Project Demonstrates
+
+Technically, the platform demonstrates:
+
+- Lakehouse architectures using open table formats
+- Data Vault and Kimball modelling approaches
+- Infrastructure as Code using OpenTofu
+- CI/CD pipelines for data infrastructure
+- Serverless and managed compute services on GCP
+
+More importantly, the project illustrates the architectural lesson discussed in the accompanying article:
+
+> **A system can be cheap to run and expensive to change.**
+
+---
+
+## Further Reading
+
+The architectural reflection behind this project is documented in [**“Cheap to run, expensive to change”**](https://boneleve.blog/posts/2026-03-04-cost-of-change).
+
+---
+
+## Note
+
+This repository is not presented as a polished production platform.
+It is a **learning artifact** whose structure, trade-offs, and friction points are described openly in the accompanying article.
+
+Some infrastructure blocks may be temporarily commented during development to avoid cloud costs; this does not change the intended architecture described above.
